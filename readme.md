@@ -1,100 +1,100 @@
-# LLM Question-Answering Application
+# LLMQA: evidence-first, fairness-aware document QA
 
+[![CI](https://github.com/WeiHanTu/LLM-powered-QA-App/actions/workflows/ci.yml/badge.svg)](https://github.com/WeiHanTu/LLM-powered-QA-App/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Streamlit](https://img.shields.io/badge/built%20with-Streamlit-orange)](https://streamlit.io/)
 
-A professional, open-source Streamlit application for interactive question-answering over your own documents using OpenAI embeddings and LLMs.
+LLMQA is a local retrieval-augmented generation (RAG) application for answering questions over
+PDF, DOCX, and TXT files. The current implementation deliberately separates retrieval, generation,
+and fairness evaluation so each stage can be tested instead of hiding everything behind a framework
+chain.
 
----
+## What is implemented
 
-## Features
+- Token-aware, provenance-preserving document chunks
+- Exact cosine retrieval with a local FAISS `IndexFlatIP`
+- Maximal marginal relevance (MMR) to reduce redundant context
+- Source-labelled answers through the OpenAI Responses API
+- Strict insufficient-context abstention and a citation validator
+- Research-mode Fair Greedy reranking over a larger candidate pool
+- Prefix-sensitive normalized discounted KL divergence (NDKL) exposure audits
+- Counterfactual flip-rate and mean absolute score-difference metrics
+- Offline unit tests, linting, type checking, a `uv.lock`, and GitHub Actions CI
 
-- Upload and process PDF, DOCX, and TXT files
-- Split documents into semantic chunks
-- Create embeddings using OpenAI's `text-embedding-3-small` model
-- Perform question-answering using a language model (GPT-3.5)
-- Display chat history for context
-- Simple, modern UI
+The fairness features do **not** prove that a model or application is unbiased. They measure narrow,
+declared behaviors on reviewed labels and evaluation cases. See [the engineering spec](docs/spec.md)
+for the threat model, research basis, limitations, and roadmap.
 
----
+## Quick start
 
-## Installation
+Requirements: Python 3.12, [`uv`](https://docs.astral.sh/uv/), and an OpenAI API key.
 
-1. **Clone the repository:**
-    ```sh
-    git clone https://github.com/yourusername/llm-question-answering-app.git
-    cd llm-question-answering-app
-    ```
-2. **Create a virtual environment and activate it:**
-    ```sh
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-3. **Install the required packages:**
-    ```sh
-    pip install -r requirements.txt
-    ```
-4. **Set up the OpenAI API key:**
-    - Copy `.env.example` to `.env` and add your OpenAI API key:
-      ```env
-      OPENAI_API_KEY=your_openai_api_key
-      ```
+```bash
+git clone https://github.com/WeiHanTu/LLM-powered-QA-App.git
+cd LLM-powered-QA-App
+uv sync --locked --all-groups
+export OPENAI_API_KEY="your-key"
+uv run streamlit run app.py
+```
 
----
+Set `OPENAI_API_KEY` in your shell or paste a session-only key into the sidebar. The application
+keeps uploaded documents and the FAISS index in memory; temporary upload files are deleted after
+indexing.
 
-## Usage
+## Fairness research controls
 
-1. **Run the Streamlit application:**
-    ```sh
-    streamlit run chat_with_documents_01.py
-    ```
-2. **Open the app in your browser** (Streamlit will provide a local URL).
-3. **Upload a document** (PDF, DOCX, or TXT) using the sidebar.
-4. **Adjust chunk size and `k` value** as needed.
-5. **Click "Add Data"** to process the document.
-6. **Ask questions** about your document using the input field.
+Fair reranking is disabled by default. To evaluate it in the UI:
 
----
+1. Upload multiple sources.
+2. Provide a reviewed source-to-group mapping, for example
+   `{"source-a.pdf":"group_a","source-b.pdf":"group_b"}`.
+3. Provide an explicit target distribution, for example `{"group_a":0.5,"group_b":0.5}`.
+4. Enable **Apply Fair Greedy reranking**.
 
-## Screenshot
+The UI reports NDKL before and after reranking. Group labels must come from reviewed metadata. The
+application intentionally does not infer protected attributes from names or document text.
 
-![App Screenshot](img.png)
+The same metrics are available without an API call:
 
----
+```bash
+uv run llmqa audit-exposure ranked-results.jsonl \
+  --target '{"group_a":0.5,"group_b":0.5}'
 
-## File Structure
+uv run llmqa fair-rerank candidates.jsonl -k 4 \
+  --target '{"group_a":0.5,"group_b":0.5}'
 
-- `chat_with_documents_01.py`: Main application script
-- `requirements.txt`: Python dependencies
-- `img.png`: App logo/screenshot
-- `.env.example`: Example environment file
+uv run llmqa audit-counterfactual paired-outcomes.jsonl
+```
 
----
+Run `uv run llmqa <command> --help` for the JSONL contracts.
 
-## Dependencies
+## Development
 
-- Python 3.10+
-- Streamlit
-- LangChain
-- OpenAI
-- Chroma
-- tiktoken
-- python-dotenv
+```bash
+uv sync --locked --all-groups
+uv run ruff check .
+uv run mypy src
+uv run pytest --cov=llmqa --cov-report=term-missing
+```
 
----
+Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
+`chat_with_documents_01.py` path remains as a compatibility entry point.
 
-## Contributing
+## Important limitations
 
-Contributions are welcome! Please open an issue or submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
+- Retrieval quality and fairness still need a project-specific labelled evaluation set. Unit tests
+  verify mechanics, not production quality.
+- The target exposure distribution is a policy decision that must be justified with domain experts
+  and affected communities; uniform exposure is not automatically fair.
+- Source-level labels are coarse. Chunk-, author-, geography-, and intersection-level audits are
+  planned.
+- Free-form QA has no stable class logits, so the generator-side logit calibration from Fair RAG is
+  not implemented. Claiming otherwise would be false.
+- Model outputs can still be wrong, biased, or inadequately cited. The UI visibly flags citation
+  validation failures.
 
----
+## Attribution and license
 
-## Attribution
+The original tutorial version was inspired by Zero To Mastery Academy's “Developing LLM Apps with
+LangChain” course. The current retrieval and evaluation architecture is an independent rewrite.
 
-This project is inspired by and based on the course "Developing LLM Apps with LangChain" from [Zero To Mastery Academy](https://zerotomastery.io/).
-
----
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Licensed under the [MIT License](LICENSE).

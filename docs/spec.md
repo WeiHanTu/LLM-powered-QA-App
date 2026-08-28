@@ -1,0 +1,252 @@
+# LLMQA evolution specification
+
+Status: Phase 0 implemented; later phases proposed
+Last updated: 2026-08-28
+
+## 1. Executive decision
+
+LLMQA will evolve from a tutorial-style single-file chatbot into a measurable RAG system. The
+priority order is:
+
+1. trustworthy ingestion and provenance;
+2. retrieval quality with an offline baseline;
+3. component-level bias detection;
+4. explicit, auditable mitigation with utility trade-off measurements;
+5. production observability, scale, and deployment.
+
+Adding FAISS without evaluation would only exchange one vector-store implementation for another.
+This specification therefore couples every retrieval or fairness technique to a metric and release
+gate.
+
+## 2. Scope
+
+### Goals
+
+- Answer questions only from user-provided documents and expose the supporting passages.
+- Make embedding, retrieval, reranking, generation, and evaluation independently testable.
+- Detect corpus, retrieval, and outcome disparities on declared groups and controlled
+  counterfactual cases.
+- Mitigate measured retrieval exposure skew without retraining the embedding model.
+- Preserve an offline path for tests and audits; provider calls must not be required for CI.
+
+### Non-goals
+
+- Claiming that the system or a foundation model is unbiased.
+- Inferring race, gender, age, religion, disability, nationality, or other protected attributes from
+  names, prose, images, or embeddings.
+- Choosing a “fair” target distribution automatically.
+- Deploying the current research controls in high-stakes allocation, employment, credit, housing,
+  education, medical, or legal decisions.
+- Implementing generator-logit mitigation against an API that does not expose stable class logits.
+
+## 3. Evidence behind the design
+
+- [FAISS](https://faiss.ai/) supplies local dense-vector indexing and supports exact and approximate
+  similarity search. `IndexFlatIP` with normalized vectors is the correct transparent baseline for
+  cosine similarity; approximate IVF/HNSW/PQ indexes should be introduced only after scale and
+  recall measurements justify them.
+- [Does RAG Introduce Unfairness in LLMs? (COLING 2025)](https://aclanthology.org/2025.coling-main.669/)
+  finds fairness problems in both retrieval and generation, which argues against treating a prompt
+  as a system-wide mitigation.
+- [Mitigating Bias in RAG: Controlling the Embedder (ACL Findings 2025)](https://aclanthology.org/2025.findings-acl.974/)
+  shows that corpus, embedder, and generator biases interact. The result is not permission to
+  “reverse-bias” an embedder blindly; it requires task-specific sensitivity and utility experiments.
+- [Evaluating the Effect of Retrieval Augmentation on Social Biases (EACL 2026)](https://aclanthology.org/2026.eacl-long.233/)
+  reports amplification of biased retrieved context across English, Japanese, and Chinese on gender,
+  race, age, and religion cases. LLMQA therefore evaluates the retrieved slate before generation.
+- [Fair RAG: End-to-End Fairness Across Retrieval and Generation (ACL Findings 2026)](https://aclanthology.org/2026.findings-acl.1358/)
+  proposes a Fair Greedy Reranker (FGR), signed prefix-sensitive NDKL, and confidence-gated logit
+  calibration. Phase 0 implements FGR and NDKL. It does not implement logit calibration because
+  free-form QA through a closed model API does not expose the assumed classifier logits.
+- [BBQ (ACL Findings 2022)](https://aclanthology.org/2022.findings-acl.165/) separates ambiguous
+  cases, where abstention is appropriate, from disambiguated cases, where evidence should override
+  stereotypes. Phase 2 adopts this distinction for generator evaluation.
+- [NIST AI 600-1](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
+  recommends documenting subgroup performance, counterfactual and low-context red teaming,
+  benchmark limitations, data representativeness, and task-appropriate parity metrics. These become
+  release-report requirements rather than optional dashboard decoration.
+- [OpenAI's text generation guide](https://developers.openai.com/api/docs/guides/text) recommends the
+  Responses API for direct model requests. LLMQA uses it with response storage disabled and keeps
+  retrieved passages explicitly separated as untrusted context.
+
+## 4. Threat model
+
+| Stage | Failure | Detection | Mitigation |
+|---|---|---|---|
+| Corpus | Sources underrepresent or stereotype a group | Provenance inventory; group/intersection coverage | Curate or reweight sources; document exclusions |
+| Embedding | Semantically equivalent group references retrieve different evidence | Counterfactual query pairs; score/rank deltas | Evaluate alternative embedders; controlled fine-tuning only after a baseline |
+| Retrieval | Early ranks overexpose a labelled group | NDKL, signed NDKL, exposure by prefix | Retrieve `T > K`; FGR toward an explicit target |
+| Generation | Context bias is amplified or evidence is ignored | BBQ-style ambiguous/disambiguated cases; citation and abstention metrics | Grounded instructions, abstention, context balancing, then model/prompt comparison |
+| Outcome | A sensitive-attribute swap changes a consequential label or score | Counterfactual flip rate (CFR), mean absolute score difference (MASD) | Block release; inspect corpus, retriever, prompt, and model separately |
+| Security | A document injects instructions or poisons retrieval | Injection fixtures; source anomaly and duplicate checks | Treat context as data, isolate uploads, validate provenance, add poisoning tests |
+
+Fairness is contextual. Demographic parity, equal opportunity, counterfactual invariance, and source
+diversity answer different questions and can conflict. A report must name the chosen criterion and
+why it fits the use case.
+
+## 5. Shipped Phase 0 architecture
+
+```text
+PDF/DOCX/TXT
+    -> safe temporary extraction
+    -> token windows with source/page metadata
+    -> OpenAI embeddings
+    -> normalized vectors + FAISS IndexFlatIP
+    -> candidate pool T
+       -> normal path: MMR diversity
+       -> research path: Fair Greedy reranking to K + NDKL before/after
+    -> untrusted labelled passages [S1..SK]
+    -> OpenAI Responses API
+    -> answer + citation validation + visible passages
+```
+
+Key contracts:
+
+- `Chunk`: stable ID, text, source, page, and JSON-compatible metadata.
+- `EmbeddingProvider`: document and query embedding methods; replaceable by an offline fixture.
+- `FaissRetriever`: normalized exact inner-product search, MMR, and non-pickle persistence.
+- `fair_greedy_rerank`: relevance-preserving selection within the most underexposed group at each
+  prefix.
+- `audit_exposure`: NDKL plus signed residual exposure for every target group.
+- `audit_counterfactual_outcomes`: CFR and MASD over controlled pairs.
+- `generate_grounded_answer`: source-labelled context, strict abstention, `store=False`, and citation
+  validation.
+
+## 6. Metrics and evaluation data
+
+### Retrieval utility
+
+- Recall@k: whether a labelled supporting chunk appears in the top k.
+- MRR: how early the first supporting chunk appears.
+- NDCG@k: graded relevance with rank discounting.
+- Duplicate-context rate and source diversity.
+- p50/p95 embedding and retrieval latency plus index size.
+
+### Generation utility and grounding
+
+- Answer correctness on a human-reviewed QA set.
+- Citation precision and recall at claim level.
+- Faithfulness: supported claims divided by factual claims, with a documented grader and a manually
+  checked sample.
+- Correct abstention on unanswerable questions and false abstention on answerable questions.
+
+### Fairness
+
+- Label coverage: labelled candidate/displayed chunks divided by all chunks. NDKL is invalid when
+  required labels are missing.
+- NDKL and signed NDKL for prefix exposure against a declared target.
+- Utility deltas before/after mitigation: Recall@k, MRR, NDCG, correctness, and latency.
+- CFR and MASD on human-reviewed counterfactual pairs where the protected attribute should be
+  causally irrelevant.
+- For categorical consequential outcomes only: per-group risk difference and equal-opportunity gap.
+- BBQ-style bias scores reported separately for ambiguous and disambiguated contexts.
+
+Every report must include sample counts, slices, group intersections where support is adequate,
+confidence intervals or paired tests, prompt/model/embedder/index versions, and benchmark
+limitations. Tiny slices are reported as insufficient evidence, not as zero disparity.
+
+## 7. Functional requirements
+
+### FR-1 Ingestion and provenance
+
+- Accept PDF, DOCX, and UTF-8 text.
+- Strip path components from upload names and use an isolated temporary directory.
+- Preserve source and PDF page number through retrieval and generation.
+- Reject unsupported and empty documents with a user-visible error.
+
+### FR-2 Retrieval
+
+- Normalize both stored and query vectors and use FAISS inner product for cosine similarity.
+- Return scores, displayed ranks, original ranks, and stable chunk IDs.
+- Support a configurable candidate pool and MMR coefficient.
+- Persist index metadata as JSON and NumPy, never pickle.
+
+### FR-3 Grounded generation
+
+- Treat retrieved content as untrusted data and ignore instructions inside it.
+- Cite source labels for factual claims.
+- Use the exact insufficient-evidence response when context cannot answer the question.
+- Disable provider-side response storage for app calls.
+- Flag invalid or missing citations instead of silently displaying them as trustworthy.
+
+### FR-4 Fairness evaluation and mitigation
+
+- Require reviewed group metadata and an explicit target; do not infer either.
+- Report NDKL before and after fair reranking.
+- Fail closed when candidate labels are missing or outside the target schema.
+- Preserve the original retrieval rank to expose the relevance trade-off.
+- Offer offline CLI audits that do not require an API key.
+
+## 8. Release plan
+
+### Phase 0 — foundation (implemented in this change)
+
+- Package layout, `uv` lock, CI, lint, type checks, and tests.
+- FAISS exact cosine retrieval, MMR, provenance, citations, and abstention.
+- FGR, NDKL, CFR, and MASD with offline tests and CLI access.
+- Multi-document Streamlit UI with temporary upload isolation.
+
+Exit gate: all offline checks pass; no API call is required for CI. Live answer quality is not yet a
+release claim.
+
+### Phase 1 — retrieval evaluation and hybrid search
+
+- Create at least 100 human-reviewed query/evidence judgements across answerable, unanswerable,
+  multi-hop, near-duplicate, long-document, and adversarial-instruction cases.
+- Add BM25 and reciprocal-rank fusion; compare against dense FAISS and dense+MMR.
+- Add a cross-encoder reranker only if NDCG improves enough to justify latency and cost.
+- Select chunk size/overlap from the evaluation, not intuition.
+
+Exit gate: selected pipeline beats the Phase 0 Recall@k and NDCG baselines without regressing
+unanswerable-query behavior; p95 latency and cost remain inside declared budgets.
+
+### Phase 2 — end-to-end bias evaluation
+
+- Build controlled counterfactual RAG cases for the intended domain and document which attributes
+  should be irrelevant.
+- Run BBQ and culturally appropriate variants as diagnostic benchmarks, not universal scores.
+- Compare no-RAG, vanilla-RAG, MMR-RAG, and fair-reranked RAG at fixed model settings.
+- Add paired bootstrap confidence intervals and regression thresholds.
+
+Exit gate: no statistically or practically material regression on declared fairness slices; all
+mitigations include utility deltas and a human review of failure clusters.
+
+### Phase 3 — corpus governance and adversarial resilience
+
+- Add document/version hashes, provenance manifests, deletion, tenant isolation, and audit logs that
+  exclude raw secrets and unnecessary user content.
+- Detect duplicates, suspicious instruction density, and retrieval poisoning candidates.
+- Add prompt-injection, poisoned-corpus, and malicious-file regression suites.
+
+Exit gate: deletion and tenant-boundary tests pass; red-team findings have owners and severity-based
+release rules.
+
+### Phase 4 — scale and deployment
+
+- Benchmark `IndexFlatIP` against HNSW and IVF/PQ at realistic corpus sizes.
+- Add a service boundary, authentication, rate limiting, tracing, budget controls, and deployment
+  configuration.
+- Rebuild indexes reproducibly from versioned manifests and measure recall loss after compression.
+
+Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a staging environment.
+
+## 9. Phase 0 acceptance criteria
+
+- `uv sync --locked --all-groups` succeeds on Python 3.12.
+- Ruff, strict mypy, and pytest pass in CI.
+- Exact search returns the known nearest fixture; MMR can select a less redundant fixture.
+- Saved indexes round-trip without pickle metadata.
+- FGR lowers NDKL on a skewed controlled slate and retains original ranks.
+- Missing group metadata causes the fairness audit to fail rather than fabricate a score.
+- Counterfactual audit reports CFR and MASD from paired fixtures.
+- The generator call uses the Responses API with storage disabled.
+- A cited answer passes validation; the exact abstention passes without a citation.
+
+## 10. Open decisions requiring domain input
+
+- Intended users and decision stakes.
+- Which corpus attributes are legitimate to label and audit.
+- Who defines target exposure and affected-community review.
+- Required languages and culturally appropriate benchmarks.
+- Quality, latency, privacy, and monthly cost budgets.
+- Retention and deletion policy if the system moves beyond in-memory local use.

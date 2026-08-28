@@ -10,6 +10,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 build/
 develop-eggs/
 dist/
@@ -64,6 +65,7 @@ coverage.xml
 # dotenv
 .env
 .env.*
+!.env.example
 
 # IDEs and editors
 .idea/
@@ -83,5 +85,10 @@ Thumbs.db
 
 # Project files
 files/
+indexes/
+artifacts/
 
-# Ignore LICENSE and README.md from this list intentionally 
+# Keep the interpreter contract under version control.
+!.python-version
+
+# LICENSE and readme.md are intentionally tracked.
