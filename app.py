@@ -15,7 +15,10 @@ from llmqa.embeddings import OpenAIEmbeddingProvider
 from llmqa.fairness import audit_exposure, fair_greedy_rerank
 from llmqa.generation import generate_grounded_answer
 from llmqa.ingest import DocumentPage, chunk_pages, load_document
-from llmqa.retrieval import FaissRetriever
+from llmqa.retrieval import BM25Retriever, FaissRetriever, HybridRetriever
+
+HYBRID_MODE = "Hybrid: BM25 + dense RRF"
+DENSE_MODE = "Dense: FAISS + MMR"
 
 
 def _json_object(raw: str, *, label: str) -> dict[str, Any]:
@@ -31,10 +34,18 @@ def _render_sources(results: list[dict[str, Any]]) -> None:
     with st.expander("Retrieved evidence", expanded=False):
         for source_number, result in enumerate(results, start=1):
             chunk = result["chunk"]
+            component_scores = result.get("component_scores", {})
+            component_ranks = result.get("component_ranks", {})
+            components = " · ".join(
+                f"{name} rank `{component_ranks[name]}` / score `{score:.4f}`"
+                for name, score in component_scores.items()
+                if name in component_ranks
+            )
+            component_line = f"  \n{components}" if components else ""
             st.markdown(
                 f"**[S{source_number}] {chunk.citation}**  \n"
-                f"similarity `{result['score']:.4f}` · original rank "
-                f"`{result['original_rank']}`"
+                f"retrieval score `{result['score']:.4f}` · pre-rerank position "
+                f"`{result['original_rank']}`{component_line}"
             )
             st.caption(chunk.text[:900] + ("…" if len(chunk.text) > 900 else ""))
 
@@ -49,7 +60,7 @@ def _attach_source_group(page: DocumentPage, source_groups: dict[str, Any]) -> D
 def main() -> None:
     st.set_page_config(page_title="LLMQA", page_icon="🔎", layout="wide")
     st.title("Evidence-first document QA")
-    st.caption("Local FAISS retrieval, source citations, and explicit fairness diagnostics")
+    st.caption("Hybrid BM25 + FAISS retrieval, source citations, and explicit fairness diagnostics")
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -78,11 +89,26 @@ def main() -> None:
         overlap = st.slider("Overlap tokens", 0, min(200, chunk_size - 1), 60, 10)
 
         st.header("Retrieval settings")
+        retrieval_mode = st.radio(
+            "Retrieval pipeline",
+            [HYBRID_MODE, DENSE_MODE],
+            help=(
+                "Hybrid fuses lexical and semantic ranks. Dense + MMR is retained as the "
+                "measurable Phase 0 baseline."
+            ),
+        )
         top_k = st.slider("Displayed passages", 1, 10, 4)
         candidate_pool = st.slider("Candidate pool", top_k, 30, max(12, top_k))
-        mmr_lambda = st.slider(
-            "Relevance ↔ diversity", 0.0, 1.0, 0.75, 0.05, help="1.0 is relevance only."
-        )
+        mmr_lambda = 1.0
+        if retrieval_mode == DENSE_MODE:
+            mmr_lambda = st.slider(
+                "Relevance ↔ diversity",
+                0.0,
+                1.0,
+                0.75,
+                0.05,
+                help="1.0 is relevance only.",
+            )
 
         with st.expander("Research fairness controls"):
             st.warning(
@@ -131,7 +157,14 @@ def main() -> None:
                         model=embedding_model,
                         api_key=api_key,
                     )
-                    st.session_state.retriever = FaissRetriever.from_chunks(chunks, provider)
+                    dense_retriever = FaissRetriever.from_chunks(chunks, provider)
+                    st.session_state.retrievers = {
+                        HYBRID_MODE: HybridRetriever(
+                            dense_retriever,
+                            BM25Retriever(chunks),
+                        ),
+                        DENSE_MODE: dense_retriever,
+                    }
                     st.session_state.messages = []
                 st.success(
                     f"Indexed {len(chunks)} chunks from {len(uploaded_files)} "
@@ -153,14 +186,14 @@ def main() -> None:
 
     question = st.chat_input("Ask a question about the indexed documents")
     if question:
-        if "retriever" not in st.session_state:
+        if "retrievers" not in st.session_state:
             st.error("Build an index before asking a question.")
             return
         if not api_key:
             st.error("Provide an API key or set OPENAI_API_KEY.")
             return
 
-        retriever: FaissRetriever = st.session_state.retriever
+        retriever: FaissRetriever | HybridRetriever = st.session_state.retrievers[retrieval_mode]
         st.session_state.messages.append({"role": "user", "content": question})
         with st.chat_message("user"):
             st.markdown(question)
@@ -174,12 +207,19 @@ def main() -> None:
                 if fairness_reranking:
                     if not target:
                         raise ValueError("fair reranking requires a target distribution")
-                    candidates = retriever.search(
-                        question,
-                        k=pool_size,
-                        fetch_k=pool_size,
-                        mmr_lambda=1.0,
-                    )
+                    if isinstance(retriever, HybridRetriever):
+                        candidates = retriever.search(
+                            question,
+                            k=pool_size,
+                            fetch_k=pool_size,
+                        )
+                    else:
+                        candidates = retriever.search(
+                            question,
+                            k=pool_size,
+                            fetch_k=pool_size,
+                            mmr_lambda=1.0,
+                        )
                     baseline = candidates[:result_count]
                     results = fair_greedy_rerank(candidates, target, k=result_count)
                     fairness_payload = {
@@ -188,12 +228,19 @@ def main() -> None:
                         "after": asdict(audit_exposure(results, target)),
                     }
                 else:
-                    results = retriever.search(
-                        question,
-                        k=result_count,
-                        fetch_k=pool_size,
-                        mmr_lambda=mmr_lambda,
-                    )
+                    if isinstance(retriever, HybridRetriever):
+                        results = retriever.search(
+                            question,
+                            k=result_count,
+                            fetch_k=pool_size,
+                        )
+                    else:
+                        results = retriever.search(
+                            question,
+                            k=result_count,
+                            fetch_k=pool_size,
+                            mmr_lambda=mmr_lambda,
+                        )
 
                 answer = generate_grounded_answer(
                     question,
@@ -211,6 +258,8 @@ def main() -> None:
                         "chunk": result.chunk,
                         "score": result.score,
                         "original_rank": result.original_rank,
+                        "component_scores": result.component_scores,
+                        "component_ranks": result.component_ranks,
                     }
                     for result in results
                 ]

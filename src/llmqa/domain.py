@@ -26,9 +26,11 @@ class Chunk:
 
 @dataclass(frozen=True, slots=True)
 class SearchResult:
-    """A retrieved chunk with both displayed and original dense-retrieval ranks."""
+    """A retrieved chunk with displayed, pre-rerank, and component diagnostics."""
 
     chunk: Chunk
     score: float
     rank: int
     original_rank: int
+    component_scores: dict[str, float] = field(default_factory=dict)
+    component_ranks: dict[str, int] = field(default_factory=dict)

@@ -187,6 +187,8 @@ def fair_greedy_rerank(
                 score=chosen.score,
                 rank=position,
                 original_rank=chosen.original_rank,
+                component_scores=chosen.component_scores,
+                component_ranks=chosen.component_ranks,
             )
         )
 

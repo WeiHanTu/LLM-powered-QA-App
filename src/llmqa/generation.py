@@ -48,7 +48,7 @@ def render_context(results: list[SearchResult]) -> str:
     for source_number, result in enumerate(results, start=1):
         sections.append(
             f"[S{source_number}] {result.chunk.citation}\n"
-            f"Dense similarity: {result.score:.4f}\n"
+            f"Retrieval score: {result.score:.4f}\n"
             f"{result.chunk.text}"
         )
     return "\n\n".join(sections)

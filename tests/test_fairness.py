@@ -23,6 +23,8 @@ def result(identifier: str, group: str, rank: int) -> SearchResult:
         score=1.0 - rank / 100,
         rank=rank,
         original_rank=rank,
+        component_scores={"dense": 1.0 - rank / 100},
+        component_ranks={"dense": rank},
     )
 
 
@@ -48,6 +50,7 @@ def test_fair_greedy_rerank_preserves_relevance_within_priority_group() -> None:
     assert [item.chunk.id for item in reranked] == ["a1", "b1", "a2", "b2"]
     assert [item.rank for item in reranked] == [1, 2, 3, 4]
     assert [item.original_rank for item in reranked] == [1, 4, 2, 5]
+    assert reranked[1].component_ranks == {"dense": 4}
 
 
 def test_exposure_audit_requires_explicit_group_metadata() -> None:

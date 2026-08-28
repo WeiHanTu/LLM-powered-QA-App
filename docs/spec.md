@@ -1,6 +1,6 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; later phases proposed
+Status: Phase 0 implemented; Phase 1 evaluation infrastructure implemented, benchmark pending
 Last updated: 2026-08-28
 
 ## 1. Executive decision
@@ -45,6 +45,13 @@ gate.
   similarity search. `IndexFlatIP` with normalized vectors is the correct transparent baseline for
   cosine similarity; approximate IVF/HNSW/PQ indexes should be introduced only after scale and
   recall measurements justify them.
+- [Reciprocal Rank Fusion (SIGIR 2009)](https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf)
+  combines independently ranked results as a sum of reciprocal ranks. It avoids pretending that
+  BM25 and cosine scores share a calibrated numeric scale; LLMQA uses the paper's constant 60 as
+  the explicit default and exposes component ranks and scores.
+- [BEIR (NeurIPS Datasets and Benchmarks 2021)](https://arxiv.org/abs/2104.08663) found BM25 to be a
+  robust zero-shot baseline and reranking/adaptation methods to improve average effectiveness at a
+  computational cost. That supports measuring dense, lexical, fused, and reranked paths separately.
 - [Does RAG Introduce Unfairness in LLMs? (COLING 2025)](https://aclanthology.org/2025.coling-main.669/)
   finds fairness problems in both retrieval and generation, which argues against treating a prompt
   as a system-wide mitigation.
@@ -84,17 +91,19 @@ Fairness is contextual. Demographic parity, equal opportunity, counterfactual in
 diversity answer different questions and can conflict. A report must name the chosen criterion and
 why it fits the use case.
 
-## 5. Shipped Phase 0 architecture
+## 5. Shipped architecture
 
 ```text
 PDF/DOCX/TXT
     -> safe temporary extraction
     -> token windows with source/page metadata
-    -> OpenAI embeddings
-    -> normalized vectors + FAISS IndexFlatIP
+    +-> OpenAI embeddings -> normalized vectors -> FAISS IndexFlatIP
+    |      -> dense-only MMR baseline
+    +-> Okapi BM25 lexical index
+           -> dense + lexical reciprocal-rank fusion (default)
     -> candidate pool T
-       -> normal path: MMR diversity
-       -> research path: Fair Greedy reranking to K + NDKL before/after
+       -> direct top K
+       -> optional research path: Fair Greedy reranking to K + NDKL before/after
     -> untrusted labelled passages [S1..SK]
     -> OpenAI Responses API
     -> answer + citation validation + visible passages
@@ -105,6 +114,10 @@ Key contracts:
 - `Chunk`: stable ID, text, source, page, and JSON-compatible metadata.
 - `EmbeddingProvider`: document and query embedding methods; replaceable by an offline fixture.
 - `FaissRetriever`: normalized exact inner-product search, MMR, and non-pickle persistence.
+- `BM25Retriever`: deterministic in-memory lexical baseline with explicit tokenization and BM25
+  parameters.
+- `HybridRetriever`: weighted RRF over dense and BM25 rankings with component diagnostics.
+- `evaluate_rankings`: offline Recall@k, MRR, and graded NDCG@k over stable chunk IDs.
 - `fair_greedy_rerank`: relevance-preserving selection within the most underexposed group at each
   prefix.
 - `audit_exposure`: NDKL plus signed residual exposure for every target group.
@@ -159,7 +172,17 @@ limitations. Tiny slices are reported as insufficient evidence, not as zero disp
 - Normalize both stored and query vectors and use FAISS inner product for cosine similarity.
 - Return scores, displayed ranks, original ranks, and stable chunk IDs.
 - Support a configurable candidate pool and MMR coefficient.
+- Support BM25 and weighted RRF without comparing uncalibrated raw score magnitudes.
+- Preserve component ranks and scores for every fused result.
 - Persist index metadata as JSON and NumPy, never pickle.
+
+### FR-2A Retrieval evaluation
+
+- Read human-reviewed relevance judgments and ranked run outputs from versionable JSONL.
+- Report Recall@k, reciprocal rank, and graded NDCG@k per answerable query and in aggregate.
+- Reject duplicate/unknown query IDs, invalid grades, and judgment sets with no positive evidence.
+- Exclude explicitly unanswerable questions from relevance averages while retaining their count;
+  evaluate abstention behavior separately at the generation layer.
 
 ### FR-3 Grounded generation
 
@@ -189,13 +212,16 @@ limitations. Tiny slices are reported as insufficient evidence, not as zero disp
 Exit gate: all offline checks pass; no API call is required for CI. Live answer quality is not yet a
 release claim.
 
-### Phase 1 — retrieval evaluation and hybrid search
+### Phase 1 — retrieval evaluation and hybrid search (in progress)
 
-- Create at least 100 human-reviewed query/evidence judgements across answerable, unanswerable,
-  multi-hop, near-duplicate, long-document, and adversarial-instruction cases.
-- Add BM25 and reciprocal-rank fusion; compare against dense FAISS and dense+MMR.
-- Add a cross-encoder reranker only if NDCG improves enough to justify latency and cost.
-- Select chunk size/overlap from the evaluation, not intuition.
+- **Implemented:** BM25, weighted RRF, visible component diagnostics, and an offline
+  Recall@k/MRR/NDCG evaluator with strict JSONL contracts.
+- **Pending:** create at least 100 human-reviewed query/evidence judgements across answerable,
+  unanswerable, multi-hop, near-duplicate, long-document, and adversarial-instruction cases.
+- **Pending:** compare BM25, dense FAISS, dense+MMR, and hybrid RRF on the same judgments.
+- **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
+  cost.
+- **Pending:** select chunk size/overlap from the evaluation, not intuition.
 
 Exit gate: selected pipeline beats the Phase 0 Recall@k and NDCG baselines without regressing
 unanswerable-query behavior; p95 latency and cost remain inside declared budgets.
@@ -242,7 +268,17 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
 - The generator call uses the Responses API with storage disabled.
 - A cited answer passes validation; the exact abstention passes without a citation.
 
-## 10. Open decisions requiring domain input
+## 10. Phase 1 infrastructure acceptance criteria
+
+- BM25 retrieves an exact lexical match independently of embeddings.
+- RRF follows `sum(weight / (60 + rank))`, has deterministic tie-breaking, and retains component
+  diagnostics.
+- Hybrid retrieval rejects dense and sparse indexes built from different ordered corpora.
+- Offline evaluation produces checked Recall@k, MRR, and graded NDCG@k values without provider
+  calls.
+- Documentation labels example data as schema fixtures, not a quality benchmark.
+
+## 11. Open decisions requiring domain input
 
 - Intended users and decision stakes.
 - Which corpus attributes are legitimate to label and audit.

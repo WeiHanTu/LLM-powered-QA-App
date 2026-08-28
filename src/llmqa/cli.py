@@ -1,4 +1,4 @@
-"""Offline command-line access to fairness metrics."""
+"""Offline command-line access to retrieval and fairness evaluation."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from llmqa.domain import Chunk, SearchResult
+from llmqa.evaluation import RetrievalJudgment, evaluate_rankings
 from llmqa.fairness import (
     CounterfactualOutcome,
     audit_counterfactual_outcomes,
@@ -31,21 +32,34 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def _load_results(path: Path) -> list[SearchResult]:
     rows = _read_jsonl(path)
-    return [
-        SearchResult(
-            chunk=Chunk(
-                id=str(row["id"]),
-                text=str(row.get("text", "")),
-                source=str(row.get("source", "unknown")),
-                page=row.get("page"),
-                metadata=dict(row.get("metadata", {})),
-            ),
-            score=float(row["score"]),
-            rank=int(row.get("rank", index)),
-            original_rank=int(row.get("original_rank", row.get("rank", index))),
+    results: list[SearchResult] = []
+    for index, row in enumerate(rows, start=1):
+        metadata = row.get("metadata", {})
+        component_scores = row.get("component_scores", {})
+        component_ranks = row.get("component_ranks", {})
+        if not isinstance(metadata, dict):
+            raise ValueError("result metadata must be a JSON object")
+        if not isinstance(component_scores, dict) or not isinstance(component_ranks, dict):
+            raise ValueError("result component diagnostics must be JSON objects")
+        results.append(
+            SearchResult(
+                chunk=Chunk(
+                    id=str(row["id"]),
+                    text=str(row.get("text", "")),
+                    source=str(row.get("source", "unknown")),
+                    page=row.get("page"),
+                    metadata=dict(metadata),
+                ),
+                score=float(row["score"]),
+                rank=int(row.get("rank", index)),
+                original_rank=int(row.get("original_rank", row.get("rank", index))),
+                component_scores={
+                    str(name): float(score) for name, score in component_scores.items()
+                },
+                component_ranks={str(name): int(rank) for name, rank in component_ranks.items()},
+            )
         )
-        for index, row in enumerate(rows, start=1)
-    ]
+    return results
 
 
 def _target(raw: str) -> dict[str, float]:
@@ -53,6 +67,35 @@ def _target(raw: str) -> dict[str, float]:
     if not isinstance(parsed, dict):
         raise ValueError("--target must be a JSON object")
     return {str(group): float(value) for group, value in parsed.items()}
+
+
+def _load_judgments(path: Path) -> list[RetrievalJudgment]:
+    judgments: list[RetrievalJudgment] = []
+    for row in _read_jsonl(path):
+        relevance = row.get("relevance")
+        if not isinstance(relevance, dict):
+            raise ValueError("each judgment must contain a relevance JSON object")
+        judgments.append(
+            RetrievalJudgment(
+                query_id=str(row["query_id"]),
+                query=str(row["query"]),
+                relevance={str(chunk_id): float(grade) for chunk_id, grade in relevance.items()},
+            )
+        )
+    return judgments
+
+
+def _load_rankings(path: Path) -> dict[str, list[str]]:
+    rankings: dict[str, list[str]] = {}
+    for row in _read_jsonl(path):
+        query_id = str(row["query_id"])
+        retrieved_ids = row.get("retrieved_ids")
+        if not isinstance(retrieved_ids, list):
+            raise ValueError("each run row must contain a retrieved_ids JSON array")
+        if query_id in rankings:
+            raise ValueError(f"run contains duplicate query ID {query_id!r}")
+        rankings[query_id] = [str(chunk_id) for chunk_id in retrieved_ids]
+    return rankings
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -74,6 +117,14 @@ def build_parser() -> argparse.ArgumentParser:
         "audit-counterfactual", help="compute flip rate and score difference from paired JSONL"
     )
     counterfactual.add_argument("input", type=Path)
+
+    retrieval = subparsers.add_parser(
+        "evaluate-retrieval",
+        help="compute Recall@k, MRR, and NDCG@k from labelled judgments and a run",
+    )
+    retrieval.add_argument("judgments", type=Path, help="query and relevance JSONL")
+    retrieval.add_argument("run", type=Path, help="ranked chunk-ID JSONL")
+    retrieval.add_argument("-k", type=int, required=True)
     return parser
 
 
@@ -103,12 +154,23 @@ def main(argv: list[str] | None = None) -> int:
                         "original_rank": result.original_rank,
                         "score": result.score,
                         "metadata": result.chunk.metadata,
+                        "component_scores": result.component_scores,
+                        "component_ranks": result.component_ranks,
                     }
                     for result in reranked
                 ],
                 indent=2,
             )
         )
+        return 0
+
+    if args.command == "evaluate-retrieval":
+        evaluation = evaluate_rankings(
+            _load_judgments(args.judgments),
+            _load_rankings(args.run),
+            k=args.k,
+        )
+        print(json.dumps(asdict(evaluation), indent=2))
         return 0
 
     rows = _read_jsonl(args.input)

@@ -12,12 +12,15 @@ chain.
 
 - Token-aware, provenance-preserving document chunks
 - Exact cosine retrieval with a local FAISS `IndexFlatIP`
+- In-memory Okapi BM25 lexical retrieval and reciprocal-rank fusion (RRF)
 - Maximal marginal relevance (MMR) to reduce redundant context
+- Per-result dense/BM25 ranks and scores instead of an opaque hybrid score
 - Source-labelled answers through the OpenAI Responses API
 - Strict insufficient-context abstention and a citation validator
 - Research-mode Fair Greedy reranking over a larger candidate pool
 - Prefix-sensitive normalized discounted KL divergence (NDKL) exposure audits
 - Counterfactual flip-rate and mean absolute score-difference metrics
+- Offline Recall@k, MRR, and graded NDCG@k evaluation from versionable JSONL
 - Offline unit tests, linting, type checking, a `uv.lock`, and GitHub Actions CI
 
 The fairness features do **not** prove that a model or application is unbiased. They measure narrow,
@@ -63,9 +66,14 @@ uv run llmqa fair-rerank candidates.jsonl -k 4 \
   --target '{"group_a":0.5,"group_b":0.5}'
 
 uv run llmqa audit-counterfactual paired-outcomes.jsonl
+
+uv run llmqa evaluate-retrieval \
+  evals/retrieval/judgments.example.jsonl \
+  evals/retrieval/run.example.jsonl -k 3
 ```
 
-Run `uv run llmqa <command> --help` for the JSONL contracts.
+Run `uv run llmqa <command> --help` for command details. The retrieval schemas and honest
+interpretation rules are documented in [`evals/README.md`](evals/README.md).
 
 ## Development
 
@@ -81,8 +89,8 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 
 ## Important limitations
 
-- Retrieval quality and fairness still need a project-specific labelled evaluation set. Unit tests
-  verify mechanics, not production quality.
+- The project does not yet have the required 100-query, human-reviewed evaluation set. The included
+  two-query files demonstrate the schema only; they are not evidence that hybrid search is better.
 - The target exposure distribution is a policy decision that must be justified with domain experts
   and affected communities; uniform exposure is not automatically fair.
 - Source-level labels are coarse. Chunk-, author-, geography-, and intersection-level audits are
