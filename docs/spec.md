@@ -279,8 +279,10 @@ release claim.
 - **Implemented:** compact public evidence generation with paired query-bootstrap intervals and an
   SVG README figure; bulky per-query outputs remain ignored but reproducible.
 - **After SciFact:** integrate the BRIGHT Robotics subset as a reasoning-intensive retrieval slice.
-- **Pending:** create at least 100 human-reviewed query/evidence judgements across answerable,
-  unanswerable, multi-hop, near-duplicate, long-document, and adversarial-instruction cases.
+- **Drafted, review pending:** 100 source-grounded questions and concise answers across answerable,
+  unanswerable, multi-hop, near-duplicate, long-document, and adversarial-instruction cases. The
+  pinned Transformer/Kimi K3 set is not a benchmark until humans approve every row and its page
+  evidence is materialized to stable chunk IDs.
 - **Pending:** compare BM25, dense FAISS, dense+MMR, and hybrid RRF on the same judgments.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.

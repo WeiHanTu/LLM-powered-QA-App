@@ -39,6 +39,26 @@ measure application quality. A defensible comparison requires at least 100 indep
 questions spanning answerable, unanswerable, multi-hop, near-duplicate, long-document, and
 adversarial-instruction cases, with adjudication rules and reviewer agreement recorded.
 
+## Project-specific technical-paper review set
+
+`project/technical-papers-v1/` contains 100 original **review-pending drafts** grounded in the
+NeurIPS 2017 Transformer paper and Kimi K3 arXiv v2. The set covers all six required case families,
+but it must not be described as human-reviewed until the review protocol is completed.
+
+```bash
+uv run llmqa fetch-project-eval-sources \
+  evals/project/technical-papers-v1/manifest.json
+uv run llmqa validate-project-eval \
+  evals/project/technical-papers-v1/cases.jsonl \
+  --fixtures evals/project/technical-papers-v1/injection-fixtures.jsonl \
+  --manifest evals/project/technical-papers-v1/manifest.json
+```
+
+The manifest pins source revisions, SHA-256 checksums, licenses, design influences, coverage gates,
+and adjudication rules. Raw papers stay in ignored `artifacts/`; version control contains only
+original short questions/answers, synthetic attack strings, and page/section locators. See the
+[review protocol](project/technical-papers-v1/REVIEW.md) before changing any review status.
+
 ## Public SciFact benchmark
 
 The first-party SciFact adapter downloads the official BEIR archive, verifies MD5

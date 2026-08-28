@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "dataset": "technical-papers-v1",
+  "title": "Transformer and Kimi K3 project QA review set",
+  "status": "draft_review_pending",
+  "intended_use": "Non-commercial, project-specific RAG evaluation after human approval",
+  "created_at": "2026-08-28",
+  "draft_provenance": "Original questions and concise answers drafted from pinned primary sources; no case is human-reviewed until its review_status is approved.",
+  "sources": [
+    {
+      "source_id": "attention-is-all-you-need",
+      "title": "Attention Is All You Need",
+      "version": "NeurIPS 2017 proceedings",
+      "landing_page": "https://papers.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html",
+      "download_url": "https://papers.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf",
+      "filename": "attention-is-all-you-need-neurips-2017.pdf",
+      "sha256": "d87d482d5ae7960e2e43d7dd6d21377e60e73e8fce1bf2a01aff7aca8a08c537",
+      "pages": 11,
+      "license": "Publisher-hosted proceedings copy; no redistribution license asserted",
+      "redistribution": "Raw PDF is fetched to ignored artifacts and is not committed"
+    },
+    {
+      "source_id": "kimi-k3",
+      "title": "Kimi K3: Open Frontier Intelligence",
+      "version": "arXiv:2607.24653v2 (2026-08-07)",
+      "landing_page": "https://arxiv.org/abs/2607.24653v2",
+      "download_url": "https://arxiv.org/pdf/2607.24653v2",
+      "filename": "kimi-k3-2607.24653v2.pdf",
+      "sha256": "1a21e4d15de52eb0d4cf09cdbffc6248c497ba6897572cc5574af237c13da51d",
+      "pages": 47,
+      "license": "CC BY-NC-ND 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+      "redistribution": "Raw PDF is fetched to ignored artifacts and is not committed"
+    }
+  ],
+  "design_sources": [
+    {
+      "name": "QASPER",
+      "url": "https://arxiv.org/abs/2105.03011",
+      "used_for": "question-answer-evidence annotation pattern for full scientific papers",
+      "data_imported": false
+    },
+    {
+      "name": "MultiHop-RAG",
+      "url": "https://github.com/yixuantt/MultiHop-RAG",
+      "used_for": "cross-document evidence and explicit multi-hop labeling",
+      "data_imported": false
+    },
+    {
+      "name": "BIPIA",
+      "url": "https://github.com/microsoft/BIPIA",
+      "used_for": "separating clean questions from untrusted indirect-injection fixtures",
+      "data_imported": false
+    }
+  ],
+  "requirements": {
+    "case_count": 100,
+    "case_type_minimums": {
+      "answerable": 80,
+      "unanswerable": 20,
+      "multi_hop": 15,
+      "near_duplicate": 20,
+      "long_document": 20,
+      "prompt_injection": 10
+    },
+    "minimum_reviewer_count_for_approval": 1,
+    "near_duplicate_group_size": 2
+  },
+  "review_policy": {
+    "allowed_statuses": [
+      "review_pending",
+      "approved",
+      "needs_revision",
+      "rejected"
+    ],
+    "approval_rule": "Verify the question, concise answer, answerability, and every page/section locator against the pinned PDF; record reviewer_ids and reviewed_at.",
+    "adjudication_rule": "Mark needs_revision on any factual or evidence disagreement. A second reviewer resolves ambiguous cases before approval.",
+    "benchmark_gate": "Do not report project benchmark scores until all 100 cases are approved and evidence locators are materialized to deterministic chunk IDs."
+  }
+}

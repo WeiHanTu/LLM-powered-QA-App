@@ -27,6 +27,13 @@ from llmqa.fairness import (
     audit_exposure,
     fair_greedy_rerank,
 )
+from llmqa.project_evaluation import (
+    fetch_project_evaluation_sources,
+    load_injection_fixtures,
+    load_project_eval_manifest,
+    load_project_evaluation_cases,
+    validate_project_evaluation,
+)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -186,6 +193,21 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--run-date", required=True, help="benchmark date in YYYY-MM-DD format")
     report.add_argument("--bootstrap-resamples", type=int, default=10_000)
     report.add_argument("--bootstrap-seed", type=int, default=20_260_828)
+
+    validate_project_eval = subparsers.add_parser(
+        "validate-project-eval",
+        help="validate coverage, provenance, evidence, and review state for project QA cases",
+    )
+    validate_project_eval.add_argument("cases", type=Path)
+    validate_project_eval.add_argument("--fixtures", type=Path, required=True)
+    validate_project_eval.add_argument("--manifest", type=Path, required=True)
+
+    fetch_project_eval = subparsers.add_parser(
+        "fetch-project-eval-sources",
+        help="download and SHA-256 verify project-evaluation source documents",
+    )
+    fetch_project_eval.add_argument("manifest", type=Path)
+    fetch_project_eval.add_argument("--cache-dir", type=Path, default=Path("artifacts/evals"))
     return parser
 
 
@@ -318,6 +340,27 @@ def main(argv: list[str] | None = None) -> int:
                     "snapshot_path": str(args.snapshot),
                     "figure_path": str(args.figure),
                     "status": "generated",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "validate-project-eval":
+        manifest = load_project_eval_manifest(args.manifest)
+        cases = load_project_evaluation_cases(args.cases)
+        fixtures = load_injection_fixtures(args.fixtures)
+        summary = validate_project_evaluation(cases, fixtures, manifest)
+        print(json.dumps(asdict(summary), indent=2))
+        return 0
+
+    if args.command == "fetch-project-eval-sources":
+        source_paths = fetch_project_evaluation_sources(args.manifest, args.cache_dir)
+        print(
+            json.dumps(
+                {
+                    "status": "verified",
+                    "source_paths": [str(path) for path in source_paths],
                 },
                 indent=2,
             )

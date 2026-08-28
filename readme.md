@@ -152,9 +152,9 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 
 ## Important limitations
 
-- The project does not yet have the required 100-query, human-reviewed evaluation set. The included
-  two-query fixtures demonstrate the generic JSONL schema only. SciFact is a genuine public
-  retrieval baseline, but it is not evidence about the project's eventual users or documents.
+- The project now has 100 source-grounded **draft** questions for review, not 100 human-reviewed
+  judgments. Until the review protocol is complete and page evidence is materialized to stable
+  chunk IDs, SciFact remains the only runnable benchmark and is not evidence about eventual users.
 - The target exposure distribution is a policy decision that must be justified with domain experts
   and affected communities; uniform exposure is not automatically fair.
 - Source-level labels are coarse. Chunk-, author-, geography-, and intersection-level audits are
