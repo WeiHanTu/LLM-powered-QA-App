@@ -20,6 +20,9 @@ class EmbeddingProvider(Protocol):
     def embed_documents(self, texts: Sequence[str]) -> FloatMatrix:
         """Embed document texts in their input order."""
 
+    def embed_queries(self, texts: Sequence[str]) -> FloatMatrix:
+        """Embed query texts in their input order."""
+
     def embed_query(self, text: str) -> FloatMatrix:
         """Embed one query and return a matrix with shape ``[1, dimension]``."""
 
@@ -32,7 +35,6 @@ class OpenAIEmbeddingProvider:
         *,
         model: str = "text-embedding-3-small",
         dimensions: int = 1536,
-        api_key: str | None = None,
         batch_size: int = 128,
         client: OpenAI | None = None,
     ) -> None:
@@ -44,7 +46,9 @@ class OpenAIEmbeddingProvider:
         self.model = model
         self.dimensions = dimensions
         self.batch_size = batch_size
-        self._client = client or OpenAI(api_key=api_key)
+        # OpenAI reads OPENAI_API_KEY from the process environment. Keeping the raw
+        # credential out of this interface prevents it from entering application state.
+        self._client = client or OpenAI()
 
     def embed_documents(self, texts: Sequence[str]) -> FloatMatrix:
         clean_texts = [text.strip() for text in texts]
@@ -66,5 +70,9 @@ class OpenAIEmbeddingProvider:
 
         return np.concatenate(batches, axis=0)
 
+    def embed_queries(self, texts: Sequence[str]) -> FloatMatrix:
+        # OpenAI uses the same embedding endpoint and vector space for corpus and query text.
+        return self.embed_documents(texts)
+
     def embed_query(self, text: str) -> FloatMatrix:
-        return self.embed_documents([text])
+        return self.embed_queries([text])

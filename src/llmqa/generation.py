@@ -59,7 +59,6 @@ def generate_grounded_answer(
     results: list[SearchResult],
     *,
     model: str,
-    api_key: str | None = None,
     client: ResponsesClient | None = None,
 ) -> GroundedAnswer:
     """Generate one grounded answer and validate its bracketed source references."""
@@ -67,7 +66,8 @@ def generate_grounded_answer(
     if not question.strip():
         raise ValueError("question must not be empty")
     context = render_context(results)
-    openai_client = client or OpenAI(api_key=api_key)
+    # OpenAI reads OPENAI_API_KEY from the process environment.
+    openai_client = client or OpenAI()
     response = openai_client.responses.create(
         model=model,
         instructions=SYSTEM_INSTRUCTIONS,

@@ -1,6 +1,6 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; SciFact adapter and full BM25 baseline implemented, dense runs pending
+Status: Phase 0 implemented; full SciFact OpenAI retrieval comparison implemented
 Last updated: 2026-08-28
 
 ## 1. Executive decision
@@ -38,6 +38,8 @@ gate.
 - Deploying the current research controls in high-stakes allocation, employment, credit, housing,
   education, medical, or legal decisions.
 - Implementing generator-logit mitigation against an API that does not expose stable class logits.
+- Adding multi-provider runtime configuration in the current phase; OpenAI is the only live
+  generation and embedding provider.
 
 ## 3. Evidence behind the design
 
@@ -170,10 +172,14 @@ fairness for LLMQA's eventual users, documents, languages, or policy targets.
 | 3 | BBQ | Diagnose generator bias in ambiguous versus disambiguated QA | Phase 2 adapter; never report it as retrieval fairness |
 | 4 | CRAG | Evaluate factual answers, missing answers, and dynamic knowledge | Defer because its web/KG setup does not match the current uploaded-document product |
 
-Current verified public baseline (2026-08-28): LLMQA's in-memory BM25 (`k1=1.2`, `b=0.75`) ran on
-the full SciFact test split (5,183 documents, 300 queries) at `k=10` and produced Recall@10
-`0.7843`, MRR@10 `0.6258`, and NDCG@10 `0.6602`. Dense, dense + MMR, and hybrid runs are not yet
-available, so this is a baseline—not evidence that one pipeline beats another.
+Current verified public comparison (2026-08-28): all four LLMQA retrievers ran on the full SciFact
+test split (5,183 documents, 300 queries) at `k=10`. OpenAI `text-embedding-3-small` at 1536
+dimensions backed the shared dense `IndexFlatIP` index. Dense produced the highest Recall@10
+(`0.8536`); equal-weight hybrid RRF produced the highest MRR@10 (`0.6890`) and NDCG@10 (`0.7214`).
+Dense + MMR at `lambda=0.75` regressed all three observed means versus plain dense. Paired
+10,000-resample query-bootstrap intervals show dense and hybrid improvements over BM25 exclude zero
+for all three metrics; the dense + MMR intervals versus BM25 cross zero. These statements apply to
+SciFact only and do not establish production quality or fairness.
 
 Dataset governance requirements:
 
@@ -240,6 +246,8 @@ Dataset governance requirements:
 - Cite source labels for factual claims.
 - Use the exact insufficient-evidence response when context cannot answer the question.
 - Disable provider-side response storage for app calls.
+- Read OpenAI credentials only from `OPENAI_API_KEY`; never accept or persist them in the UI,
+  benchmark artifacts, logs, or index metadata.
 - Flag invalid or missing citations instead of silently displaying them as trustworthy.
 
 ### FR-4 Fairness evaluation and mitigation
@@ -266,13 +274,10 @@ release claim.
 
 - **Implemented:** BM25, weighted RRF, visible component diagnostics, and an offline
   Recall@k/MRR/NDCG evaluator with strict JSONL contracts.
-- **Implemented:** checksum-verified SciFact acquisition, safe extraction, format adapter, shared
-  dense/query-embedding cache, comparison runner, machine-readable artifacts, and full BM25
-  baseline.
-- **Pending provider run:** execute dense, dense + MMR, and hybrid RRF with one recorded embedding
-  configuration and the existing shared-index runner.
-- **Next evidence milestone:** run all four retrievers on the full SciFact test split and publish a
-  generated README comparison figure only after configuration and results are committed.
+- **Implemented:** checksum-verified SciFact acquisition, safe extraction, format adapter, batched
+  query embeddings with a shared cache, and the full BM25/dense/dense+MMR/hybrid comparison.
+- **Implemented:** compact public evidence generation with paired query-bootstrap intervals and an
+  SVG README figure; bulky per-query outputs remain ignored but reproducible.
 - **After SciFact:** integrate the BRIGHT Robotics subset as a reasoning-intensive retrieval slice.
 - **Pending:** create at least 100 human-reviewed query/evidence judgements across answerable,
   unanswerable, multi-hop, near-duplicate, long-document, and adversarial-instruction cases.

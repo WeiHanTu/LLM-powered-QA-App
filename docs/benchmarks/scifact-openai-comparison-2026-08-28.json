@@ -1,0 +1,239 @@
+{
+  "build_seconds": {
+    "bm25": 0.29421299998648465,
+    "dense": 61.92865775001701,
+    "queries": 3.0337014999822713
+  },
+  "citation": "Wadden et al. (2020), Fact or Fiction: Verifying Scientific Claims, https://aclanthology.org/2020.emnlp-main.609/",
+  "configuration": {
+    "bm25_b": 0.75,
+    "bm25_k1": 1.2,
+    "dense_weight": 1.0,
+    "embedding_batch_size": 128,
+    "embedding_dimensions": 1536,
+    "embedding_model": "text-embedding-3-small",
+    "faiss_index": "IndexFlatIP with L2-normalized vectors",
+    "fetch_k": 40,
+    "k": 10,
+    "mmr_lambda": 0.75,
+    "rrf_rank_constant": 60,
+    "sparse_weight": 1.0
+  },
+  "dataset": {
+    "archive_md5": "5f7d1de60b170fc8027bb7898e2efca1",
+    "corpus_count": 5183,
+    "license": "CC BY-NC 2.0",
+    "limited_run": false,
+    "name": "beir/scifact",
+    "query_count": 300,
+    "source_url": "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip",
+    "split": "test",
+    "total_query_count": 300
+  },
+  "dense_vector_storage_bytes": 63688749,
+  "evidence_status": "verified_full_public_comparison",
+  "limitations": [
+    "SciFact is a scientific-claim retrieval benchmark, not validation for LLMQA users or uploaded documents.",
+    "Confidence intervals quantify variation over these 300 benchmark queries only; they do not quantify deployment uncertainty.",
+    "No correction was applied for multiple retriever and metric comparisons.",
+    "Search latency excludes OpenAI query embedding time because query vectors were precomputed for a fair local-retrieval comparison.",
+    "API token usage and dollar cost were not captured in this run.",
+    "The configured OpenAI model name is recorded, but provider-side model revisions can still affect future reproductions."
+  ],
+  "run_date": "2026-08-28",
+  "runs": [
+    {
+      "metrics": {
+        "MRR@10": {
+          "ci_95": [
+            0.5774717592592593,
+            0.6734113756613757
+          ],
+          "delta_vs_bm25": 0.0,
+          "mean": 0.6257685185185186,
+          "paired_delta_ci_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "NDCG@10": {
+          "ci_95": [
+            0.6149793092408727,
+            0.7052544782476006
+          ],
+          "delta_vs_bm25": 0.0,
+          "mean": 0.6601993721550043,
+          "paired_delta_ci_95": [
+            0.0,
+            0.0
+          ]
+        },
+        "Recall@10": {
+          "ci_95": [
+            0.7377777777777778,
+            0.8285569444444444
+          ],
+          "delta_vs_bm25": 0.0,
+          "mean": 0.7842777777777777,
+          "paired_delta_ci_95": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 4.198458016617224,
+        "p95": 7.67857919272501,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "bm25"
+    },
+    {
+      "metrics": {
+        "MRR@10": {
+          "ci_95": [
+            0.635507705026455,
+            0.7259501322751322
+          ],
+          "delta_vs_bm25": 0.054239417989418,
+          "mean": 0.6800079365079365,
+          "paired_delta_ci_95": [
+            0.011991501322751324,
+            0.09589117063492061
+          ]
+        },
+        "NDCG@10": {
+          "ci_95": [
+            0.6754465472849189,
+            0.7577833986130302
+          ],
+          "delta_vs_bm25": 0.05619262468137701,
+          "mean": 0.7163919968363814,
+          "paired_delta_ci_95": [
+            0.018206355894196363,
+            0.09379742853199097
+          ]
+        },
+        "Recall@10": {
+          "ci_95": [
+            0.8136638888888889,
+            0.8910027777777777
+          ],
+          "delta_vs_bm25": 0.06927777777777779,
+          "mean": 0.8535555555555555,
+          "paired_delta_ci_95": [
+            0.023666666666666666,
+            0.11466666666666667
+          ]
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.466208002762869,
+        "p95": 0.5996273917844519,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "dense"
+    },
+    {
+      "metrics": {
+        "MRR@10": {
+          "ci_95": [
+            0.6212657407407407,
+            0.7153732804232803
+          ],
+          "delta_vs_bm25": 0.04216005291005292,
+          "mean": 0.6679285714285714,
+          "paired_delta_ci_95": [
+            -0.0009129298941798909,
+            0.08476342592592594
+          ]
+        },
+        "NDCG@10": {
+          "ci_95": [
+            0.6515726127471814,
+            0.7395834382334023
+          ],
+          "delta_vs_bm25": 0.035113249386914076,
+          "mean": 0.6953126215419184,
+          "paired_delta_ci_95": [
+            -0.00436644383967682,
+            0.073841753183712
+          ]
+        },
+        "Recall@10": {
+          "ci_95": [
+            0.771,
+            0.8566666666666667
+          ],
+          "delta_vs_bm25": 0.031111111111111114,
+          "mean": 0.8153888888888889,
+          "paired_delta_ci_95": [
+            -0.016166666666666666,
+            0.07733611111111108
+          ]
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.9575214644428343,
+        "p95": 1.4422333071706817,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "dense-mmr"
+    },
+    {
+      "metrics": {
+        "MRR@10": {
+          "ci_95": [
+            0.6434904761904762,
+            0.7341291666666667
+          ],
+          "delta_vs_bm25": 0.06321957671957673,
+          "mean": 0.6889880952380952,
+          "paired_delta_ci_95": [
+            0.03463088624338624,
+            0.09286640211640211
+          ]
+        },
+        "NDCG@10": {
+          "ci_95": [
+            0.6786131355380253,
+            0.7633765375001105
+          ],
+          "delta_vs_bm25": 0.061227807235452264,
+          "mean": 0.7214271793904565,
+          "paired_delta_ci_95": [
+            0.037141579925300906,
+            0.08619543412049277
+          ]
+        },
+        "Recall@10": {
+          "ci_95": [
+            0.7978888888888889,
+            0.8791125000000001
+          ],
+          "delta_vs_bm25": 0.05527777777777779,
+          "mean": 0.8395555555555556,
+          "paired_delta_ci_95": [
+            0.025833333333333333,
+            0.08616805555555554
+          ]
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 4.952395480358973,
+        "p95": 8.427756218588913,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "hybrid"
+    }
+  ],
+  "schema_version": 1,
+  "statistical_method": {
+    "confidence_level": 0.95,
+    "multiple_comparison_correction": false,
+    "name": "paired nonparametric query bootstrap",
+    "resamples": 10000,
+    "seed": 20260828,
+    "unit": "SciFact test query"
+  }
+}

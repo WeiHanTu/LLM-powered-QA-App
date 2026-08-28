@@ -50,7 +50,7 @@ def test_openai_provider_batches_and_restores_input_order() -> None:
         client=client,
     )
 
-    vectors = provider.embed_documents(["a", "bbbb", "cc"])
+    vectors = provider.embed_queries(["a", "bbbb", "cc"])
 
     assert len(client.embeddings.calls) == 2
     assert np.array_equal(vectors, np.asarray([[1, 0], [4, 1], [2, 0]], dtype=np.float32))

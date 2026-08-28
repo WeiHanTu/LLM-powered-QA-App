@@ -11,6 +11,7 @@ from typing import Any
 
 import streamlit as st
 
+from llmqa.config import openai_api_key_configured
 from llmqa.embeddings import OpenAIEmbeddingProvider
 from llmqa.fairness import audit_exposure, fair_greedy_rerank
 from llmqa.generation import generate_grounded_answer
@@ -67,12 +68,11 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Index settings")
-        key_input = st.text_input(
-            "OpenAI API key",
-            type="password",
-            help="Kept in this process only. You can instead set OPENAI_API_KEY.",
-        )
-        api_key = key_input.strip() or os.getenv("OPENAI_API_KEY")
+        api_key_is_configured = openai_api_key_configured()
+        if api_key_is_configured:
+            st.success("OpenAI authentication loaded from `OPENAI_API_KEY`.")
+        else:
+            st.warning("Set `OPENAI_API_KEY` before starting the application.")
         embedding_model = st.text_input(
             "Embedding model",
             value=os.getenv("LLMQA_EMBEDDING_MODEL", "text-embedding-3-small"),
@@ -129,8 +129,8 @@ def main() -> None:
     if build_index:
         if not uploaded_files:
             st.error("Upload at least one supported document.")
-        elif not api_key:
-            st.error("Provide an API key or set OPENAI_API_KEY.")
+        elif not api_key_is_configured:
+            st.error("Set OPENAI_API_KEY and restart the application.")
         else:
             try:
                 source_groups = _json_object(source_groups_raw, label="source-to-group mapping")
@@ -155,7 +155,6 @@ def main() -> None:
                         raise ValueError("the uploaded documents contained no extractable text")
                     provider = OpenAIEmbeddingProvider(
                         model=embedding_model,
-                        api_key=api_key,
                     )
                     dense_retriever = FaissRetriever.from_chunks(chunks, provider)
                     st.session_state.retrievers = {
@@ -189,8 +188,8 @@ def main() -> None:
         if "retrievers" not in st.session_state:
             st.error("Build an index before asking a question.")
             return
-        if not api_key:
-            st.error("Provide an API key or set OPENAI_API_KEY.")
+        if not api_key_is_configured:
+            st.error("Set OPENAI_API_KEY and restart the application.")
             return
 
         retriever: FaissRetriever | HybridRetriever = st.session_state.retrievers[retrieval_mode]
@@ -246,7 +245,6 @@ def main() -> None:
                     question,
                     results,
                     model=chat_model,
-                    api_key=api_key,
                 )
                 st.markdown(answer.text)
                 if not answer.citations_valid:

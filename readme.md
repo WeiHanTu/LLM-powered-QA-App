@@ -47,21 +47,32 @@ flowchart LR
     G --> V["Cited answer + citation validation"]
 ```
 
-## Verified public retrieval baseline
+## Verified public retrieval benchmark
 
-The first full public run uses BEIR SciFact: 5,183 scientific abstracts and all 300 test queries.
-These are LLMQA's own results, not copied leaderboard scores.
+The first full comparison uses BEIR SciFact: 5,183 scientific abstracts and all 300 test queries.
+Every retriever used the same corpus, queries, qrels, and cutoff. Dense methods shared one OpenAI
+`text-embedding-3-small` 1536-dimensional FAISS index; these are LLMQA's results, not copied
+leaderboard scores.
 
-| Dataset | Retriever | Recall@10 | MRR@10 | NDCG@10 |
-|---|---:|---:|---:|---:|
-| SciFact test | BM25 (`k1=1.2`, `b=0.75`) | 0.7843 | 0.6258 | 0.6602 |
+![SciFact retrieval benchmark with 95% query-bootstrap confidence intervals](docs/benchmarks/scifact-openai-comparison-2026-08-28.svg)
 
-The machine-readable evidence is in
-[`docs/benchmarks/scifact-bm25-2026-08-28.json`](docs/benchmarks/scifact-bm25-2026-08-28.json).
-SciFact is CC BY-NC 2.0, so raw data is downloaded into ignored local artifacts and is not
-redistributed here. This single baseline does **not** show that hybrid retrieval is better; the
-comparison figure remains intentionally gated until dense, dense + MMR, and hybrid runs use the
-same corpus, queries, cutoff, and embedding configuration.
+| Retriever | Recall@10 | MRR@10 | NDCG@10 |
+|---|---:|---:|---:|
+| BM25 (`k1=1.2`, `b=0.75`) | 0.7843 | 0.6258 | 0.6602 |
+| Dense FAISS | **0.8536** | 0.6800 | 0.7164 |
+| Dense + MMR (`lambda=0.75`) | 0.8154 | 0.6679 | 0.6953 |
+| Hybrid RRF (`k=60`) | 0.8396 | **0.6890** | **0.7214** |
+
+Dense has the highest observed Recall@10; hybrid has the highest observed MRR@10 and NDCG@10.
+Paired 95% query-bootstrap intervals for dense and hybrid improvements over BM25 exclude zero on
+all three metrics. Dense + MMR's intervals versus BM25 cross zero, and its observed means are lower
+than plain dense. MMR is therefore not the default based on this run.
+
+The compact [machine-readable evidence](docs/benchmarks/scifact-openai-comparison-2026-08-28.json)
+contains the full configuration, 10,000-resample intervals, paired deltas, latency scope, and
+limitations. SciFact is CC BY-NC 2.0, so raw data and bulky per-query artifacts remain ignored and
+are not redistributed. The result is evidence for this benchmark, not proof of production quality
+or fairness.
 
 ```bash
 uv run llmqa fetch-scifact
@@ -71,6 +82,11 @@ uv run llmqa benchmark-scifact --retrievers bm25 -k 10 --fetch-k 40
 uv run llmqa benchmark-scifact \
   --retrievers bm25 dense dense-mmr hybrid \
   -k 10 --fetch-k 40
+
+uv run llmqa report-scifact artifacts/benchmark-results/scifact/summary.json \
+  --snapshot docs/benchmarks/scifact-comparison.json \
+  --figure docs/benchmarks/scifact-comparison.svg \
+  --run-date YYYY-MM-DD
 ```
 
 ## Quick start
@@ -85,9 +101,10 @@ export OPENAI_API_KEY="your-key"
 uv run streamlit run app.py
 ```
 
-Set `OPENAI_API_KEY` in your shell or paste a session-only key into the sidebar. The application
-keeps uploaded documents and the FAISS index in memory; temporary upload files are deleted after
-indexing.
+LLMQA uses environment-only OpenAI authentication: the SDK reads `OPENAI_API_KEY` directly, while
+the application only checks whether it is present. The key is never copied into Streamlit state or
+benchmark artifacts. Uploaded documents and the FAISS index remain in memory; temporary upload
+files are deleted after indexing.
 
 ## Fairness research controls
 

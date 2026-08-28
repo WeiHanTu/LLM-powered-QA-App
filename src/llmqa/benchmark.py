@@ -361,6 +361,22 @@ class _QueryCachingEmbeddingProvider:
     def embed_documents(self, texts: Sequence[str]) -> FloatMatrix:
         return self._delegate.embed_documents(texts)
 
+    def prime_queries(self, texts: Sequence[str]) -> None:
+        unique_texts = list(dict.fromkeys(texts))
+        if not unique_texts:
+            raise ValueError("at least one benchmark query is required")
+        vectors = self._delegate.embed_queries(unique_texts)
+        if vectors.ndim != 2 or vectors.shape[0] != len(unique_texts):
+            raise ValueError("query embedding provider returned an unexpected matrix shape")
+        self._queries.update(
+            {text: vectors[index : index + 1].copy() for index, text in enumerate(unique_texts)}
+        )
+
+    def embed_queries(self, texts: Sequence[str]) -> FloatMatrix:
+        if not texts:
+            raise ValueError("at least one query is required")
+        return np.concatenate([self.embed_query(text) for text in texts], axis=0)
+
     def embed_query(self, text: str) -> FloatMatrix:
         if text not in self._queries:
             self._queries[text] = self._delegate.embed_query(text)
@@ -419,6 +435,9 @@ def run_retrieval_benchmark(
         started = time.perf_counter()
         dense = FaissRetriever.from_chunks(list(dataset.chunks), cached_provider)
         build_seconds["dense"] = time.perf_counter() - started
+        started = time.perf_counter()
+        cached_provider.prime_queries([judgment.query for judgment in dataset.judgments])
+        build_seconds["queries"] = time.perf_counter() - started
 
     hybrid: HybridRetriever | None = None
     if "hybrid" in requested:

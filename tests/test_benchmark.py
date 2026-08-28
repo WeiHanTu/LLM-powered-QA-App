@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import xml.etree.ElementTree as ET
 import zipfile
 from collections.abc import Sequence
 from pathlib import Path
@@ -17,6 +18,7 @@ from llmqa.benchmark import (
     run_retrieval_benchmark,
     write_benchmark_artifacts,
 )
+from llmqa.benchmark_reporting import write_public_benchmark_report
 from llmqa.cli import main
 
 
@@ -63,6 +65,7 @@ class CountingEmbeddingProvider:
 
     def __init__(self) -> None:
         self.document_calls = 0
+        self.query_batch_calls = 0
         self.query_calls = 0
         self.vectors = {
             "Alpha\n\napple evidence": [1.0, 0.0, 0.0],
@@ -79,6 +82,10 @@ class CountingEmbeddingProvider:
     def embed_query(self, text: str) -> NDArray[np.float32]:
         self.query_calls += 1
         return np.asarray([self.vectors[text]], dtype=np.float32)
+
+    def embed_queries(self, texts: Sequence[str]) -> NDArray[np.float32]:
+        self.query_batch_calls += 1
+        return np.asarray([self.vectors[text] for text in texts], dtype=np.float32)
 
 
 def test_fetch_and_load_scifact_fixture_with_verified_manifest(tmp_path: Path) -> None:
@@ -152,7 +159,8 @@ def test_benchmark_reuses_dense_embeddings_and_writes_artifacts(tmp_path: Path) 
     summary_path = write_benchmark_artifacts(outcome, tmp_path / "results")
 
     assert provider.document_calls == 1
-    assert provider.query_calls == 2
+    assert provider.query_batch_calls == 1
+    assert provider.query_calls == 0
     assert outcome.report.limited_run is False
     assert outcome.report.bm25_k1 == 1.2
     assert outcome.report.rrf_rank_constant == 60
@@ -209,3 +217,52 @@ def test_benchmark_scifact_cli_runs_offline_bm25(
     output = json.loads(capsys.readouterr().out)
     assert output["query_count"] == 2
     assert output["runs"][0]["mean_ndcg_at_k"] == 1
+
+
+def test_benchmark_scifact_cli_requires_environment_key_for_dense_modes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_directory = _fetch_fixture(tmp_path)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="OPENAI_API_KEY is not set"):
+        main(
+            [
+                "benchmark-scifact",
+                "--dataset-dir",
+                str(dataset_directory),
+                "--retrievers",
+                "dense",
+            ]
+        )
+
+
+def test_public_report_is_compact_and_contains_bootstrap_intervals(tmp_path: Path) -> None:
+    dataset = load_scifact(_fetch_fixture(tmp_path))
+    outcome = run_retrieval_benchmark(
+        dataset,
+        ["bm25", "dense", "dense-mmr", "hybrid"],
+        k=10,
+        fetch_k=10,
+        embedding_provider=CountingEmbeddingProvider(),
+    )
+    summary_path = write_benchmark_artifacts(outcome, tmp_path / "full")
+    snapshot_path = tmp_path / "public" / "snapshot.json"
+    figure_path = tmp_path / "public" / "figure.svg"
+
+    write_public_benchmark_report(
+        summary_path,
+        snapshot_path,
+        figure_path,
+        run_date="2026-08-28",
+        bootstrap_resamples=100,
+        bootstrap_seed=7,
+    )
+
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert snapshot["evidence_status"] == "verified_full_public_comparison"
+    assert snapshot["statistical_method"]["resamples"] == 100
+    assert "per_query" not in snapshot_path.read_text(encoding="utf-8")
+    assert len(snapshot["runs"][0]["metrics"]["Recall@10"]["ci_95"]) == 2
+    ET.fromstring(figure_path.read_text(encoding="utf-8"))

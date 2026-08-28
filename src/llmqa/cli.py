@@ -16,6 +16,8 @@ from llmqa.benchmark import (
     run_retrieval_benchmark,
     write_benchmark_artifacts,
 )
+from llmqa.benchmark_reporting import write_public_benchmark_report
+from llmqa.config import require_openai_api_key
 from llmqa.domain import Chunk, SearchResult
 from llmqa.embeddings import OpenAIEmbeddingProvider
 from llmqa.evaluation import RetrievalJudgment, evaluate_rankings
@@ -173,6 +175,17 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--embedding-model", default="text-embedding-3-small")
     benchmark.add_argument("--embedding-dimensions", type=int, default=1536)
     benchmark.add_argument("--embedding-batch-size", type=int, default=128)
+
+    report = subparsers.add_parser(
+        "report-scifact",
+        help="generate compact public JSON and SVG evidence from a full SciFact run",
+    )
+    report.add_argument("summary", type=Path, help="full benchmark summary JSON")
+    report.add_argument("--snapshot", type=Path, required=True)
+    report.add_argument("--figure", type=Path, required=True)
+    report.add_argument("--run-date", required=True, help="benchmark date in YYYY-MM-DD format")
+    report.add_argument("--bootstrap-resamples", type=int, default=10_000)
+    report.add_argument("--bootstrap-seed", type=int, default=20_260_828)
     return parser
 
 
@@ -238,6 +251,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "benchmark-scifact":
         retriever_names: list[RetrieverName] = args.retrievers
         needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in retriever_names)
+        if needs_dense:
+            require_openai_api_key()
         provider = (
             OpenAIEmbeddingProvider(
                 model=args.embedding_model,
@@ -282,6 +297,27 @@ def main(argv: list[str] | None = None) -> int:
                         }
                         for run in outcome.report.runs
                     ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-scifact":
+        write_public_benchmark_report(
+            args.summary,
+            args.snapshot,
+            args.figure,
+            run_date=args.run_date,
+            bootstrap_resamples=args.bootstrap_resamples,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot_path": str(args.snapshot),
+                    "figure_path": str(args.figure),
+                    "status": "generated",
                 },
                 indent=2,
             )
