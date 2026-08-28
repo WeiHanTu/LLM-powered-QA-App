@@ -11,6 +11,7 @@ requires-python = ">=3.12,<3.14"
 license = { file = "LICENSE" }
 authors = [{ name = "Wei-Han Tu" }]
 dependencies = [
+    "certifi>=2025.8.3",
     "docx2txt>=0.9,<1",
     "faiss-cpu>=1.12,<2",
     "numpy>=1.26,<3",

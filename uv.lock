@@ -437,6 +437,7 @@ name = "llmqa"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "certifi" },
     { name = "docx2txt" },
     { name = "faiss-cpu" },
     { name = "numpy" },
@@ -456,6 +457,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", specifier = ">=2025.8.3" },
     { name = "docx2txt", specifier = ">=0.9,<1" },
     { name = "faiss-cpu", specifier = ">=1.12,<2" },
     { name = "numpy", specifier = ">=1.26,<3" },

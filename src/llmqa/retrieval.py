@@ -71,6 +71,12 @@ class FaissRetriever:
     def chunk_ids(self) -> tuple[str, ...]:
         return tuple(chunk.id for chunk in self._chunks)
 
+    @property
+    def vector_storage_bytes(self) -> int:
+        """Return bytes held by the FAISS index and the MMR vector matrix."""
+
+        return int(faiss.serialize_index(self._index).nbytes + self._document_vectors.nbytes)
+
     def search(
         self,
         query: str,

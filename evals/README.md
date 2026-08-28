@@ -38,3 +38,27 @@ The example files contain only two synthetic queries. They prove the interface w
 measure application quality. A defensible comparison requires at least 100 independently reviewed
 questions spanning answerable, unanswerable, multi-hop, near-duplicate, long-document, and
 adversarial-instruction cases, with adjudication rules and reviewer agreement recorded.
+
+## Public SciFact benchmark
+
+The first-party SciFact adapter downloads the official BEIR archive, verifies MD5
+`5f7d1de60b170fc8027bb7898e2efca1`, rejects unsafe archive paths, and creates a manifest with
+SHA-256 hashes for the extracted corpus, queries, and test qrels.
+
+```bash
+uv run llmqa fetch-scifact
+uv run llmqa benchmark-scifact --retrievers bm25 -k 10 --fetch-k 40
+```
+
+Dense modes require `OPENAI_API_KEY`. A single invocation shares document and query embeddings:
+
+```bash
+uv run llmqa benchmark-scifact \
+  --retrievers bm25 dense dense-mmr hybrid \
+  --embedding-model text-embedding-3-small \
+  --embedding-dimensions 1536 \
+  -k 10 --fetch-k 40
+```
+
+Outputs are written under ignored `artifacts/benchmark-results/scifact/`. SciFact is released under
+CC BY-NC 2.0; the raw archive and extracted data must not be committed to this repository.

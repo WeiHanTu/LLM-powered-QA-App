@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "evidence_status": "verified_full_public_baseline",
+  "dataset": {
+    "name": "beir/scifact",
+    "split": "test",
+    "source_url": "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip",
+    "archive_md5": "5f7d1de60b170fc8027bb7898e2efca1",
+    "license": "CC BY-NC 2.0",
+    "corpus_count": 5183,
+    "query_count": 300,
+    "total_query_count": 300,
+    "limited_run": false
+  },
+  "retriever": {
+    "name": "bm25",
+    "k1": 1.2,
+    "b": 0.75,
+    "k": 10,
+    "fetch_k": 40
+  },
+  "metrics": {
+    "recall_at_10": 0.7842777777777777,
+    "mrr_at_10": 0.6257685185185186,
+    "ndcg_at_10": 0.6601993721550043
+  },
+  "citation": "Wadden et al. (2020), Fact or Fiction: Verifying Scientific Claims, https://aclanthology.org/2020.emnlp-main.609/",
+  "limitations": [
+    "This is a public scientific-claim retrieval benchmark, not project-specific validation.",
+    "Dense, dense plus MMR, and hybrid RRF results were unavailable in this run.",
+    "No conclusion about the best retrieval pipeline can be drawn from a single BM25 baseline."
+  ]
+}

@@ -34,6 +34,10 @@
 ## Code review rules
 
 - Flag retrieval changes that lack Recall@k, MRR, or NDCG evidence on the evaluation set.
+- Do not commit third-party benchmark corpora. Pin source/checksum/license metadata and keep raw data
+  under ignored artifacts.
+- Do not add README benchmark figures from toy, limited, mixed-configuration, or copied leaderboard
+  results. Generate them only from a complete reproducible project run and show limitations nearby.
 - Flag fairness changes that omit pre/post metrics, group-label coverage, or a declared target.
 - Flag generated factual answers without verifiable source identifiers or an insufficient-context
   abstention path.

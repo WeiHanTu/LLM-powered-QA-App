@@ -27,6 +27,52 @@ The fairness features do **not** prove that a model or application is unbiased. 
 declared behaviors on reviewed labels and evaluation cases. See [the engineering spec](docs/spec.md)
 for the threat model, research basis, limitations, and roadmap.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    D["PDF / DOCX / TXT"] --> C["Provenance-preserving chunks"]
+    C --> E["OpenAI embeddings"]
+    E --> F["FAISS cosine search"]
+    C --> B["BM25 lexical search"]
+    F --> M["Dense + MMR baseline"]
+    F --> R["Reciprocal-rank fusion"]
+    B --> R
+    M --> P["Candidate evidence"]
+    R --> P
+    P --> Q{"Research fairness mode?"}
+    Q -- No --> G["Grounded generation"]
+    Q -- Yes --> A["Fair Greedy rerank + NDKL audit"]
+    A --> G
+    G --> V["Cited answer + citation validation"]
+```
+
+## Verified public retrieval baseline
+
+The first full public run uses BEIR SciFact: 5,183 scientific abstracts and all 300 test queries.
+These are LLMQA's own results, not copied leaderboard scores.
+
+| Dataset | Retriever | Recall@10 | MRR@10 | NDCG@10 |
+|---|---:|---:|---:|---:|
+| SciFact test | BM25 (`k1=1.2`, `b=0.75`) | 0.7843 | 0.6258 | 0.6602 |
+
+The machine-readable evidence is in
+[`docs/benchmarks/scifact-bm25-2026-08-28.json`](docs/benchmarks/scifact-bm25-2026-08-28.json).
+SciFact is CC BY-NC 2.0, so raw data is downloaded into ignored local artifacts and is not
+redistributed here. This single baseline does **not** show that hybrid retrieval is better; the
+comparison figure remains intentionally gated until dense, dense + MMR, and hybrid runs use the
+same corpus, queries, cutoff, and embedding configuration.
+
+```bash
+uv run llmqa fetch-scifact
+uv run llmqa benchmark-scifact --retrievers bm25 -k 10 --fetch-k 40
+
+# Requires OPENAI_API_KEY and performs billable embedding calls.
+uv run llmqa benchmark-scifact \
+  --retrievers bm25 dense dense-mmr hybrid \
+  -k 10 --fetch-k 40
+```
+
 ## Quick start
 
 Requirements: Python 3.12, [`uv`](https://docs.astral.sh/uv/), and an OpenAI API key.
@@ -90,7 +136,8 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 ## Important limitations
 
 - The project does not yet have the required 100-query, human-reviewed evaluation set. The included
-  two-query files demonstrate the schema only; they are not evidence that hybrid search is better.
+  two-query fixtures demonstrate the generic JSONL schema only. SciFact is a genuine public
+  retrieval baseline, but it is not evidence about the project's eventual users or documents.
 - The target exposure distribution is a policy decision that must be justified with domain experts
   and affected communities; uniform exposure is not automatically fair.
 - Source-level labels are coarse. Chunk-, author-, geography-, and intersection-level audits are

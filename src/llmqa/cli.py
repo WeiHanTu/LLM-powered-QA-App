@@ -8,7 +8,16 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from llmqa.benchmark import (
+    RETRIEVER_NAMES,
+    RetrieverName,
+    fetch_scifact,
+    load_scifact,
+    run_retrieval_benchmark,
+    write_benchmark_artifacts,
+)
 from llmqa.domain import Chunk, SearchResult
+from llmqa.embeddings import OpenAIEmbeddingProvider
 from llmqa.evaluation import RetrievalJudgment, evaluate_rankings
 from llmqa.fairness import (
     CounterfactualOutcome,
@@ -125,6 +134,45 @@ def build_parser() -> argparse.ArgumentParser:
     retrieval.add_argument("judgments", type=Path, help="query and relevance JSONL")
     retrieval.add_argument("run", type=Path, help="ranked chunk-ID JSONL")
     retrieval.add_argument("-k", type=int, required=True)
+
+    fetch = subparsers.add_parser(
+        "fetch-scifact",
+        help="download and checksum-verify the BEIR SciFact benchmark",
+    )
+    fetch.add_argument("--cache-dir", type=Path, default=Path("artifacts/benchmarks"))
+
+    benchmark = subparsers.add_parser(
+        "benchmark-scifact",
+        help="run LLMQA retrievers on an already-fetched SciFact test split",
+    )
+    benchmark.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/benchmarks/scifact"),
+    )
+    benchmark.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/benchmark-results/scifact"),
+    )
+    benchmark.add_argument(
+        "--retrievers",
+        nargs="+",
+        choices=RETRIEVER_NAMES,
+        default=["bm25"],
+    )
+    benchmark.add_argument("-k", type=int, default=10)
+    benchmark.add_argument("--fetch-k", type=int, default=40)
+    benchmark.add_argument("--mmr-lambda", type=float, default=0.75)
+    benchmark.add_argument("--bm25-k1", type=float, default=1.2)
+    benchmark.add_argument("--bm25-b", type=float, default=0.75)
+    benchmark.add_argument("--rrf-rank-constant", type=int, default=60)
+    benchmark.add_argument("--dense-weight", type=float, default=1.0)
+    benchmark.add_argument("--sparse-weight", type=float, default=1.0)
+    benchmark.add_argument("--limit-queries", type=int)
+    benchmark.add_argument("--embedding-model", default="text-embedding-3-small")
+    benchmark.add_argument("--embedding-dimensions", type=int, default=1536)
+    benchmark.add_argument("--embedding-batch-size", type=int, default=128)
     return parser
 
 
@@ -171,6 +219,73 @@ def main(argv: list[str] | None = None) -> int:
             k=args.k,
         )
         print(json.dumps(asdict(evaluation), indent=2))
+        return 0
+
+    if args.command == "fetch-scifact":
+        dataset_directory = fetch_scifact(args.cache_dir)
+        print(
+            json.dumps(
+                {
+                    "dataset": "beir/scifact",
+                    "dataset_directory": str(dataset_directory),
+                    "status": "verified",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "benchmark-scifact":
+        retriever_names: list[RetrieverName] = args.retrievers
+        needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in retriever_names)
+        provider = (
+            OpenAIEmbeddingProvider(
+                model=args.embedding_model,
+                dimensions=args.embedding_dimensions,
+                batch_size=args.embedding_batch_size,
+            )
+            if needs_dense
+            else None
+        )
+        dataset = load_scifact(args.dataset_dir, limit_queries=args.limit_queries)
+        outcome = run_retrieval_benchmark(
+            dataset,
+            retriever_names,
+            k=args.k,
+            fetch_k=args.fetch_k,
+            mmr_lambda=args.mmr_lambda,
+            bm25_k1=args.bm25_k1,
+            bm25_b=args.bm25_b,
+            rrf_rank_constant=args.rrf_rank_constant,
+            dense_weight=args.dense_weight,
+            sparse_weight=args.sparse_weight,
+            embedding_provider=provider,
+        )
+        summary_path = write_benchmark_artifacts(outcome, args.output_dir)
+        print(
+            json.dumps(
+                {
+                    "summary_path": str(summary_path),
+                    "dataset": outcome.report.dataset,
+                    "corpus_count": outcome.report.corpus_count,
+                    "query_count": outcome.report.query_count,
+                    "total_query_count": outcome.report.total_query_count,
+                    "limited_run": outcome.report.limited_run,
+                    "runs": [
+                        {
+                            "retriever": run.retriever,
+                            "mean_recall_at_k": run.evaluation.mean_recall_at_k,
+                            "mean_reciprocal_rank": run.evaluation.mean_reciprocal_rank,
+                            "mean_ndcg_at_k": run.evaluation.mean_ndcg_at_k,
+                            "retrieval_latency_ms_p50": run.retrieval_latency_ms_p50,
+                            "retrieval_latency_ms_p95": run.retrieval_latency_ms_p95,
+                        }
+                        for run in outcome.report.runs
+                    ],
+                },
+                indent=2,
+            )
+        )
         return 0
 
     rows = _read_jsonl(args.input)

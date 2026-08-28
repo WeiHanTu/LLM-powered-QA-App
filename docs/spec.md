@@ -1,6 +1,6 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; Phase 1 evaluation infrastructure implemented, benchmark pending
+Status: Phase 0 implemented; SciFact adapter and full BM25 baseline implemented, dense runs pending
 Last updated: 2026-08-28
 
 ## 1. Executive decision
@@ -129,11 +129,11 @@ Key contracts:
 
 ### Retrieval utility
 
-- Recall@k: whether a labelled supporting chunk appears in the top k.
-- MRR: how early the first supporting chunk appears.
-- NDCG@k: graded relevance with rank discounting.
+- Recall@5 and Recall@10: whether labelled supporting chunks appear in the first results.
+- MRR@10: how early the first supporting chunk appears.
+- NDCG@10: graded relevance with rank discounting.
 - Duplicate-context rate and source diversity.
-- p50/p95 embedding and retrieval latency plus index size.
+- Index/embedding build time, p50/p95 retrieval latency, and index size.
 
 ### Generation utility and grounding
 
@@ -157,6 +157,41 @@ Key contracts:
 Every report must include sample counts, slices, group intersections where support is adequate,
 confidence intervals or paired tests, prompt/model/embedder/index versions, and benchmark
 limitations. Tiny slices are reported as insufficient evidence, not as zero disparity.
+
+### Public benchmark portfolio and evidence policy
+
+Public benchmarks provide reproducible, transferable baselines. They do not validate quality or
+fairness for LLMQA's eventual users, documents, languages, or policy targets.
+
+| Order | Benchmark | Purpose | Integration decision |
+|---|---|---|---|
+| 1 | BEIR SciFact | Compare BM25, dense FAISS, dense + MMR, and hybrid RRF | Implement first: 5,183 abstracts, 300 test queries, 339 positive qrels |
+| 2 | BRIGHT Robotics | Stress reasoning-intensive retrieval | Add after the SciFact harness is stable; report separately rather than averaging domains |
+| 3 | BBQ | Diagnose generator bias in ambiguous versus disambiguated QA | Phase 2 adapter; never report it as retrieval fairness |
+| 4 | CRAG | Evaluate factual answers, missing answers, and dynamic knowledge | Defer because its web/KG setup does not match the current uploaded-document product |
+
+Current verified public baseline (2026-08-28): LLMQA's in-memory BM25 (`k1=1.2`, `b=0.75`) ran on
+the full SciFact test split (5,183 documents, 300 queries) at `k=10` and produced Recall@10
+`0.7843`, MRR@10 `0.6258`, and NDCG@10 `0.6602`. Dense, dense + MMR, and hybrid runs are not yet
+available, so this is a baseline—not evidence that one pipeline beats another.
+
+Dataset governance requirements:
+
+- Download third-party data on demand into ignored local artifacts; do not commit or redistribute
+  raw corpora.
+- Pin the source URL and published checksum, verify before extraction, reject unsafe archive paths,
+  and record the dataset version and original citation in every report.
+- Record and honor the original license. SciFact is CC BY-NC 2.0; BRIGHT and BBQ are CC BY 4.0;
+  CRAG is CC BY-NC 4.0. These benchmarks are research evidence, not automatically deployable
+  product data.
+- Keep benchmark adapters dependency-light and deterministic. Network and provider calls must be
+  explicit; CI uses small local fixtures only.
+- Run every retrieval method on the identical corpus, queries, qrels, cutoff, and embedding model.
+  Do not compare scores copied from papers or leaderboards as if LLMQA produced them.
+- Publish a README benchmark table or figure only after a complete reproducible run. The figure must
+  identify the dataset, split, sample count, model, metric cutoffs, date, and known limitations.
+- Retain the planned 100+ project-specific, independently reviewed queries. Public results are an
+  additional baseline, not a substitute.
 
 ## 7. Functional requirements
 
@@ -183,6 +218,21 @@ limitations. Tiny slices are reported as insufficient evidence, not as zero disp
 - Reject duplicate/unknown query IDs, invalid grades, and judgment sets with no positive evidence.
 - Exclude explicitly unanswerable questions from relevance averages while retaining their count;
   evaluate abstention behavior separately at the generation layer.
+
+### FR-2B Public retrieval benchmark adapter
+
+- Provide a first-party command that downloads and verifies BEIR SciFact without requiring the
+  third-party BEIR Python package.
+- Convert the corpus, queries, and qrels into `Chunk` and `RetrievalJudgment` contracts without
+  changing source IDs or relevance grades.
+- Run one or more of `bm25`, `dense`, `dense-mmr`, and `hybrid` while sharing the same dense index
+  within a benchmark invocation.
+- Default to the offline BM25 run. Dense modes require an explicitly configured embedding provider
+  and must record its model, dimensions, and batch size.
+- Write machine-readable run JSONL and a summary JSON containing metrics, configuration, build time,
+  p50/p95 retrieval latency, dataset checksum, license, and citation.
+- Support a query limit for smoke tests, but label limited runs so they cannot be mistaken for the
+  full 300-query result.
 
 ### FR-3 Grounded generation
 
@@ -216,6 +266,14 @@ release claim.
 
 - **Implemented:** BM25, weighted RRF, visible component diagnostics, and an offline
   Recall@k/MRR/NDCG evaluator with strict JSONL contracts.
+- **Implemented:** checksum-verified SciFact acquisition, safe extraction, format adapter, shared
+  dense/query-embedding cache, comparison runner, machine-readable artifacts, and full BM25
+  baseline.
+- **Pending provider run:** execute dense, dense + MMR, and hybrid RRF with one recorded embedding
+  configuration and the existing shared-index runner.
+- **Next evidence milestone:** run all four retrievers on the full SciFact test split and publish a
+  generated README comparison figure only after configuration and results are committed.
+- **After SciFact:** integrate the BRIGHT Robotics subset as a reasoning-intensive retrieval slice.
 - **Pending:** create at least 100 human-reviewed query/evidence judgements across answerable,
   unanswerable, multi-hop, near-duplicate, long-document, and adversarial-instruction cases.
 - **Pending:** compare BM25, dense FAISS, dense+MMR, and hybrid RRF on the same judgments.
@@ -278,7 +336,23 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
   calls.
 - Documentation labels example data as schema fixtures, not a quality benchmark.
 
-## 11. Open decisions requiring domain input
+## 11. Public SciFact benchmark acceptance criteria
+
+- The downloader pins the official BEIR archive URL and MD5 and fails before extraction on a
+  mismatch.
+- Archive extraction rejects absolute paths and parent-directory traversal.
+- The adapter preserves all 5,183 corpus IDs and all 300 test query IDs in a full run.
+- The same query subset and cutoff feed every requested retriever.
+- BM25 runs without an API key; dense modes share one embedding/index build and record provider
+  configuration.
+- Summary and run artifacts are deterministic except for measured timings and contain an explicit
+  `limited_run` flag.
+- Offline fixture tests cover acquisition failure, parsing, ranking, metric calculation, and report
+  serialization; CI does not download SciFact or call a model provider.
+- README tables or figures are generated only from a committed full-run summary, with the CC BY-NC
+  2.0 restriction and lack of project-specific validity visible nearby.
+
+## 12. Open decisions requiring domain input
 
 - Intended users and decision stakes.
 - Which corpus attributes are legitimate to label and audit.
