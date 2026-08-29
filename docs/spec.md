@@ -1,6 +1,6 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; retrieval published; automated generation baseline pending human review
+Status: Phase 0 implemented; Phase 1 retrieval published; generation remains provisional
 Last updated: 2026-08-29
 
 ## 1. Executive decision
@@ -54,6 +54,14 @@ gate.
 - [BEIR (NeurIPS Datasets and Benchmarks 2021)](https://arxiv.org/abs/2104.08663) found BM25 to be a
   robust zero-shot baseline and reranking/adaptation methods to improve average effectiveness at a
   computational cost. That supports measuring dense, lexical, fused, and reranked paths separately.
+- [IRCoT (ACL 2023)](https://aclanthology.org/2023.acl-long.557/) shows why one-step
+  retrieve-then-read is insufficient for multi-step QA and motivates query updates between evidence
+  needs.
+- [Question Decomposition for RAG (ACL SRW 2025)](https://arxiv.org/abs/2507.00355) decomposes a
+  multi-hop question, retrieves for each subquestion, merges candidates, and reranks the pool.
+- [ChainRAG (ACL 2025)](https://aclanthology.org/2025.acl-long.1089/) identifies lost-in-retrieval
+  failures when decomposition omits key entities. LLMQA therefore pins and inspects generated
+  subqueries rather than treating decomposition as an opaque quality improvement.
 - [Does RAG Introduce Unfairness in LLMs? (COLING 2025)](https://aclanthology.org/2025.coling-main.669/)
   finds fairness problems in both retrieval and generation, which argues against treating a prompt
   as a system-wide mitigation.
@@ -102,7 +110,8 @@ PDF/DOCX/TXT
     +-> OpenAI embeddings -> normalized vectors -> FAISS IndexFlatIP
     |      -> dense-only MMR baseline
     +-> Okapi BM25 lexical index
-           -> dense + lexical reciprocal-rank fusion (default)
+           -> dense + lexical reciprocal-rank fusion (optional)
+question -> optional question-only decomposition -> per-query BM25 -> reciprocal-rank fusion
     -> candidate pool T
        -> direct top K
        -> optional research path: Fair Greedy reranking to K + NDKL before/after
@@ -119,6 +128,7 @@ Key contracts:
 - `BM25Retriever`: deterministic in-memory lexical baseline with explicit tokenization and BM25
   parameters.
 - `HybridRetriever`: weighted RRF over dense and BM25 rankings with component diagnostics.
+- `DecomposedQueryRetriever`: weighted RRF over original-query and atomic-subquery BM25 rankings.
 - `evaluate_rankings`: offline Recall@k, MRR, and graded NDCG@k over stable chunk IDs.
 - `fair_greedy_rerank`: relevance-preserving selection within the most underexposed group at each
   prefix.
@@ -214,6 +224,8 @@ Dataset governance requirements:
 - Return scores, displayed ranks, original ranks, and stable chunk IDs.
 - Support a configurable candidate pool and MMR coefficient.
 - Support BM25 and weighted RRF without comparing uncalibrated raw score magnitudes.
+- Support opt-in, question-only decomposition with strict structured output, disabled response
+  storage, pinned subqueries, and no gold answers, required claims, or evidence locators in input.
 - Preserve component ranks and scores for every fused result.
 - Persist index metadata as JSON and NumPy, never pickle.
 
@@ -313,6 +325,10 @@ release claim.
   second-model audit upheld the primary judge five times and the cross judge six times. The current
   required-claims run regenerated candidate answers, so its improvement over the historical run is
   not an isolated rubric effect.
+- **Implemented and rejected as default:** one frozen question-decomposition + BM25 RRF
+  configuration raised full multi-hop locator coverage from 5/15 to 6/15 but left total locator
+  hits unchanged at 25/44. Its limited generation experiment reduced automated required-claim task
+  pass from 7/15 to 6/15. BM25 remains the default; decomposition stays opt-in for further research.
 - **Pending:** human review of the current required-claims run. Candidate and primary judge still
   use the same model alias, so the report remains an automated baseline rather than a final
   benchmark.
@@ -384,6 +400,12 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
   sets, use cluster-level paired intervals, and label overlapping case-family slices as descriptive.
 - Clean retrieval over prompt-injection-tagged questions is never reported as prompt-injection
   resistance.
+- Query decomposition artifacts must cover all 15 multi-hop cases, hash-match the reviewed
+  questions and prompt contract, record the resolved provider model, and contain only non-empty,
+  unique subqueries.
+- A decomposition candidate advances only after paired full-locator coverage improves; it replaces
+  the default only after downstream generation also improves. The current candidate failed the
+  second gate.
 
 ## 11. Public SciFact benchmark acceptance criteria
 

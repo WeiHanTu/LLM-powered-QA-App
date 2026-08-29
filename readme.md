@@ -13,6 +13,7 @@ chain.
 - Token-aware, provenance-preserving document chunks
 - Exact cosine retrieval with a local FAISS `IndexFlatIP`
 - In-memory Okapi BM25 lexical retrieval and reciprocal-rank fusion (RRF)
+- Opt-in, question-only OpenAI decomposition with per-subquery BM25 and RRF
 - Maximal marginal relevance (MMR) to reduce redundant context
 - Per-result dense/BM25 ranks and scores instead of an opaque hybrid score
 - Source-labelled answers through the OpenAI Responses API
@@ -107,6 +108,38 @@ contains provenance hashes, both query-weighted and cluster-macro means, 10,000-
 intervals, latency scope, and limitations. Page-bounded qrels are not exact answer-span labels, and
 the five answerable prompt-injection-tagged rows in this clean retrieval run do not measure
 prompt-injection resistance.
+
+### Multi-hop decomposition experiment
+
+The multi-hop follow-up implements leakage-controlled query decomposition: `gpt-5-mini` receives
+only the question, returns two to four schema-constrained subqueries with API storage disabled, and
+the exact outputs, resolved model, prompt hash, and source-case hash are pinned. BM25 retrieves 40
+candidates for the original query and each subquery; equal-weight RRF (`k=60`) produces the final
+top 10. Gold answers, required claims, and evidence locators never enter decomposition.
+
+![BM25 versus decomposed-query RRF on multi-hop retrieval and generation](docs/benchmarks/technical-papers-v1-multihop-retrieval-2026-08-29.svg)
+
+| 15-case multi-hop slice | BM25 | Decomposed BM25 + RRF |
+|---|---:|---:|
+| Full cited-locator coverage@10 | 5 / 15 | **6 / 15** |
+| Cited locators retrieved | 25 / 44 | 25 / 44 |
+| Retrieval Recall@10 | **0.3148** | 0.3146 |
+| Required-claim task pass | **7 / 15** | 6 / 15 |
+| Citation syntax valid | 15 / 15 | 15 / 15 |
+
+The retrieval endpoint moved by one case: two gains, one regression, twelve ties, McNemar exact
+`p=1.0`. That cleared the preregistered gate for a limited generation experiment, not for a default
+switch. Generation then produced two gains, three regressions, and ten ties (`p=1.0`). BM25 remains
+the default. This is the useful negative result: decomposition helped `tp-061` and `tp-064`, but did
+not improve total locator hits or downstream task pass.
+
+The design follows the multi-step retrieval motivation in
+[IRCoT](https://aclanthology.org/2023.acl-long.557/) and the decompose-retrieve-merge pattern in
+[Question Decomposition for RAG](https://arxiv.org/abs/2507.00355). Its underspecified "the two
+papers" subqueries also reproduce the lost-entity failure described by
+[ChainRAG](https://aclanthology.org/2025.acl-long.1089/). Only one fixed configuration and 15 cases
+were tested, and the generation runs were separate API calls scored by an automated same-model
+judge. See the [machine-readable experiment record](docs/benchmarks/technical-papers-v1-multihop-retrieval-2026-08-29.json).
 
 ### Required-claim generation and prompt-injection baseline
 
@@ -225,6 +258,18 @@ uv run llmqa report-project-cross-judge \
   artifacts/generation-results/technical-papers-v1/cross-judge-gpt-4.1/cases.jsonl \
   --snapshot docs/benchmarks/technical-papers-v1-generation-cross-judge.json \
   --run-date YYYY-MM-DD
+
+# Requires OPENAI_API_KEY. Sends only each reviewed multi-hop question.
+uv run llmqa generate-project-query-decompositions --model gpt-5-mini
+
+uv run llmqa benchmark-project-eval \
+  --retrievers bm25 bm25-decomposed-rrf -k 10 --fetch-k 40
+
+# Opt-in generation experiment; BM25 remains the application default.
+uv run llmqa evaluate-project-generation \
+  --retriever bm25-decomposed-rrf \
+  --case-ids tp-061 tp-062 tp-063 tp-064 tp-065 tp-066 tp-067 tp-068 \
+    tp-069 tp-070 tp-071 tp-072 tp-073 tp-074 tp-075
 ```
 
 ## Quick start
@@ -311,6 +356,9 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 - Ten answerable generation cases lacked at least one cited locator in top-10 context. All were
   multi-hop, leaving only five fully retrieved multi-hop cases; retrieval and generation failures
   cannot be separated reliably for that slice.
+- One question-only decomposition + RRF configuration increased full multi-hop locator coverage
+  from 5/15 to 6/15 but reduced automated task pass from 7/15 to 6/15. It remains an opt-in
+  experiment, not an evidence-backed default or a general claim about query decomposition.
 - Unanswerable outputs are scored against one exact sentinel. This reproducible contract does not
   measure semantic refusal quality and marks `tp-080` wrong despite its correct evidence-based refusal.
 - The second-family audit is failure- and attack-enriched rather than representative. Its 68.6%

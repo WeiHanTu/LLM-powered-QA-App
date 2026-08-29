@@ -380,3 +380,66 @@ class HybridRetriever:
             rank_constant=self._rank_constant,
             weights=self._weights,
         )
+
+
+class DecomposedQueryRetriever:
+    """Retrieve an original query and its atomic subqueries, then fuse their ranks."""
+
+    def __init__(
+        self,
+        base: BM25Retriever,
+        *,
+        rank_constant: int = 60,
+        original_weight: float = 1.0,
+        subquery_weight: float = 1.0,
+    ) -> None:
+        if rank_constant <= 0:
+            raise ValueError("rank_constant must be positive")
+        if any(
+            not math.isfinite(value) or value < 0 for value in (original_weight, subquery_weight)
+        ):
+            raise ValueError("query weights must be finite and non-negative")
+        if original_weight == 0 and subquery_weight == 0:
+            raise ValueError("at least one query weight must be positive")
+        self._base = base
+        self._rank_constant = rank_constant
+        self._original_weight = original_weight
+        self._subquery_weight = subquery_weight
+
+    @property
+    def size(self) -> int:
+        return self._base.size
+
+    def search(
+        self,
+        query: str,
+        *,
+        subqueries: Sequence[str],
+        k: int = 4,
+        fetch_k: int | None = None,
+    ) -> list[SearchResult]:
+        if not query.strip():
+            raise ValueError("query must not be empty")
+        if k <= 0:
+            raise ValueError("k must be positive")
+        normalized_subqueries = tuple(subquery.strip() for subquery in subqueries)
+        if any(not subquery for subquery in normalized_subqueries):
+            raise ValueError("subqueries must not be empty")
+        if len(set(normalized_subqueries)) != len(normalized_subqueries):
+            raise ValueError("subqueries must be unique")
+        if query.strip() in normalized_subqueries:
+            raise ValueError("subqueries must not repeat the original query")
+
+        pool_size = min(max(fetch_k or max(k * 4, 20), k), self.size)
+        rankings = {"original": self._base.search(query, k=pool_size)}
+        weights = {"original": self._original_weight}
+        for index, subquery in enumerate(normalized_subqueries, start=1):
+            name = f"subquery-{index}"
+            rankings[name] = self._base.search(subquery, k=pool_size)
+            weights[name] = self._subquery_weight
+        return reciprocal_rank_fusion(
+            rankings,
+            k=min(k, self.size),
+            rank_constant=self._rank_constant,
+            weights=weights,
+        )

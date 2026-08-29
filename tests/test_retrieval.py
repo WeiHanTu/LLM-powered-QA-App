@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from llmqa.domain import Chunk
-from llmqa.retrieval import FaissRetriever
+from llmqa.retrieval import BM25Retriever, DecomposedQueryRetriever, FaissRetriever
 
 
 class FakeEmbeddingProvider:
@@ -56,3 +56,24 @@ def test_faiss_index_round_trip_without_pickle(tmp_path: Path) -> None:
     assert restored.size == 3
     assert restored.search("cat query", k=1)[0].chunk.id == "cat"
     assert not (tmp_path / "index.pkl").exists()
+
+
+def test_decomposed_query_retriever_fuses_inspectable_component_rankings() -> None:
+    corpus = [
+        Chunk("alpha", "alpha alpha mechanism", "paper-a"),
+        Chunk("beta", "beta beta mechanism", "paper-b"),
+        Chunk("overview", "compare alpha beta overview", "survey"),
+    ]
+    retriever = DecomposedQueryRetriever(BM25Retriever(corpus), rank_constant=60)
+
+    results = retriever.search(
+        "compare alpha and beta",
+        subqueries=("alpha mechanism", "beta mechanism"),
+        k=3,
+        fetch_k=3,
+    )
+
+    assert {result.chunk.id for result in results} == {"alpha", "beta", "overview"}
+    assert any("subquery-1" in result.component_ranks for result in results)
+    assert any("subquery-2" in result.component_ranks for result in results)
+    assert [result.rank for result in results] == [1, 2, 3]

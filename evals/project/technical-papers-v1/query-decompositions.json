@@ -1,0 +1,215 @@
+{
+  "cases_sha256": "38993e0ef0b35a3abb7dd4a5f6e4546290c200d28a4b645cadb1e04ac5a48711",
+  "dataset": "technical-papers-v1",
+  "generated_at": "2026-08-29T23:19:51.083452+00:00",
+  "method": "question-only-openai-v1",
+  "prompt_sha256": "a697401bd0bf8581a9e62c6bb15cfff33987da108a7d38da2601e55f5ea267e6",
+  "prompt_version": "atomic-search-subqueries-v1",
+  "query_count": 15,
+  "question_only_input": true,
+  "records": [
+    {
+      "case_id": "tp-061",
+      "input_tokens": 174,
+      "output_tokens": 1185,
+      "question_sha256": "4adcef37d33a0aa33ef48358f0a2fbc26b0b3ec839ef0b1d4b81aad2fda56f57",
+      "response_id": "resp_059f798f827062f5016a9368d088d087d0b6d209310772562f",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Paper 1: how does it encode position? (seek description of positional encoding/embedding used: absolute vs relative, learned vs sinusoidal, rotary/ALiBi/etc., and implementation details)",
+        "Paper 1: what claims or experimental results does it make about extrapolation or generalization to longer sequences?",
+        "Paper 2: how does it encode position? (seek description of positional encoding/embedding used: absolute vs relative, learned vs sinusoidal, rotary/ALiBi/etc., and implementation details)",
+        "Paper 2: what claims or experimental results does it make about extrapolation or generalization to longer sequences?"
+      ],
+      "total_tokens": 1359
+    },
+    {
+      "case_id": "tp-062",
+      "input_tokens": 174,
+      "output_tokens": 644,
+      "question_sha256": "d1e643e16c38c9c1b128b39fa58c4f913e7abe81500fdba7274017ed1558d935",
+      "response_id": "resp_0b16352c9f576f32016a9368d8dfbc87d09aa9d5a5f42a960c",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Kimi K3 \"attention layout\" detailed description: attention pattern, head arrangement, sparsity/locality, positional encoding, and any deviations from standard self-attention",
+        "Original Transformer (\"Attention Is All You Need\") attention details: scaled dot-product, multi-head self-attention, full pairwise attention across sequence, positional encoding implementation"
+      ],
+      "total_tokens": 818
+    },
+    {
+      "case_id": "tp-063",
+      "input_tokens": 180,
+      "output_tokens": 442,
+      "question_sha256": "2bcb046416288d78fcf9c7cddaee4f20d8185376f93a919a3f707f139fe21578",
+      "response_id": "resp_0f9162851b1c00e4016a9368ddb54887d085f26128d797a2c5",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "How do the feed-forward activations differ between the two architectures?",
+        "Why does Kimi K3 cap its activation branches (what is the reason and effect of capping those branches)?"
+      ],
+      "total_tokens": 622
+    },
+    {
+      "case_id": "tp-064",
+      "input_tokens": 176,
+      "output_tokens": 552,
+      "question_sha256": "dcfeea7728c9c89a00984b06019781228ee62430eeae0aef86a811c61fc5bae1",
+      "response_id": "resp_0ad7d004aa4a0fcd016a9368e0f5e487d0a0f5f403225bf6da",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Original Transformer (\"Attention Is All You Need\") reported optimizer and learning-rate schedule details \u2014 optimizer type, hyperparameters, warmup steps, and lr formula as stated in the paper.",
+        "Kimi K3 reported optimizer and learning-rate schedule details \u2014 optimizer type, hyperparameters, warmup steps, and lr schedule as documented in the Kimi K3 paper or repository."
+      ],
+      "total_tokens": 728
+    },
+    {
+      "case_id": "tp-065",
+      "input_tokens": 181,
+      "output_tokens": 1147,
+      "question_sha256": "b9c0bb69fe14f9acd32134602f49b5ba21819530a95608d5596cca7cf05a56e3",
+      "response_id": "resp_0a506a41b9d2c4d7016a9368e55a9887d0a09ccd28f09f5858",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "2017 paper \"full self-attention\" \"long-sequence tradeoff\" description of the computational and memory tradeoffs for long sequences",
+        "Kimi K3 (K3, Kimi) architecture and method: how Kimi K3 modifies computation, memory scaling, or inductive biases compared to full self-attention",
+        "Empirical comparisons in Kimi K3 papers: results on long-sequence benchmarks versus full self-attention (memory use, latency, and accuracy)"
+      ],
+      "total_tokens": 1328
+    },
+    {
+      "case_id": "tp-066",
+      "input_tokens": 173,
+      "output_tokens": 232,
+      "question_sha256": "7fc449623f05a24ef5cdff08192611117df3907d0323834bac8c2b5d98bd73de",
+      "response_id": "resp_0174f1867deae212016a9368ed2ea487d0abf1487ddf00fee7",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Transformer base model number of attention heads reported",
+        "Kimi K3 number of attention heads reported"
+      ],
+      "total_tokens": 405
+    },
+    {
+      "case_id": "tp-067",
+      "input_tokens": 175,
+      "output_tokens": 399,
+      "question_sha256": "145b7ded8d713dd28170ddc8a553aa3177961ac2739368e6a2123bfb3e0922aa",
+      "response_id": "resp_0b369b4299d4d1e6016a9368ef406887d0aa4191ef256d55bc",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Reported parameter counts for the Transformer base and Transformer big models (e.g., \"Transformer base\" parameter scale, \"Transformer big\" parameter scale)",
+        "Reported parameter count or parameter scale for the model named \"Kimi K3\" (e.g., \"Kimi K3\" parameters)"
+      ],
+      "total_tokens": 574
+    },
+    {
+      "case_id": "tp-068",
+      "input_tokens": 175,
+      "output_tokens": 408,
+      "question_sha256": "94a8e12001e278c5657782330cdd8db288641f5819400da968f4eba0181eedb6",
+      "response_id": "resp_0b3c1342ce930055016a9368f215bc87d0a1558a879df1617f",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "layer counts reported for the original Transformer stacks",
+        "Kimi K3's backbone layer counts"
+      ],
+      "total_tokens": 583
+    },
+    {
+      "case_id": "tp-069",
+      "input_tokens": 174,
+      "output_tokens": 593,
+      "question_sha256": "7c6ae80d91871f6de1babbebcf9bce462df22a7c730007bed293672c5f50055f",
+      "response_id": "resp_0bc766dc92565d73016a9368f52b4c87d0ab7543256c4a0ded",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "What modality direction did the original Transformer identify or leave for future work?",
+        "How does Kimi K3 implement or realize the modality direction referenced by the original Transformer (Kimi K3 architecture, mechanisms, and implementation details)"
+      ],
+      "total_tokens": 767
+    },
+    {
+      "case_id": "tp-070",
+      "input_tokens": 179,
+      "output_tokens": 623,
+      "question_sha256": "d9d414c3dfd18c09819308e79d6ac0b28c9c90409f80a0a7ab4f6378151ec923",
+      "response_id": "resp_090676b874b808b1016a9368f9bd3c87d0891b08b566d13a58",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Vaswani et al. 'Attention Is All You Need' Transformer paper long-input mechanism proposed for future study (search for 'future work', 'long input', 'long sequences', 'memory', or 'local attention' mentions)",
+        "Kimi K3 model what long-input / long-context mechanism it actually deploys (search for 'Kimi K3 architecture', 'Kimi K3 long input', 'Kimi K3 context window', 'Kimi K3 attention/memory mechanism')"
+      ],
+      "total_tokens": 802
+    },
+    {
+      "case_id": "tp-071",
+      "input_tokens": 172,
+      "output_tokens": 676,
+      "question_sha256": "99dc7cfc133222d2b669412e4ada629a5734f818b29b5a0fa622aaad10a89479",
+      "response_id": "resp_0e4966c8aafc9854016a9368fed8d087d0ad883590bfbfd8b7",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "standard Transformer residual connections definition and implementation details: 'Transformer' 'residual connection' 'Add & Norm' 'LayerNorm' equations and placement",
+        "Kimi K3 Attention Residuals definition and implementation details: 'Kimi K3 Attention Residuals' description, equations, and code examples",
+        "comparative analysis: differences between standard Transformer residual connections and Kimi K3 Attention Residuals, including motivation, mathematical/architectural differences, and reported effects on training or performance"
+      ],
+      "total_tokens": 848
+    },
+    {
+      "case_id": "tp-072",
+      "input_tokens": 178,
+      "output_tokens": 314,
+      "question_sha256": "122ebd51fe26a0f261af46d29b21494db673fb5f7e5b8cd295de788f77b0b718",
+      "response_id": "resp_016d68f92ae0b526016a9369038da487d0aa66b7d34073c34e",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "What factors or mechanisms constrain the block size of Kimi K3's prefix cache?",
+        "What specific range is the block size of Kimi K3's prefix cache forced into?"
+      ],
+      "total_tokens": 492
+    },
+    {
+      "case_id": "tp-073",
+      "input_tokens": 173,
+      "output_tokens": 687,
+      "question_sha256": "4280bcc99ac170d27c05b23fa2add39aae558e135dab9cbee62145b3372e33c9",
+      "response_id": "resp_071bc537f50d9e0d016a936905f0f487d08341fa3ebbbeab10",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "For each paper, what efficiency evidence is presented? List the reported efficiency numbers, the specific metrics or measurements used (e.g., FLOPs, latency, throughput, parameter count, energy), and the experiments or evaluation conditions tied to those numbers as stated in each paper.",
+        "Why are the two numbers not directly comparable? Identify differences reported in the papers that would affect comparability such as metric definitions, evaluation protocols, datasets, hardware and software environment, batching or input settings, measurement units, and any caveats or normalization steps mentioned."
+      ],
+      "total_tokens": 860
+    },
+    {
+      "case_id": "tp-074",
+      "input_tokens": 176,
+      "output_tokens": 726,
+      "question_sha256": "e4c3023083e398bf7acd0c95fe68477adc07e73bfafac7505a87caa760fa6aef",
+      "response_id": "resp_0e86a8a988d56346016a93690aac7c87d09bbdb7e8f1929a71",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "How is causality enforced in the original Transformer decoder self-attention? Describe the causal/masking mechanism and how the mask is applied in the attention computation.",
+        "What is Kimi K3's chunkwise KDA and how does it implement chunkwise attention? Explain how causality is enforced both within chunks and across chunk boundaries in Kimi K3's chunkwise KDA.",
+        "Direct comparison: what are the functional differences in causality enforcement between the original Transformer decoder attention and Kimi K3's chunkwise KDA (masking strategy, boundary handling, allowed lookahead/latency implications)?"
+      ],
+      "total_tokens": 902
+    },
+    {
+      "case_id": "tp-075",
+      "input_tokens": 170,
+      "output_tokens": 840,
+      "question_sha256": "883e8907107caf939d634fd81270011adee1adcb5b5a51a594e5ac4f9a224ffa",
+      "response_id": "resp_036ca96bbaf98243016a93691120d487d0892670ec21f7c3b8",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "In the two papers, how are model outputs described at the architecture level? Extract passages that describe outputs in terms of model components, layers/modules, output heads, representations, signal flow, dimensionality, or prediction targets.",
+        "In the two papers, how are model outputs described at the interface level? Extract passages that describe outputs in terms of API/endpoint semantics, output formats or schemas, return types, tokens/messages, user-facing labels, or other interface-level specifications."
+      ],
+      "total_tokens": 1010
+    }
+  ],
+  "requested_model": "gpt-5-mini",
+  "schema_version": 1,
+  "split": "reviewed-v1"
+}

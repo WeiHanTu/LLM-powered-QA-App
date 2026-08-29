@@ -1,0 +1,380 @@
+{
+  "configuration": {
+    "candidate_fetch_k_per_query": 40,
+    "configuration_count_evaluated": 1,
+    "fusion": "weighted reciprocal-rank fusion",
+    "k": 10,
+    "original_query_weight": 1.0,
+    "primary_endpoint": "multi-hop full evidence-locator coverage at 10",
+    "rrf_rank_constant": 60,
+    "subquery_weight": 1.0
+  },
+  "dataset": {
+    "answerable_query_count": 80,
+    "corpus_count": 188,
+    "multi_hop_query_count": 15,
+    "name": "technical-papers-v1",
+    "query_count": 100,
+    "split": "reviewed-v1"
+  },
+  "decomposition": {
+    "artifact_sha256": "8b9309922660b2bb66fafb438de210849fb0919b18e7ec3da4c5779723af4d23",
+    "cases_sha256": "38993e0ef0b35a3abb7dd4a5f6e4546290c200d28a4b645cadb1e04ac5a48711",
+    "generated_at": "2026-08-29T23:19:51.083452+00:00",
+    "method": "question-only-openai-v1",
+    "prompt_sha256": "a697401bd0bf8581a9e62c6bb15cfff33987da108a7d38da2601e55f5ea267e6",
+    "prompt_version": "atomic-search-subqueries-v1",
+    "query_count": 15,
+    "question_only_input": true,
+    "requested_model": "gpt-5-mini"
+  },
+  "evidence_status": "verified_offline_multihop_retrieval_comparison",
+  "generation_experiment": {
+    "baseline": {
+      "citation_validity": {
+        "successes": 15,
+        "total": 15
+      },
+      "results_sha256": "dbbaa5a98d9939258f684289beb56721141d749e57e383468121e745c833a63a",
+      "retriever": "bm25",
+      "summary_sha256": "c3bd14f4b84e23c463f69672aa438e2523e9b2f43d68343023678e9646a3da3e",
+      "task_pass": {
+        "rate": 0.4666666666666667,
+        "successes": 7,
+        "total": 15
+      }
+    },
+    "candidate": {
+      "citation_validity": {
+        "successes": 15,
+        "total": 15
+      },
+      "results_sha256": "b574ecf11126530dac2a1c84226081cfc9e340251f03d9fbcf3e0a826edfb5f8",
+      "retriever": "bm25-decomposed-rrf",
+      "summary_sha256": "ec6f8c74c7f440c586881bd79bdc754ab5d25b452437444d4e23cd18f26b79e1",
+      "task_pass": {
+        "rate": 0.4,
+        "successes": 6,
+        "total": 15
+      }
+    },
+    "limitations": [
+      "Both runs use automated gpt-5-mini judgments rather than human adjudication.",
+      "Candidate answers were generated in separate API runs, so model nondeterminism is confounded with the retrieval change.",
+      "The 15-case slice is too small to establish a statistically stable task-pass delta."
+    ],
+    "paired_task_pass": {
+      "candidate_gains": 2,
+      "candidate_losses": 3,
+      "mcnemar_exact_two_sided_p": 1.0,
+      "ties": 10
+    },
+    "per_case": [
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": true,
+        "case_id": "tp-061"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-062"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": false,
+        "case_id": "tp-063"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": true,
+        "case_id": "tp-064"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-065"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-066"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": false,
+        "case_id": "tp-067"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-068"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-069"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-070"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-071"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-072"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-073"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": false,
+        "case_id": "tp-074"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-075"
+      }
+    ],
+    "scope": "15 clean multi-hop cases under required-claims-v1",
+    "status": "automated_model_judgment_not_human_adjudicated"
+  },
+  "limitations": [
+    "The multi-hop slice has only 15 reviewed questions; McNemar power is low.",
+    "The same fixed slice motivated and evaluates this one configuration, so the result is an internal paired benchmark rather than an external generalization claim.",
+    "Subqueries were generated once by an OpenAI model alias; the exact outputs and resolved model are pinned, but fresh generation may differ.",
+    "The question-only constraint prevents answer and evidence leakage, but questions that say 'the two papers' can produce underspecified subqueries.",
+    "This run measures retrieval only; downstream answer quality and API decomposition latency are not included."
+  ],
+  "paired_primary_endpoint": {
+    "candidate_gains": 2,
+    "candidate_losses": 1,
+    "mcnemar_exact_two_sided_p": 1.0,
+    "ties": 12
+  },
+  "per_case": [
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-061",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-062",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 3,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-063",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-064",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-065",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-066",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-067",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 0,
+      "case_id": "tp-068",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 3,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-069",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-070",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-071",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-072",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 0,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-073",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-074",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-075",
+      "evidence_locator_count": 3
+    }
+  ],
+  "research_basis": [
+    {
+      "title": "Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions",
+      "url": "https://aclanthology.org/2023.acl-long.557/"
+    },
+    {
+      "title": "Question Decomposition for Retrieval-Augmented Generation",
+      "url": "https://arxiv.org/abs/2507.00355"
+    },
+    {
+      "title": "Mitigating Lost-in-Retrieval Problems in Retrieval Augmented Multi-Hop Question Answering",
+      "url": "https://aclanthology.org/2025.acl-long.1089/"
+    }
+  ],
+  "run_date": "2026-08-29",
+  "runs": [
+    {
+      "all_answerable": {
+        "MRR@10": 0.8160416666666667,
+        "NDCG@10": 0.5551494598469049,
+        "Recall@10": 0.5548595848595849,
+        "full_locator_coverage": {
+          "rate": 0.875,
+          "successes": 70,
+          "total": 80
+        }
+      },
+      "multi_hop": {
+        "MRR@10": 0.58,
+        "NDCG@10": 0.3290533027240952,
+        "Recall@10": 0.3148066748066748,
+        "full_locator_coverage": {
+          "rate": 0.3333333333333333,
+          "successes": 5,
+          "total": 15
+        },
+        "locator_hit_rate": {
+          "rate": 0.5681818181818182,
+          "successes": 25,
+          "total": 44
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.15556247672066092,
+        "p95": 0.25016279832925636,
+        "scope": "local BM25 search; decomposition was precomputed"
+      },
+      "retriever": "bm25"
+    },
+    {
+      "all_answerable": {
+        "MRR@10": 0.8260416666666666,
+        "NDCG@10": 0.5579683754942745,
+        "Recall@10": 0.5548248626373626,
+        "full_locator_coverage": {
+          "rate": 0.8875,
+          "successes": 71,
+          "total": 80
+        }
+      },
+      "multi_hop": {
+        "MRR@10": 0.6333333333333333,
+        "NDCG@10": 0.3440875195100662,
+        "Recall@10": 0.3146214896214896,
+        "full_locator_coverage": {
+          "rate": 0.4,
+          "successes": 6,
+          "total": 15
+        },
+        "locator_hit_rate": {
+          "rate": 0.5681818181818182,
+          "successes": 25,
+          "total": 44
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.21995851420797408,
+        "p95": 0.8492018328979611,
+        "scope": "local BM25 search; decomposition was precomputed"
+      },
+      "retriever": "bm25-decomposed-rrf"
+    }
+  ],
+  "schema_version": 1,
+  "selection": {
+    "adopt_as_default": false,
+    "adopt_for_generation_experiment": true,
+    "decision": "advance decomposed BM25 RRF to a generation experiment",
+    "final_decision": "retain BM25 as the default retriever",
+    "final_reason": "decomposed retrieval changed automated multi-hop task pass from 7/15 to 6/15 with 2 paired gains and 3 paired losses",
+    "generation_experiment_completed": true,
+    "rule": "candidate full-locator count must increase and paired gains must exceed losses"
+  }
+}

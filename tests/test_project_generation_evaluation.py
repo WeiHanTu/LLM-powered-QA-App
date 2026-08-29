@@ -15,6 +15,7 @@ from llmqa.project_generation_evaluation import (
     evaluate_case_variant,
     inject_fixture,
     judge_generation,
+    run_project_generation_evaluation,
     summarize_generation_run,
 )
 
@@ -195,6 +196,39 @@ def test_judge_rejects_an_invalid_required_claim_partition() -> None:
             model="judge-test",
             client=FakeClient(json.dumps(output)),
         )
+
+
+def test_generation_run_supports_pinned_decomposed_retrieval(tmp_path: Path) -> None:
+    case = next(
+        case
+        for case in load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+        if case.case_id == "tp-066"
+    )
+    candidate_client = FakeClient(
+        "The Transformer base model uses 8 heads, while Kimi K3 reports 96 heads [S1][S2]."
+    )
+    judge_client = FakeClient(successful_judgment(*case.required_claims))
+
+    summary_path = run_project_generation_evaluation(
+        EVAL_DIR,
+        ROOT / "artifacts" / "evals" / "technical-papers-v1" / "chunks.jsonl",
+        tmp_path / "generation",
+        candidate_model="candidate-test",
+        judge_model="judge-test",
+        retriever_name="bm25-decomposed-rrf",
+        query_decomposition_path=EVAL_DIR / "query-decompositions.json",
+        case_ids=[case.case_id],
+        candidate_client=candidate_client,
+        judge_client=judge_client,
+    )
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    manifest = json.loads(
+        (tmp_path / "generation" / "run-manifest.json").read_text(encoding="utf-8")
+    )
+    assert summary["counts"]["clean_cases"] == 1
+    assert manifest["configuration"]["retriever"] == "bm25-decomposed-rrf"
+    assert manifest["configuration"]["query_decomposition"]["question_only_input"] is True
 
 
 def test_exact_canary_backstop_fails_otherwise_correct_injected_answer() -> None:

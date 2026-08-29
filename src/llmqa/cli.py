@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from llmqa.benchmark import (
+    PROJECT_RETRIEVER_NAMES,
     RETRIEVER_NAMES,
+    ProjectRetrieverName,
     RetrieverName,
     fetch_scifact,
     load_scifact,
@@ -45,6 +47,12 @@ from llmqa.project_generation_cross_judge import (
 )
 from llmqa.project_generation_evaluation import run_project_generation_evaluation
 from llmqa.project_generation_reporting import write_project_generation_report
+from llmqa.project_multihop_reporting import write_multihop_retrieval_report
+from llmqa.query_decomposition import (
+    generate_query_decomposition_artifact,
+    load_query_decomposition_artifact,
+    query_decomposition_sha256,
+)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -214,7 +222,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("artifacts/benchmark-results/technical-papers-v1"),
     )
     project_benchmark.add_argument(
-        "--retrievers", nargs="+", choices=RETRIEVER_NAMES, default=["bm25"]
+        "--retrievers", nargs="+", choices=PROJECT_RETRIEVER_NAMES, default=["bm25"]
+    )
+    project_benchmark.add_argument(
+        "--query-decompositions",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
     )
     project_benchmark.add_argument("-k", type=int, default=10)
     project_benchmark.add_argument("--fetch-k", type=int, default=40)
@@ -227,6 +240,45 @@ def build_parser() -> argparse.ArgumentParser:
     project_benchmark.add_argument("--embedding-model", default="text-embedding-3-small")
     project_benchmark.add_argument("--embedding-dimensions", type=int, default=1536)
     project_benchmark.add_argument("--embedding-batch-size", type=int, default=128)
+
+    decompose_queries = subparsers.add_parser(
+        "generate-project-query-decompositions",
+        help="generate question-only OpenAI subqueries for reviewed multi-hop cases",
+    )
+    decompose_queries.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    decompose_queries.add_argument(
+        "--output",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
+    )
+    decompose_queries.add_argument("--model", default="gpt-5-mini")
+
+    multihop_report = subparsers.add_parser(
+        "report-project-multihop-retrieval",
+        help="publish paired locator-coverage evidence for decomposed BM25 RRF",
+    )
+    multihop_report.add_argument("summary", type=Path)
+    multihop_report.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    multihop_report.add_argument(
+        "--query-decompositions",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
+    )
+    multihop_report.add_argument("--snapshot", type=Path, required=True)
+    multihop_report.add_argument("--figure", type=Path, required=True)
+    multihop_report.add_argument("--run-date", required=True)
+    multihop_report.add_argument("--baseline-generation-summary", type=Path)
+    multihop_report.add_argument("--baseline-generation-results", type=Path)
+    multihop_report.add_argument("--candidate-generation-summary", type=Path)
+    multihop_report.add_argument("--candidate-generation-results", type=Path)
 
     report = subparsers.add_parser(
         "report-scifact",
@@ -279,6 +331,18 @@ def build_parser() -> argparse.ArgumentParser:
     generation_eval.add_argument("-k", type=int, default=10)
     generation_eval.add_argument("--bm25-k1", type=float, default=1.2)
     generation_eval.add_argument("--bm25-b", type=float, default=0.75)
+    generation_eval.add_argument(
+        "--retriever",
+        choices=("bm25", "bm25-decomposed-rrf"),
+        default="bm25",
+    )
+    generation_eval.add_argument(
+        "--query-decompositions",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
+    )
+    generation_eval.add_argument("--fetch-k", type=int, default=40)
+    generation_eval.add_argument("--rrf-rank-constant", type=int, default=60)
     generation_eval.add_argument("--workers", type=int, default=1)
     generation_eval.add_argument(
         "--case-ids",
@@ -480,8 +544,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "benchmark-project-eval":
-        retriever_names = args.retrievers
-        needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in retriever_names)
+        project_retriever_names: list[ProjectRetrieverName] = args.retrievers
+        needs_dense = any(
+            name in {"dense", "dense-mmr", "hybrid"} for name in project_retriever_names
+        )
         if needs_dense:
             require_openai_api_key()
         provider = (
@@ -494,9 +560,27 @@ def main(argv: list[str] | None = None) -> int:
             else None
         )
         dataset = load_project_retrieval_benchmark(args.eval_dir, args.chunks)
+        decomposition_mapping = None
+        decomposition_provenance = None
+        if "bm25-decomposed-rrf" in project_retriever_names:
+            artifact, decomposition_mapping = load_query_decomposition_artifact(
+                args.query_decompositions,
+                args.eval_dir,
+            )
+            decomposition_provenance = {
+                "artifact_sha256": query_decomposition_sha256(args.query_decompositions),
+                "method": artifact.method,
+                "prompt_version": artifact.prompt_version,
+                "prompt_sha256": artifact.prompt_sha256,
+                "cases_sha256": artifact.cases_sha256,
+                "requested_model": artifact.requested_model,
+                "generated_at": artifact.generated_at,
+                "question_only_input": artifact.question_only_input,
+                "query_count": artifact.query_count,
+            }
         outcome = run_retrieval_benchmark(
             dataset,
-            retriever_names,
+            project_retriever_names,
             k=args.k,
             fetch_k=args.fetch_k,
             mmr_lambda=args.mmr_lambda,
@@ -506,6 +590,8 @@ def main(argv: list[str] | None = None) -> int:
             dense_weight=args.dense_weight,
             sparse_weight=args.sparse_weight,
             embedding_provider=provider,
+            query_decompositions=decomposition_mapping,
+            query_decomposition_provenance=decomposition_provenance,
         )
         summary_path = write_benchmark_artifacts(outcome, args.output_dir)
         print(
@@ -530,6 +616,52 @@ def main(argv: list[str] | None = None) -> int:
                         }
                         for run in outcome.report.runs
                     ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "generate-project-query-decompositions":
+        require_openai_api_key()
+        artifact = generate_query_decomposition_artifact(
+            args.eval_dir,
+            args.output,
+            model=args.model,
+        )
+        print(
+            json.dumps(
+                {
+                    "output_path": str(args.output),
+                    "query_count": artifact.query_count,
+                    "method": artifact.method,
+                    "prompt_sha256": artifact.prompt_sha256,
+                    "requested_model": artifact.requested_model,
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-project-multihop-retrieval":
+        snapshot = write_multihop_retrieval_report(
+            args.summary,
+            args.eval_dir,
+            args.query_decompositions,
+            args.snapshot,
+            args.figure,
+            run_date=args.run_date,
+            baseline_generation_summary_path=args.baseline_generation_summary,
+            baseline_generation_results_path=args.baseline_generation_results,
+            candidate_generation_summary_path=args.candidate_generation_summary,
+            candidate_generation_results_path=args.candidate_generation_results,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot_path": str(args.snapshot),
+                    "figure_path": str(args.figure),
+                    "selection": snapshot["selection"],
                 },
                 indent=2,
             )
@@ -590,6 +722,12 @@ def main(argv: list[str] | None = None) -> int:
             k=args.k,
             bm25_k1=args.bm25_k1,
             bm25_b=args.bm25_b,
+            retriever_name=args.retriever,
+            query_decomposition_path=(
+                args.query_decompositions if args.retriever == "bm25-decomposed-rrf" else None
+            ),
+            fetch_k=args.fetch_k,
+            rrf_rank_constant=args.rrf_rank_constant,
             case_ids=args.case_ids,
             max_workers=args.workers,
         )

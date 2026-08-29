@@ -24,6 +24,12 @@ from llmqa.project_benchmark_reporting import (
     build_project_benchmark_snapshot,
     write_project_benchmark_report,
 )
+from llmqa.project_evaluation import load_project_evaluation_cases
+from llmqa.project_multihop_reporting import (
+    add_generation_experiment,
+    build_multihop_retrieval_snapshot,
+    render_multihop_retrieval_svg,
+)
 
 
 def _fixture_members() -> dict[str, str]:
@@ -185,6 +191,32 @@ def test_dense_benchmark_requires_an_embedding_provider(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="embedding provider"):
         run_retrieval_benchmark(dataset, ["dense"])
+
+
+def test_decomposed_benchmark_requires_queries_and_records_provenance(tmp_path: Path) -> None:
+    dataset = load_scifact(_fetch_fixture(tmp_path))
+
+    with pytest.raises(ValueError, match="requires query decompositions"):
+        run_retrieval_benchmark(dataset, ["bm25-decomposed-rrf"], k=2, fetch_k=3)
+
+    outcome = run_retrieval_benchmark(
+        dataset,
+        ["bm25", "bm25-decomposed-rrf"],
+        k=2,
+        fetch_k=3,
+        query_decompositions={
+            "q1": ("alpha evidence", "apple evidence"),
+            "q2": ("beta evidence", "banana evidence"),
+        },
+        query_decomposition_provenance={"artifact_sha256": "a" * 64},
+    )
+
+    assert [run.retriever for run in outcome.report.runs] == [
+        "bm25",
+        "bm25-decomposed-rrf",
+    ]
+    assert outcome.report.query_decomposition == {"artifact_sha256": "a" * 64}
+    assert all(run.evaluation.mean_recall_at_k == 1 for run in outcome.report.runs)
 
 
 def test_benchmark_rejects_unknown_retriever_at_runtime(tmp_path: Path) -> None:
@@ -379,3 +411,134 @@ def test_project_report_uses_distinct_evidence_clusters(tmp_path: Path) -> None:
         bootstrap_seed=7,
     )
     assert sliced_snapshot["diagnostic_slices"]["long_document"]["query_count"] == 20
+
+
+def test_multihop_report_selects_candidate_only_on_paired_locator_gain() -> None:
+    cases = load_project_evaluation_cases(
+        Path(__file__).parents[1] / "evals" / "project" / "technical-papers-v1" / "cases.jsonl"
+    )
+    answerable = [case for case in cases if case.answerability == "answerable"]
+    multi_hop = [case for case in answerable if "multi_hop" in case.case_types]
+
+    def run(retriever: str, full_multi_hop: int) -> dict[str, object]:
+        rows = []
+        for case in answerable:
+            is_full = "multi_hop" not in case.case_types or case in multi_hop[:full_multi_hop]
+            locators = case.evidence if is_full else case.evidence[:1]
+            rows.append(
+                {
+                    "query_id": case.case_id,
+                    "recall_at_k": 1.0 if is_full else 0.5,
+                    "reciprocal_rank": 1.0,
+                    "ndcg_at_k": 1.0 if is_full else 0.5,
+                    "retrieved_ids": [locator.chunk_ids[0] for locator in locators],
+                }
+            )
+        return {
+            "retriever": retriever,
+            "evaluation": {
+                "mean_recall_at_k": 0.9,
+                "mean_reciprocal_rank": 1.0,
+                "mean_ndcg_at_k": 0.9,
+                "per_query": rows,
+            },
+            "retrieval_latency_ms_p50": 1.0,
+            "retrieval_latency_ms_p95": 2.0,
+        }
+
+    summary = {
+        "dataset": "technical-papers-v1",
+        "split": "reviewed-v1",
+        "corpus_count": 188,
+        "query_count": 100,
+        "limited_run": False,
+        "k": 10,
+        "fetch_k": 40,
+        "rrf_rank_constant": 60,
+        "query_decomposition": {
+            "artifact_sha256": "a" * 64,
+            "cases_sha256": "c" * 64,
+            "method": "question-only-openai-v1",
+            "question_only_input": True,
+            "query_count": 15,
+        },
+        "runs": [run("bm25", 5), run("bm25-decomposed-rrf", 8)],
+    }
+
+    snapshot = build_multihop_retrieval_snapshot(
+        summary,
+        cases,
+        run_date="2026-08-29",
+        decomposition_sha256="a" * 64,
+    )
+
+    assert snapshot["runs"][0]["multi_hop"]["full_locator_coverage"]["successes"] == 5
+    assert snapshot["runs"][1]["multi_hop"]["full_locator_coverage"]["successes"] == 8
+    assert snapshot["paired_primary_endpoint"]["candidate_gains"] == 3
+    assert snapshot["selection"]["adopt_for_generation_experiment"] is True
+
+    baseline_generation_rows = [
+        {
+            "case_id": case.case_id,
+            "variant": "clean",
+            "task_pass": index < 7,
+            "citations_valid": True,
+        }
+        for index, case in enumerate(multi_hop)
+    ]
+    candidate_generation_rows = [
+        {
+            "case_id": case.case_id,
+            "variant": "clean",
+            "task_pass": index < 6,
+            "citations_valid": True,
+        }
+        for index, case in enumerate(multi_hop)
+    ]
+    generation_summary = {
+        "dataset": "technical-papers-v1",
+        "configuration": {
+            "retriever": "bm25",
+            "claim_contract_version": "required-claims-v1",
+        },
+        "provenance": {"cases_sha256": "c" * 64},
+    }
+    candidate_generation_summary = {
+        **generation_summary,
+        "configuration": {
+            **generation_summary["configuration"],
+            "retriever": "bm25-decomposed-rrf",
+        },
+    }
+    add_generation_experiment(
+        snapshot,
+        generation_summary,
+        baseline_generation_rows,
+        candidate_generation_summary,
+        candidate_generation_rows,
+        baseline_summary_sha256="b" * 64,
+        baseline_results_sha256="c" * 64,
+        candidate_summary_sha256="d" * 64,
+        candidate_results_sha256="e" * 64,
+    )
+
+    assert snapshot["generation_experiment"]["baseline"]["task_pass"]["successes"] == 7
+    assert snapshot["generation_experiment"]["candidate"]["task_pass"]["successes"] == 6
+    assert snapshot["selection"]["adopt_as_default"] is False
+    ET.fromstring(render_multihop_retrieval_svg(snapshot))
+
+    improved_candidate_rows = [
+        {**row, "task_pass": index < 8} for index, row in enumerate(candidate_generation_rows)
+    ]
+    add_generation_experiment(
+        snapshot,
+        generation_summary,
+        baseline_generation_rows,
+        candidate_generation_summary,
+        improved_candidate_rows,
+        baseline_summary_sha256="b" * 64,
+        baseline_results_sha256="c" * 64,
+        candidate_summary_sha256="d" * 64,
+        candidate_results_sha256="e" * 64,
+    )
+    assert snapshot["selection"]["adopt_as_default"] is True

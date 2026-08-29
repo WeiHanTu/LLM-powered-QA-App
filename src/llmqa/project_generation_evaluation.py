@@ -36,7 +36,11 @@ from llmqa.project_evaluation import (
     load_project_evaluation_cases,
     score_injection_judgment,
 )
-from llmqa.retrieval import BM25Retriever
+from llmqa.query_decomposition import (
+    load_query_decomposition_artifact,
+    query_decomposition_sha256,
+)
+from llmqa.retrieval import BM25Retriever, DecomposedQueryRetriever
 
 GENERATION_EVALUATION_VERSION = "project-generation-v4"
 JUDGE_PROMPT_VERSION = "generation-judge-required-claims-v2"
@@ -834,6 +838,10 @@ def run_project_generation_evaluation(
     k: int = 10,
     bm25_k1: float = 1.2,
     bm25_b: float = 0.75,
+    retriever_name: Literal["bm25", "bm25-decomposed-rrf"] = "bm25",
+    query_decomposition_path: Path | None = None,
+    fetch_k: int = 40,
+    rrf_rank_constant: int = 60,
     case_ids: Sequence[str] | None = None,
     max_workers: int = 1,
     candidate_client: ResponsesClient | None = None,
@@ -843,6 +851,10 @@ def run_project_generation_evaluation(
 
     if k <= 0:
         raise ValueError("k must be positive")
+    if fetch_k < k:
+        raise ValueError("fetch_k must be at least k")
+    if rrf_rank_constant <= 0:
+        raise ValueError("rrf_rank_constant must be positive")
     if not 1 <= max_workers <= 16:
         raise ValueError("max_workers must be between 1 and 16")
     dataset = load_project_retrieval_benchmark(evaluation_directory, raw_chunks_path)
@@ -860,16 +872,41 @@ def run_project_generation_evaluation(
         selected_cases = tuple(case for case in cases if case.case_id in set(requested))
     if not selected_cases:
         raise ValueError("at least one project case must be selected")
+    decomposition_mapping: dict[str, tuple[str, ...]] | None = None
+    decomposition_provenance: dict[str, object] | None = None
+    if retriever_name == "bm25-decomposed-rrf":
+        if query_decomposition_path is None:
+            raise ValueError("decomposed retrieval requires a query-decomposition artifact")
+        artifact, decomposition_mapping = load_query_decomposition_artifact(
+            query_decomposition_path,
+            evaluation_directory,
+        )
+        decomposition_provenance = {
+            "artifact_sha256": query_decomposition_sha256(query_decomposition_path),
+            "method": artifact.method,
+            "prompt_version": artifact.prompt_version,
+            "prompt_sha256": artifact.prompt_sha256,
+            "cases_sha256": artifact.cases_sha256,
+            "requested_model": artifact.requested_model,
+            "generated_at": artifact.generated_at,
+            "question_only_input": artifact.question_only_input,
+            "query_count": artifact.query_count,
+        }
     selected_injection_cases = tuple(
         case for case in selected_cases if case.injection_fixture_id is not None
     )
     configuration: dict[str, object] = {
         "candidate_model": candidate_model,
         "judge_model": judge_model,
-        "retriever": "bm25",
+        "retriever": retriever_name,
         "k": k,
         "bm25_k1": bm25_k1,
         "bm25_b": bm25_b,
+        "fetch_k": fetch_k if retriever_name == "bm25-decomposed-rrf" else None,
+        "rrf_rank_constant": (
+            rrf_rank_constant if retriever_name == "bm25-decomposed-rrf" else None
+        ),
+        "query_decomposition": decomposition_provenance,
         "selected_case_ids": [case.case_id for case in selected_cases],
         "max_workers": max_workers,
         "candidate_prompt_sha256": hashlib.sha256(SYSTEM_INSTRUCTIONS.encode("utf-8")).hexdigest(),
@@ -918,14 +955,28 @@ def run_project_generation_evaluation(
     if unexpected:
         raise ValueError(f"result artifact contains unexpected cases: {sorted(unexpected)}")
 
-    retriever = BM25Retriever(dataset.chunks, k1=bm25_k1, b=bm25_b)
+    bm25_retriever = BM25Retriever(dataset.chunks, k1=bm25_k1, b=bm25_b)
+    decomposed_retriever = (
+        DecomposedQueryRetriever(bm25_retriever, rank_constant=rrf_rank_constant)
+        if retriever_name == "bm25-decomposed-rrf"
+        else None
+    )
     existing_keys = set(rows)
     shared_candidate_client = candidate_client or cast(ResponsesClient, OpenAI())
     shared_judge_client = judge_client or cast(ResponsesClient, OpenAI())
 
     def evaluate_missing_variants(case: ProjectEvaluationCase) -> tuple[dict[str, Any], ...]:
         generated_rows: list[dict[str, Any]] = []
-        clean_results = retriever.search(case.question, k=k)
+        if decomposed_retriever is None:
+            clean_results = bm25_retriever.search(case.question, k=k)
+        else:
+            assert decomposition_mapping is not None
+            clean_results = decomposed_retriever.search(
+                case.question,
+                subqueries=decomposition_mapping.get(case.case_id, ()),
+                k=k,
+                fetch_k=fetch_k,
+            )
         clean_key = (case.case_id, "clean")
         if clean_key not in existing_keys:
             clean_result = evaluate_case_variant(

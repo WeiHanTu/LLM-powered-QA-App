@@ -12,7 +12,7 @@ import tempfile
 import time
 import urllib.request
 import zipfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -23,7 +23,7 @@ from certifi import where as certifi_ca_bundle
 from llmqa.domain import Chunk
 from llmqa.embeddings import EmbeddingProvider, FloatMatrix
 from llmqa.evaluation import RetrievalEvaluation, RetrievalJudgment, evaluate_rankings
-from llmqa.retrieval import BM25Retriever, FaissRetriever, HybridRetriever
+from llmqa.retrieval import BM25Retriever, DecomposedQueryRetriever, FaissRetriever, HybridRetriever
 
 SCIFACT_NAME = "beir/scifact"
 SCIFACT_URL = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip"
@@ -38,6 +38,14 @@ SCIFACT_MANIFEST = "benchmark-manifest.json"
 
 type RetrieverName = Literal["bm25", "dense", "dense-mmr", "hybrid"]
 RETRIEVER_NAMES: tuple[RetrieverName, ...] = ("bm25", "dense", "dense-mmr", "hybrid")
+type ProjectRetrieverName = Literal["bm25", "dense", "dense-mmr", "hybrid", "bm25-decomposed-rrf"]
+PROJECT_RETRIEVER_NAMES: tuple[ProjectRetrieverName, ...] = (
+    "bm25",
+    "dense",
+    "dense-mmr",
+    "hybrid",
+    "bm25-decomposed-rrf",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +113,7 @@ class RetrievalBenchmarkReport:
     rrf_rank_constant: int
     dense_weight: float
     sparse_weight: float
+    query_decomposition: dict[str, object] | None
     embedding_model: str | None
     embedding_dimensions: int | None
     embedding_batch_size: int | None
@@ -431,7 +440,7 @@ def _relevance_group_ids(judgments: Sequence[RetrievalJudgment]) -> dict[str, st
 
 def run_retrieval_benchmark(
     dataset: RetrievalBenchmarkDataset,
-    retrievers: Sequence[RetrieverName],
+    retrievers: Sequence[ProjectRetrieverName],
     *,
     k: int = 10,
     fetch_k: int = 40,
@@ -442,13 +451,15 @@ def run_retrieval_benchmark(
     dense_weight: float = 1.0,
     sparse_weight: float = 1.0,
     embedding_provider: EmbeddingProvider | None = None,
+    query_decompositions: Mapping[str, Sequence[str]] | None = None,
+    query_decomposition_provenance: Mapping[str, object] | None = None,
 ) -> RetrievalBenchmarkOutcome:
     """Run requested retrievers over one immutable corpus/query/qrels view."""
 
     if not retrievers:
         raise ValueError("at least one retriever is required")
     requested = tuple(dict.fromkeys(retrievers))
-    unknown_retrievers = set(requested) - set(RETRIEVER_NAMES)
+    unknown_retrievers = set(requested) - set(PROJECT_RETRIEVER_NAMES)
     if unknown_retrievers:
         raise ValueError(f"unknown retrievers: {sorted(unknown_retrievers)}")
     if not dataset.judgments:
@@ -458,9 +469,21 @@ def run_retrieval_benchmark(
     if not 0 <= mmr_lambda <= 1:
         raise ValueError("mmr_lambda must be between 0 and 1")
     needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in requested)
-    needs_sparse = any(name in {"bm25", "hybrid"} for name in requested)
+    needs_sparse = any(name in {"bm25", "hybrid", "bm25-decomposed-rrf"} for name in requested)
     if needs_dense and embedding_provider is None:
         raise ValueError("dense benchmark modes require an embedding provider")
+    if "bm25-decomposed-rrf" in requested and query_decompositions is None:
+        raise ValueError("decomposed-query benchmark mode requires query decompositions")
+    if query_decompositions is not None:
+        judgment_ids = {judgment.query_id for judgment in dataset.judgments}
+        unknown_query_ids = set(query_decompositions) - judgment_ids
+        if unknown_query_ids:
+            raise ValueError(
+                f"query decompositions contain unknown query IDs: {sorted(unknown_query_ids)}"
+            )
+        for query_id, subqueries in query_decompositions.items():
+            if not subqueries or any(not subquery.strip() for subquery in subqueries):
+                raise ValueError(f"query decomposition {query_id!r} must contain non-empty queries")
 
     build_seconds: dict[str, float] = {}
     sparse: BM25Retriever | None = None
@@ -491,6 +514,11 @@ def run_retrieval_benchmark(
             sparse_weight=sparse_weight,
         )
 
+    decomposed: DecomposedQueryRetriever | None = None
+    if "bm25-decomposed-rrf" in requested:
+        assert sparse is not None
+        decomposed = DecomposedQueryRetriever(sparse, rank_constant=rrf_rank_constant)
+
     all_rankings: dict[str, dict[str, tuple[str, ...]]] = {}
     summaries: list[BenchmarkRunSummary] = []
     for retriever_name in requested:
@@ -512,9 +540,17 @@ def run_retrieval_benchmark(
                     fetch_k=fetch_k,
                     mmr_lambda=mmr_lambda,
                 )
-            else:
+            elif retriever_name == "hybrid":
                 assert hybrid is not None
                 results = hybrid.search(judgment.query, k=k, fetch_k=fetch_k)
+            else:
+                assert decomposed is not None and query_decompositions is not None
+                results = decomposed.search(
+                    judgment.query,
+                    subqueries=query_decompositions.get(judgment.query_id, ()),
+                    k=k,
+                    fetch_k=fetch_k,
+                )
             latencies_ms.append((time.perf_counter() - started) * 1000)
             rankings[judgment.query_id] = tuple(result.chunk.id for result in results)
 
@@ -552,6 +588,11 @@ def run_retrieval_benchmark(
         rrf_rank_constant=rrf_rank_constant,
         dense_weight=dense_weight,
         sparse_weight=sparse_weight,
+        query_decomposition=(
+            dict(query_decomposition_provenance)
+            if query_decomposition_provenance is not None
+            else None
+        ),
         embedding_model=embedding_provider.model if embedding_provider is not None else None,
         embedding_dimensions=_provider_integer(embedding_provider, "dimensions"),
         embedding_batch_size=_provider_integer(embedding_provider, "batch_size"),
