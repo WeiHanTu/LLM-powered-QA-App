@@ -38,6 +38,8 @@ from llmqa.project_evaluation import (
     materialize_project_evaluation,
     validate_project_evaluation,
 )
+from llmqa.project_generation_evaluation import run_project_generation_evaluation
+from llmqa.project_generation_reporting import write_project_generation_report
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -247,6 +249,54 @@ def build_parser() -> argparse.ArgumentParser:
     project_report.add_argument("--run-date", required=True)
     project_report.add_argument("--bootstrap-resamples", type=int, default=10_000)
     project_report.add_argument("--bootstrap-seed", type=int, default=20_260_829)
+
+    generation_eval = subparsers.add_parser(
+        "evaluate-project-generation",
+        help="run clean and attacked generation evaluation on reviewed project cases",
+    )
+    generation_eval.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    generation_eval.add_argument(
+        "--chunks",
+        type=Path,
+        default=Path("artifacts/evals/technical-papers-v1/chunks.jsonl"),
+    )
+    generation_eval.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/generation-results/technical-papers-v1"),
+    )
+    generation_eval.add_argument("--candidate-model", default="gpt-5-mini")
+    generation_eval.add_argument("--judge-model", default="gpt-5-mini")
+    generation_eval.add_argument("-k", type=int, default=10)
+    generation_eval.add_argument("--bm25-k1", type=float, default=1.2)
+    generation_eval.add_argument("--bm25-b", type=float, default=0.75)
+    generation_eval.add_argument("--workers", type=int, default=1)
+    generation_eval.add_argument(
+        "--case-ids",
+        nargs="+",
+        help="optional reviewed case IDs for a non-publishable smoke run",
+    )
+
+    generation_report = subparsers.add_parser(
+        "report-project-generation",
+        help="publish a provisional automated generation-evaluation JSON and SVG",
+    )
+    generation_report.add_argument("summary", type=Path)
+    generation_report.add_argument("case_results", type=Path)
+    generation_report.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    generation_report.add_argument("--snapshot", type=Path, required=True)
+    generation_report.add_argument("--figure", type=Path, required=True)
+    generation_report.add_argument("--run-date", required=True)
+    generation_report.add_argument("--bootstrap-resamples", type=int, default=10_000)
+    generation_report.add_argument("--bootstrap-seed", type=int, default=20_260_829)
 
     validate_project_eval = subparsers.add_parser(
         "validate-project-eval",
@@ -487,6 +537,59 @@ def main(argv: list[str] | None = None) -> int:
                     "snapshot_path": str(args.snapshot),
                     "figure_path": str(args.figure),
                     "status": "generated",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "evaluate-project-generation":
+        require_openai_api_key()
+        summary_path = run_project_generation_evaluation(
+            args.eval_dir,
+            args.chunks,
+            args.output_dir,
+            candidate_model=args.candidate_model,
+            judge_model=args.judge_model,
+            k=args.k,
+            bm25_k1=args.bm25_k1,
+            bm25_b=args.bm25_b,
+            case_ids=args.case_ids,
+            max_workers=args.workers,
+        )
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        print(
+            json.dumps(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": summary["run_id"],
+                    "limited_run": summary["limited_run"],
+                    "counts": summary["counts"],
+                    "clean_metrics": summary["clean_metrics"],
+                    "injection_metrics": summary["injection_metrics"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-project-generation":
+        write_project_generation_report(
+            args.summary,
+            args.case_results,
+            args.eval_dir,
+            args.snapshot,
+            args.figure,
+            run_date=args.run_date,
+            bootstrap_resamples=args.bootstrap_resamples,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot_path": str(args.snapshot),
+                    "figure_path": str(args.figure),
+                    "status": "automated_baseline_human_adjudication_pending",
                 },
                 indent=2,
             )

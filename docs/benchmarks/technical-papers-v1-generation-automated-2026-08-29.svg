@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-labelledby="title description">
+<title id="title">Automated RAG generation evaluation</title>
+<desc id="description">Four interval plots show answerable grounded pass, exact abstention, prompt-injection joint pass, and attack-induced failure. Human adjudication is pending.</desc>
+<rect width="1200" height="650" rx="18" fill="#f8fafc"/>
+<text x="45" y="55" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#0f172a">Automated RAG generation evaluation</text>
+<text x="45" y="88" font-family="Arial,sans-serif" font-size="15" fill="#475569">100 clean cases · 10 attacked variants · 2026-08-29 · human adjudication pending</text>
+<rect x="45" y="132" width="262" height="360" rx="14" fill="#ffffff" stroke="#dbe3ee"/>
+<text x="67" y="174" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#0f172a">Answerable grounded pass</text>
+<text x="67" y="214" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#2563eb">68.0%</text>
+<text x="67" y="242" font-family="Arial,sans-serif" font-size="14" fill="#475569">45 evidence clusters</text>
+<line x1="73" y1="322" x2="279" y2="322" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+<line x1="185.2" y1="322" x2="238.7" y2="322" stroke="#2563eb" stroke-width="8" stroke-linecap="round"/>
+<circle cx="213.1" cy="322" r="8" fill="#2563eb" stroke="#ffffff" stroke-width="3"/>
+<text x="73" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">0%</text>
+<text x="251" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">100%</text>
+<text x="67" y="417" font-family="Arial,sans-serif" font-size="13" fill="#64748b">95% interval · higher is better</text>
+<rect x="325" y="132" width="262" height="360" rx="14" fill="#ffffff" stroke="#dbe3ee"/>
+<text x="347" y="174" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#0f172a">Exact abstention</text>
+<text x="347" y="214" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#0f9f72">95.0%</text>
+<text x="347" y="242" font-family="Arial,sans-serif" font-size="14" fill="#475569">19 / 20 unanswerable</text>
+<line x1="353" y1="322" x2="559" y2="322" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+<line x1="510.4" y1="322" x2="557.2" y2="322" stroke="#0f9f72" stroke-width="8" stroke-linecap="round"/>
+<circle cx="548.7" cy="322" r="8" fill="#0f9f72" stroke="#ffffff" stroke-width="3"/>
+<text x="353" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">0%</text>
+<text x="531" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">100%</text>
+<text x="347" y="417" font-family="Arial,sans-serif" font-size="13" fill="#64748b">95% interval · higher is better</text>
+<rect x="605" y="132" width="262" height="360" rx="14" fill="#ffffff" stroke="#dbe3ee"/>
+<text x="627" y="174" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#0f172a">Injection joint pass</text>
+<text x="627" y="214" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#d97706">40.0%</text>
+<text x="627" y="242" font-family="Arial,sans-serif" font-size="14" fill="#475569">4 / 10 attacked</text>
+<line x1="633" y1="322" x2="839" y2="322" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+<line x1="667.6" y1="322" x2="774.6" y2="322" stroke="#d97706" stroke-width="8" stroke-linecap="round"/>
+<circle cx="715.4" cy="322" r="8" fill="#d97706" stroke="#ffffff" stroke-width="3"/>
+<text x="633" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">0%</text>
+<text x="811" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">100%</text>
+<text x="627" y="417" font-family="Arial,sans-serif" font-size="13" fill="#64748b">95% interval · higher is better</text>
+<rect x="885" y="132" width="262" height="360" rx="14" fill="#ffffff" stroke="#dbe3ee"/>
+<text x="907" y="174" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#0f172a">Attack-induced failure</text>
+<text x="907" y="214" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#dc2626">55.6%</text>
+<text x="907" y="242" font-family="Arial,sans-serif" font-size="14" fill="#475569">5 / 9 clean passes</text>
+<line x1="913" y1="322" x2="1119" y2="322" stroke="#cbd5e1" stroke-width="4" stroke-linecap="round"/>
+<line x1="967.9" y1="322" x2="1080.1" y2="322" stroke="#dc2626" stroke-width="8" stroke-linecap="round"/>
+<circle cx="1027.4" cy="322" r="8" fill="#dc2626" stroke="#ffffff" stroke-width="3"/>
+<text x="913" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">0%</text>
+<text x="1091" y="357" font-family="Arial,sans-serif" font-size="12" fill="#64748b">100%</text>
+<text x="907" y="417" font-family="Arial,sans-serif" font-size="13" fill="#64748b">95% interval · lower is better</text>
+<text x="45" y="545" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#0f172a">Provisional automated baseline</text>
+<text x="45" y="574" font-family="Arial,sans-serif" font-size="14" fill="#475569">Candidate: gpt-5-mini · primary judge: gpt-5-mini · BM25 top-10 · storage disabled</text>
+<text x="45" y="603" font-family="Arial,sans-serif" font-size="14" fill="#475569">The judge is not independent, at least one rationale failed spot checking, and no tools were exposed.</text>
+</svg>

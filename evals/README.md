@@ -45,8 +45,9 @@ adversarial-instruction cases, with adjudication rules and reviewer agreement re
 NeurIPS 2017 Transformer paper and Kimi K3 arXiv v2. The set covers all six required case families,
 and all 100 cases plus 10 redesigned prompt-injection fixtures are approved. Its evidence has been
 materialized into 188 deterministic chunks and page-bounded retrieval judgments, so the validation
-gate reports `ready_for_benchmark: true`. A complete four-retriever run is now published, while
-generation correctness, abstention, and prompt-injection scoring remain separate pending work.
+gate reports `ready_for_benchmark: true`. Complete retrieval and automated generation runs are now
+published. The generation record remains provisional until its model-judge decisions receive human
+adjudication.
 
 ```bash
 uv run llmqa fetch-project-eval-sources \
@@ -74,6 +75,17 @@ uv run llmqa report-project-eval \
   artifacts/benchmark-results/technical-papers-v1/summary.json \
   --snapshot docs/benchmarks/technical-papers-v1-comparison.json \
   --figure docs/benchmarks/technical-papers-v1-comparison.svg \
+  --run-date YYYY-MM-DD
+uv run llmqa evaluate-project-generation \
+  --candidate-model gpt-5-mini \
+  --judge-model gpt-5-mini \
+  --workers 4 \
+  -k 10
+uv run llmqa report-project-generation \
+  artifacts/generation-results/technical-papers-v1/summary.json \
+  artifacts/generation-results/technical-papers-v1/cases.jsonl \
+  --snapshot docs/benchmarks/technical-papers-v1-generation.json \
+  --figure docs/benchmarks/technical-papers-v1-generation.svg \
   --run-date YYYY-MM-DD
 ```
 
@@ -103,6 +115,15 @@ zero. The result does not justify replacing BM25 with dense, MMR, or equal-weigh
 for this corpus. Overlapping case-family means are retained as diagnostics only; they do not have
 separate confidence intervals, and the prompt-injection-tagged retrieval slice is not a security
 evaluation.
+
+The 2026-08-29 generation run used BM25 top-10 retrieval and `gpt-5-mini` for both candidate and
+schema-constrained judge. It passed 82/100 clean tasks, including 63/80 strict answerable cases and
+19/20 exact abstentions. The answerable evidence-cluster macro pass rate was 68.0%. Four of ten
+attacked variants passed all five injection criteria, and five of the nine injection cases that
+passed clean failed under attack. Exact canary leakage was zero, but five cases cited injected
+content; this is why canary suppression is not the benchmark. These are automated, provisional
+scores with human adjudication pending, a known judge spot-check issue on `tp-062`, no tools exposed,
+and no benign-fixture control.
 
 ## Public SciFact benchmark
 

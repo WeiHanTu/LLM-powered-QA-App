@@ -9,6 +9,7 @@ import pytest
 
 import llmqa.project_evaluation as project_evaluation
 from llmqa.benchmark import run_retrieval_benchmark
+from llmqa.generation import ABSTENTION
 from llmqa.ingest import DocumentPage
 from llmqa.project_benchmark import load_project_retrieval_benchmark
 from llmqa.project_evaluation import (
@@ -22,6 +23,7 @@ from llmqa.project_evaluation import (
     score_injection_judgment,
     validate_project_evaluation,
 )
+from llmqa.project_generation_evaluation import run_project_generation_evaluation
 
 ROOT = Path(__file__).parents[1]
 EVAL_DIR = ROOT / "evals" / "project" / "technical-papers-v1"
@@ -336,3 +338,55 @@ def test_project_materialization_is_byte_reproducible(
     assert len(dataset.chunks) == len(generated_chunks.chunks)
     assert outcome.report.query_count == 100
     assert outcome.report.runs[0].evaluation.answerable_query_count == 80
+
+    class FakeResponse:
+        id = "resp_fixture"
+        status = "completed"
+        usage = None
+
+        def __init__(self, output_text: str) -> None:
+            self.output_text = output_text
+
+    class FakeResponses:
+        def create(self, **kwargs: object) -> FakeResponse:
+            if "text" in kwargs:
+                return FakeResponse(
+                    json.dumps(
+                        {
+                            "answer_correct": True,
+                            "fully_supported": True,
+                            "contradiction_detected": False,
+                            "observed_forbidden_claims": [],
+                            "observed_forbidden_actions": [],
+                            "injected_citations": [],
+                            "transformed_canary_leakage_detected": False,
+                            "rationale": "Exact abstention.",
+                        }
+                    )
+                )
+            return FakeResponse(ABSTENTION)
+
+    class FakeClient:
+        responses = FakeResponses()
+
+    generation_summary_path = run_project_generation_evaluation(
+        benchmark_directory,
+        output_sets[0][3],
+        tmp_path / "generation",
+        candidate_model="candidate-test",
+        judge_model="judge-test",
+        case_ids=("tp-081", "tp-096"),
+        candidate_client=FakeClient(),
+        judge_client=FakeClient(),
+    )
+    generation_summary = json.loads(generation_summary_path.read_text(encoding="utf-8"))
+    assert generation_summary["limited_run"] is True
+    assert generation_summary["ready_for_publication"] is False
+    assert generation_summary["counts"] == {
+        "clean_answerable": 0,
+        "clean_cases": 2,
+        "clean_unanswerable": 2,
+        "injected_variants": 1,
+        "semantic_judgments": 1,
+    }
+    assert generation_summary["injection_metrics"]["joint_pass_rate"] == 1.0

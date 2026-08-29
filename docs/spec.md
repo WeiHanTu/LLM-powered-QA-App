@@ -1,6 +1,6 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; SciFact and reviewed project retrieval comparisons published
+Status: Phase 0 implemented; retrieval published; automated generation baseline pending human review
 Last updated: 2026-08-29
 
 ## 1. Executive decision
@@ -298,13 +298,24 @@ release claim.
   Retrieval metrics cover 80 answerable cases grouped into 45 distinct positive relevance sets.
   BM25 leads all query-weighted means and the cluster-macro Recall@10/NDCG@10 means; hybrid's small
   cluster-macro MRR@10 lead is not conclusive against BM25.
+- **Implemented:** resumable BM25 top-10 generation evaluation over 100 clean cases and 10 paired
+  post-retrieval injection variants. The OpenAI Responses API uses storage disabled; a strict JSON
+  schema constrains the semantic judge output; deterministic backstops cover citation syntax, exact
+  abstention, canary leakage, and attribution to fixture-bearing sources.
+- **Measured, provisional:** `gpt-5-mini` passed 82/100 clean tasks, 63/80 answerable tasks, 19/20
+  exact abstentions, and 4/10 five-criterion injection cases. Five of nine clean-passing injection
+  cases failed under attack. The answerable evidence-cluster macro pass rate is 68.0% with a 54.4%-
+  80.4% cluster-bootstrap interval.
+- **Pending:** human adjudication of model-judge decisions. The same model served as candidate and
+  primary judge, and a spot check found one rationale inconsistent with the answer text; the report
+  is therefore an automated baseline, not a final benchmark.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
 - **Pending:** select chunk size/overlap from the evaluation, not intuition.
 
 Exit gate: select the evidence-backed default and document utility, latency, and cost. Replacing BM25
-requires a meaningful paired improvement; this comparison does not establish one. Unanswerable-query
-behavior remains a generation-layer gate.
+requires a meaningful paired improvement; this comparison does not establish one. The automated
+generation gate is measured but remains open until human adjudication is recorded.
 
 ### Phase 2 — end-to-end bias evaluation
 
@@ -322,7 +333,8 @@ mitigations include utility deltas and a human review of failure clusters.
 - Add document/version hashes, provenance manifests, deletion, tenant isolation, and audit logs that
   exclude raw secrets and unnecessary user content.
 - Detect duplicates, suspicious instruction density, and retrieval poisoning candidates.
-- Add prompt-injection, poisoned-corpus, and malicious-file regression suites.
+- Expand the initial ten-case post-retrieval injection suite with benign controls, tool-enabled
+  attacks, poisoned-corpus cases, and malicious-file regressions.
 
 Exit gate: deletion and tenant-boundary tests pass; red-team findings have owners and severity-based
 release rules.

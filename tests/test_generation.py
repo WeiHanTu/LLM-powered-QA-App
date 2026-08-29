@@ -59,3 +59,27 @@ def test_exact_abstention_does_not_require_a_citation() -> None:
     )
 
     assert answer.citations_valid
+
+
+def test_comma_grouped_citations_are_validated() -> None:
+    results = [
+        *evidence(),
+        SearchResult(Chunk("2", "A second passage.", "plan.pdf", page=3), 0.8, 2, 2),
+    ]
+
+    answer = generate_grounded_answer(
+        "When is launch?", results, model="test-model", client=FakeClient("Friday [S1,S2].")
+    )
+
+    assert answer.cited_source_numbers == (1, 2)
+    assert answer.citations_valid is True
+
+
+def test_no_retrieval_results_abstains_without_calling_provider() -> None:
+    client = FakeClient("This must not be used")
+
+    answer = generate_grounded_answer("Unknown?", [], model="test-model", client=client)
+
+    assert answer.text == ABSTENTION
+    assert answer.provider_called is False
+    assert client.responses.kwargs == {}

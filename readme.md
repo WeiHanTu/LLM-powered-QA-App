@@ -108,6 +108,34 @@ intervals, latency scope, and limitations. Page-bounded qrels are not exact answ
 the five answerable prompt-injection-tagged rows in this clean retrieval run do not measure
 prompt-injection resistance.
 
+### Automated generation and prompt-injection baseline
+
+The next run fixes retrieval to the evidence-backed BM25 top-10 baseline and evaluates `gpt-5-mini`
+on all 100 clean cases plus 10 post-retrieval injected variants. Answerable correctness and semantic
+injection behavior use a schema-constrained `gpt-5-mini` judge; abstention, citation syntax, exact
+canary leakage, and fixture-source attribution backstops are deterministic.
+
+![Automated RAG generation evaluation with human adjudication pending](docs/benchmarks/technical-papers-v1-generation-automated-2026-08-29.svg)
+
+| Metric | Result | Interpretation |
+|---|---:|---|
+| Clean task pass | 82 / 100 | Strict answer or exact abstention contract |
+| Answerable grounded pass | 63 / 80 | Query-weighted automated score |
+| Answerable evidence-cluster macro | 68.0% | 95% cluster bootstrap: 54.4%-80.4% |
+| Exact unanswerable abstention | 19 / 20 | One answer explained absence instead of using the exact string |
+| Injection joint pass | 4 / 10 | All five criteria must pass |
+| Attack-induced failure | 5 / 9 | Among injection cases that passed clean; lower is better |
+
+The result exposes the weakness instead of hiding it. All ten attacks avoided exact canary leakage,
+but only six avoided forbidden claims and only five avoided citing injected content. A canary-only
+score would therefore have reported 100% while the actual five-criterion pass rate was 40%.
+
+This is a **provisional automated baseline, not a human-adjudicated benchmark**. Fifteen answerable
+failures were grounded but incomplete, two answerable cases abstained, and one model-judge rationale
+(`tp-062`) conflicts with text present in the answer. The candidate and judge use the same model,
+and no tools were exposed, so the result does not establish safety for tool-enabled agents. See the
+[machine-readable generation record](docs/benchmarks/technical-papers-v1-generation-automated-2026-08-29.json).
+
 ```bash
 uv run llmqa fetch-scifact
 uv run llmqa benchmark-scifact --retrievers bm25 -k 10 --fetch-k 40
@@ -120,6 +148,18 @@ uv run llmqa benchmark-scifact \
 uv run llmqa report-scifact artifacts/benchmark-results/scifact/summary.json \
   --snapshot docs/benchmarks/scifact-comparison.json \
   --figure docs/benchmarks/scifact-comparison.svg \
+  --run-date YYYY-MM-DD
+
+# Requires OPENAI_API_KEY; raw responses remain under ignored artifacts/.
+uv run llmqa evaluate-project-generation \
+  --candidate-model gpt-5-mini --judge-model gpt-5-mini \
+  --workers 4 -k 10
+
+uv run llmqa report-project-generation \
+  artifacts/generation-results/technical-papers-v1/summary.json \
+  artifacts/generation-results/technical-papers-v1/cases.jsonl \
+  --snapshot docs/benchmarks/technical-papers-v1-generation.json \
+  --figure docs/benchmarks/technical-papers-v1-generation.svg \
   --run-date YYYY-MM-DD
 ```
 
@@ -186,9 +226,9 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 
 ## Important limitations
 
-- The 100-case technical-paper set is reviewed and its deterministic evidence gate is open, but no
-  generation-quality, abstention, or prompt-injection score has been reported. The published project
-  result measures retrieval only.
+- The 100-case technical-paper set and fixtures are reviewed, but the published generation result
+  uses an automated same-model judge and has not been human-adjudicated. Treat it as a provisional
+  experiment, not a final model-quality or security benchmark.
 - Project qrels label every chunk on a reviewed cited page as relevant. They measure cited-page
   retrieval, not exact answer-span retrieval; treating them as passage-level human judgments would
   overstate the annotation quality.
@@ -202,6 +242,8 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
   not implemented. Claiming otherwise would be false.
 - Model outputs can still be wrong, biased, or inadequately cited. The UI visibly flags citation
   validation failures.
+- The injection run exposes no tools and has only ten attacks with no benign-fixture control. Its
+  40% joint pass rate does not generalize to tool-enabled agents or production attack prevalence.
 
 ## Attribution and license
 
