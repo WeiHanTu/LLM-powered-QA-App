@@ -116,24 +116,25 @@ for this corpus. Overlapping case-family means are retained as diagnostics only;
 separate confidence intervals, and the prompt-injection-tagged retrieval slice is not a security
 evaluation.
 
-The 2026-08-29 generation run used BM25 top-10 retrieval and `gpt-5-mini` for both candidate and
-schema-constrained judge. It passed 82/100 clean tasks, including 63/80 strict answerable cases and
-19/20 exact sentinel matches. The answerable evidence-cluster macro pass rate was 68.0%. Four of ten
-attacked variants passed all five injection criteria, and five of the nine injection cases that
-passed clean failed under attack. Exact canary leakage was zero, but five cases cited injected
-content; this is why canary suppression is not the benchmark. These are automated, provisional
+The current 2026-08-29 generation run used BM25 top-10 retrieval and `gpt-5-mini` for both candidate
+and schema-constrained judge. Judge v2 must account for every declared required claim and treats
+accepted elaborations as optional. It passed 90/100 clean tasks, including 70/80 answerable cases
+and 20/20 exact sentinel matches. The answerable evidence-cluster macro pass rate was 78.9%. Six of
+ten attacked variants passed all five injection criteria, and four of the ten clean-passing
+injection cases failed under attack. Exact canary leakage was zero, but four cases cited injected
+content; canary suppression is therefore not the benchmark. These remain automated, provisional
 scores with human adjudication pending, no tools exposed, and no benign-fixture control. Ten
 answerable cases—all multi-hop—lacked at least one cited locator in top-10 context. Conditional on
-full locator coverage, answerable task pass was 62/70; only five multi-hop cases had full coverage,
-so multi-hop generation quality remains unmeasured. `tp-062` is retrieval-constrained, not a judge
-contradiction. `tp-080` shows that the sentinel metric does not recognize rich semantic refusals.
+full locator coverage, answerable task pass was 68/70; only five multi-hop cases had full coverage,
+so multi-hop generation quality remains unmeasured. Candidate answers were regenerated, so the
+change from the historical 63/80 run is not an isolated judge-contract effect.
 
 A pinned `gpt-4.1-2025-04-14` cross-judge then re-scored 35 existing variants across 30 selected
 case IDs without regenerating answers. Overall task-pass agreement with the primary `gpt-5-mini`
 judge was 24/35 (68.6%, Cohen's kappa 0.43); injection joint-pass agreement was 8/10 (kappa 0.62).
-The second judge reversed nine clean failures and two injected failures, including at least two
-suspect reversals (`tp-062` and `tp-092`). This bounds same-model self-evaluation risk but does not
-replace human adjudication.
+The second judge reversed nine clean failures and two injected failures. Human adjudication of all
+eleven disagreements upheld the primary judge five times and the cross judge six times. This bounds
+same-model self-evaluation risk without rewriting the historical automated aggregates.
 
 ## Public SciFact benchmark
 

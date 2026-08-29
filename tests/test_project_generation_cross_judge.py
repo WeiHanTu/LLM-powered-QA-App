@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -14,6 +15,13 @@ EVAL_DIR = ROOT / "evals" / "project" / "technical-papers-v1"
 PUBLIC_SNAPSHOT = (
     ROOT / "docs" / "benchmarks" / "technical-papers-v1-generation-cross-judge-2026-08-29.json"
 )
+ADJUDICATION = (
+    ROOT / "docs" / "benchmarks" / "technical-papers-v1-generation-adjudication-2026-08-29.json"
+)
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def test_cross_judge_selection_covers_failures_attacks_and_seeded_passes() -> None:
@@ -40,12 +48,17 @@ def test_cross_judge_selection_covers_failures_attacks_and_seeded_passes() -> No
     assert selected == select_cross_judge_case_ids(cases, rows, sample_size=30, seed=7)[0]
 
 
-def test_binary_agreement_reports_confusion_and_kappa() -> None:
+def test_binary_agreement_reports_directional_mcnemar_and_kappa() -> None:
     agreement = binary_agreement([(True, True), (True, False), (False, False), (False, False)])
 
     assert agreement["agreement_count"] == 3
     assert agreement["agreement_rate"] == 0.75
     assert agreement["cohen_kappa"] == 0.5
+    assert agreement["directional_disagreement"] == {
+        "primary_pass_cross_fail": 1,
+        "primary_fail_cross_pass": 0,
+        "mcnemar_exact_two_sided_p": 1.0,
+    }
     assert agreement["confusion"] == {
         "primary_true_cross_true": 1,
         "primary_true_cross_false": 1,
@@ -68,8 +81,61 @@ def test_committed_cross_judge_snapshot_reconciles() -> None:
     assert task["agreement_count"] == 24
     assert task["total"] == 35
     assert task["confusion"]["primary_true_cross_false"] == 0
+    assert task["directional_disagreement"] == {
+        "primary_pass_cross_fail": 0,
+        "primary_fail_cross_pass": 11,
+        "mcnemar_exact_two_sided_p": 0.0009765625,
+    }
+    clean = snapshot["agreement"]["task_pass_clean_answerable"]
+    assert clean["directional_disagreement"] == {
+        "primary_pass_cross_fail": 0,
+        "primary_fail_cross_pass": 9,
+        "mcnemar_exact_two_sided_p": 0.00390625,
+    }
     injection = snapshot["agreement"]["injection_criteria"]["passed"]
     assert injection["agreement_count"] == 8
     assert injection["total"] == 10
     assert len(snapshot["disagreements"]) == 11
+    sensitivity = snapshot["judge_sensitivity"]
+    assert sensitivity["clean_answerable_failure_complete_sensitivity"] == {
+        "audited_primary_passes": 8,
+        "audited_primary_passes_retained": 8,
+        "cross_judge_imputed": {"passes": 72, "rate": 0.9, "total": 80},
+        "failure_complete": True,
+        "interpretation": (
+            "Failure-complete sensitivity scenario, not a full recomputation: every primary "
+            "failure was re-judged, while unjudged primary passes are assumed to remain passes."
+        ),
+        "primary": {"passes": 63, "rate": 0.7875, "total": 80},
+        "unjudged_primary_passes_assumed_retained": 55,
+    }
+    assert sensitivity["injection_joint_same_outputs"] == {
+        "cross_judge_passes": 6,
+        "primary_passes": 4,
+        "status": "exact_rejudgment_of_all_ten_attacked_outputs",
+        "total": 10,
+    }
     assert snapshot["usage"]["actual_api_requests"] is None
+
+
+def test_committed_human_adjudication_covers_every_disagreement() -> None:
+    snapshot = json.loads(PUBLIC_SNAPSHOT.read_text(encoding="utf-8"))
+    adjudication = json.loads(ADJUDICATION.read_text(encoding="utf-8"))
+    decisions = adjudication["decisions"]
+
+    disagreement_keys = {(row["case_id"], row["variant"]) for row in snapshot["disagreements"]}
+    decision_keys = {(row["case_id"], row["variant"]) for row in decisions}
+    assert decision_keys == disagreement_keys
+    assert len(decision_keys) == len(decisions) == 11
+    assert adjudication["summary"] == {
+        "fail": 5,
+        "pass": 6,
+        "uphold_cross_judge": 6,
+        "uphold_primary": 5,
+    }
+    provenance = adjudication["provenance"]
+    assert provenance["cases_sha256"] == _sha256(EVAL_DIR / "cases.jsonl")
+    assert provenance["cross_judge_snapshot_sha256"] == _sha256(PUBLIC_SNAPSHOT)
+    assert provenance["primary_snapshot_sha256"] == _sha256(
+        ROOT / "docs" / "benchmarks" / "technical-papers-v1-generation-automated-2026-08-29.json"
+    )

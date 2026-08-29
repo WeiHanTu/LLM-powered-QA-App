@@ -15,6 +15,12 @@ EVAL_DIR = ROOT / "evals" / "project" / "technical-papers-v1"
 PUBLIC_SNAPSHOT = (
     ROOT / "docs" / "benchmarks" / "technical-papers-v1-generation-automated-2026-08-29.json"
 )
+REQUIRED_CLAIMS_SNAPSHOT = (
+    ROOT
+    / "docs"
+    / "benchmarks"
+    / "technical-papers-v1-generation-required-claims-v1-2026-08-29.json"
+)
 
 
 def test_generation_snapshot_is_full_and_explicitly_provisional() -> None:
@@ -81,6 +87,7 @@ def test_generation_snapshot_is_full_and_explicitly_provisional() -> None:
             "judge_prompt_sha256": "judge-hash",
             "judge_schema_sha256": "schema-hash",
             "judge_prompt_version": "judge-v1",
+            "claim_contract_version": "required-claims-v1",
             "injection_placement_version": "placement-v1",
         },
         "provenance": {},
@@ -107,6 +114,7 @@ def test_generation_snapshot_is_full_and_explicitly_provisional() -> None:
     assert conditioned["answerable_task_pass_with_incomplete_locator_coverage"]["rate"] == 1.0
     assert snapshot["dataset"]["answerable_evidence_cluster_count"] == 45  # type: ignore[index]
     assert len(snapshot["per_case_outcomes"]) == 100
+    assert "semantic_abstention_gap" not in snapshot["audit_flags"]
     element_tree.fromstring(svg)
 
 
@@ -126,3 +134,28 @@ def test_committed_generation_snapshot_discloses_retrieval_confound() -> None:
     assert retrieval["answerable_case_count"] == 10
     assert retrieval["all_are_multi_hop"] is True
     assert "model_judge_spot_check" not in snapshot["audit_flags"]
+
+
+def test_committed_required_claims_snapshot_reconciles() -> None:
+    snapshot = json.loads(REQUIRED_CLAIMS_SNAPSHOT.read_text(encoding="utf-8"))
+
+    assert snapshot["run_id"] == "68f31a98962453b5a9b6"
+    assert snapshot["configuration"]["claim_contract_version"] == "required-claims-v1"
+    assert snapshot["configuration"]["judge_prompt_version"] == (
+        "generation-judge-required-claims-v2"
+    )
+    assert snapshot["metrics"]["clean_task"]["successes"] == 90
+    assert snapshot["metrics"]["answerable_grounded_query"]["successes"] == 70
+    assert snapshot["metrics"]["unanswerable_sentinel_compliance"]["successes"] == 20
+    assert snapshot["metrics"]["injection_joint_pass"]["successes"] == 6
+    conditioned = snapshot["metrics"]["retrieval_conditioned"]
+    assert conditioned["answerable_task_pass_given_full_locator_coverage"]["successes"] == 68
+    assert conditioned["answerable_task_pass_given_full_locator_coverage"]["total"] == 70
+    assert conditioned["multi_hop_task_pass_given_full_locator_coverage"]["total"] == 5
+    assert "semantic_abstention_gap" not in snapshot["audit_flags"]
+    element_tree.parse(
+        ROOT
+        / "docs"
+        / "benchmarks"
+        / "technical-papers-v1-generation-required-claims-v1-2026-08-29.svg"
+    )

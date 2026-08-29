@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
+from math import comb
 from pathlib import Path
 from typing import Any, cast
 
@@ -163,7 +164,7 @@ def select_cross_judge_case_ids(
 
 
 def binary_agreement(pairs: Sequence[tuple[bool, bool]]) -> dict[str, object]:
-    """Return a confusion matrix, raw agreement, and Cohen's kappa."""
+    """Return directional discordance, McNemar's exact test, and agreement statistics."""
 
     if not pairs:
         raise ValueError("agreement requires at least one paired judgment")
@@ -177,8 +178,19 @@ def binary_agreement(pairs: Sequence[tuple[bool, bool]]) -> dict[str, object]:
     cross_true_rate = (primary_true_cross_true + primary_false_cross_true) / total
     expected = primary_true_rate * cross_true_rate + (1 - primary_true_rate) * (1 - cross_true_rate)
     kappa = (observed - expected) / (1 - expected) if expected < 1 else None
+    discordant = primary_true_cross_false + primary_false_cross_true
+    smaller_corner = min(primary_true_cross_false, primary_false_cross_true)
+    exact_p = min(
+        1.0,
+        2 * sum(comb(discordant, value) for value in range(smaller_corner + 1)) / (2**discordant),
+    )
     return {
         "total": total,
+        "directional_disagreement": {
+            "primary_pass_cross_fail": primary_true_cross_false,
+            "primary_fail_cross_pass": primary_false_cross_true,
+            "mcnemar_exact_two_sided_p": exact_p,
+        },
         "agreement_count": primary_true_cross_true + primary_false_cross_false,
         "agreement_rate": observed,
         "cohen_kappa": kappa,
@@ -354,7 +366,73 @@ def _usage(rows: Sequence[Mapping[str, Any]]) -> dict[str, int | None]:
     }
 
 
-def _summary(manifest: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> dict[str, object]:
+def _judge_sensitivity(
+    primary_summary: Mapping[str, Any],
+    clean_rows: Sequence[Mapping[str, Any]],
+    injected_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, object]:
+    counts = cast(Mapping[str, Any], primary_summary["counts"])
+    clean_metrics = cast(Mapping[str, Any], primary_summary["clean_metrics"])
+    answerable_total = int(counts["clean_answerable"])
+    primary_answerable_passes = int(clean_metrics["answerable_grounded_pass_count"])
+    primary_answerable_failures = answerable_total - primary_answerable_passes
+    audited_primary_passes = sum(bool(row["primary_task_pass"]) for row in clean_rows)
+    audited_primary_failures = len(clean_rows) - audited_primary_passes
+    primary_pass_cross_fail = sum(
+        bool(row["primary_task_pass"]) and not bool(row["cross_task_pass"]) for row in clean_rows
+    )
+    primary_fail_cross_pass = sum(
+        not bool(row["primary_task_pass"]) and bool(row["cross_task_pass"]) for row in clean_rows
+    )
+    imputed_cross_passes = (
+        primary_answerable_passes - primary_pass_cross_fail + primary_fail_cross_pass
+    )
+    unjudged_primary_passes = primary_answerable_passes - audited_primary_passes
+    failure_complete = audited_primary_failures == primary_answerable_failures
+
+    primary_injection_passes = sum(
+        bool(cast(Mapping[str, Any], row["primary_injection_score"])["passed"])
+        for row in injected_rows
+    )
+    cross_injection_passes = sum(
+        bool(cast(Mapping[str, Any], row["cross_injection_score"])["passed"])
+        for row in injected_rows
+    )
+    return {
+        "clean_answerable_failure_complete_sensitivity": {
+            "failure_complete": failure_complete,
+            "primary": {
+                "passes": primary_answerable_passes,
+                "total": answerable_total,
+                "rate": primary_answerable_passes / answerable_total,
+            },
+            "cross_judge_imputed": {
+                "passes": imputed_cross_passes,
+                "total": answerable_total,
+                "rate": imputed_cross_passes / answerable_total,
+            },
+            "audited_primary_passes_retained": audited_primary_passes - primary_pass_cross_fail,
+            "audited_primary_passes": audited_primary_passes,
+            "unjudged_primary_passes_assumed_retained": unjudged_primary_passes,
+            "interpretation": (
+                "Failure-complete sensitivity scenario, not a full recomputation: every primary "
+                "failure was re-judged, while unjudged primary passes are assumed to remain passes."
+            ),
+        },
+        "injection_joint_same_outputs": {
+            "status": "exact_rejudgment_of_all_ten_attacked_outputs",
+            "primary_passes": primary_injection_passes,
+            "cross_judge_passes": cross_injection_passes,
+            "total": len(injected_rows),
+        },
+    }
+
+
+def _summary(
+    manifest: Mapping[str, Any],
+    rows: Sequence[Mapping[str, Any]],
+    primary_summary: Mapping[str, Any],
+) -> dict[str, object]:
     task_pairs = [(bool(row["primary_task_pass"]), bool(row["cross_task_pass"])) for row in rows]
     clean_rows = [row for row in rows if row["variant"] == "clean"]
     injected_rows = [row for row in rows if row["variant"] == "injected"]
@@ -415,6 +493,7 @@ def _summary(manifest: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> 
             "semantic_fields": semantic_agreement,
             "injection_criteria": injection_agreement,
         },
+        "judge_sensitivity": _judge_sensitivity(primary_summary, clean_rows, injected_rows),
         "disagreements": [
             {
                 "case_id": row["case_id"],
@@ -434,6 +513,11 @@ def _summary(manifest: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> 
             (
                 "The sample is deliberately failure- and attack-enriched. Agreement rates describe "
                 "the selected audit set and are not population accuracy estimates."
+            ),
+            (
+                "The 72/80 clean-answerable cross-judge figure is a failure-complete sensitivity "
+                "scenario, not a full recomputation: 55 unjudged primary passes are imputed as "
+                "stable. The 6/10 injection figure re-judges all ten attacked outputs directly."
             ),
             (
                 "Unanswerable clean outputs are excluded because the primary run did not produce "
@@ -582,7 +666,7 @@ def run_project_generation_cross_judge(
     if set(result_rows) != expected_keys:
         raise RuntimeError("cross-judge run is incomplete")
     ordered = [result_rows[key] for key in sorted(result_rows)]
-    summary = _summary(manifest, ordered)
+    summary = _summary(manifest, ordered, primary_summary)
     _atomic_write(summary_path, _json_bytes(summary))
     return summary_path
 
@@ -635,6 +719,7 @@ def write_project_cross_judge_report(
         "selection": summary["selection"],
         "counts": summary["counts"],
         "agreement": summary["agreement"],
+        "judge_sensitivity": summary["judge_sensitivity"],
         "disagreements": summary["disagreements"],
         "per_variant_outcomes": public_outcomes,
         "usage": summary["usage"],

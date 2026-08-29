@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import pytest
+
 from llmqa.domain import Chunk, SearchResult
 from llmqa.project_evaluation import (
     load_injection_fixtures,
@@ -72,12 +74,14 @@ def evidence() -> list[SearchResult]:
     ]
 
 
-def successful_judgment() -> str:
+def successful_judgment(*required_claims: str) -> str:
     return json.dumps(
         {
             "answer_correct": True,
             "fully_supported": True,
             "contradiction_detected": False,
+            "required_claims_satisfied": list(required_claims),
+            "required_claims_missing": [],
             "observed_forbidden_claims": [],
             "observed_forbidden_actions": [],
             "injected_citations": [],
@@ -93,6 +97,8 @@ def forbidden_claim_judgment(claim: str) -> str:
             "answer_correct": False,
             "fully_supported": False,
             "contradiction_detected": False,
+            "required_claims_satisfied": [],
+            "required_claims_missing": [],
             "observed_forbidden_claims": [claim],
             "observed_forbidden_actions": [],
             "injected_citations": [],
@@ -124,7 +130,7 @@ def test_structured_judge_disables_storage_and_withholds_fixture_content() -> No
     fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
     case = next(case for case in cases if case.case_id == "tp-091")
     fixture = next(fixture for fixture in fixtures if fixture.fixture_id == "pi-01")
-    client = FakeClient(successful_judgment())
+    client = FakeClient(successful_judgment(*case.required_claims))
 
     judgment = judge_generation(
         case,
@@ -141,9 +147,54 @@ def test_structured_judge_disables_storage_and_withholds_fixture_content() -> No
     assert judgment.input_tokens == 20
     assert client.responses.kwargs["store"] is False
     assert fixture.content not in str(client.responses.kwargs["input"])
+    payload = json.loads(str(client.responses.kwargs["input"]))
+    assert payload["required_claims"] == list(case.required_claims)
+    assert payload["accepted_elaborations"] == list(case.accepted_elaborations)
     text_config = client.responses.kwargs["text"]
     assert isinstance(text_config, dict)
     assert text_config["format"]["strict"] is True
+
+
+def test_judge_must_account_for_every_required_claim() -> None:
+    case = next(
+        case
+        for case in load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+        if case.case_id == "tp-002"
+    )
+    output = json.loads(successful_judgment(*case.required_claims))
+    output["answer_correct"] = False
+    output["required_claims_satisfied"] = [case.required_claims[0]]
+    output["required_claims_missing"] = [case.required_claims[1]]
+    judgment = judge_generation(
+        case,
+        "It uses eight heads [S1].",
+        evidence(),
+        model="judge-test",
+        client=FakeClient(json.dumps(output)),
+    )
+
+    assert judgment.required_claims_satisfied == (case.required_claims[0],)
+    assert judgment.required_claims_missing == (case.required_claims[1],)
+    assert judgment.answer_correct is False
+
+
+def test_judge_rejects_an_invalid_required_claim_partition() -> None:
+    case = next(
+        case
+        for case in load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+        if case.case_id == "tp-002"
+    )
+    output = json.loads(successful_judgment(*case.required_claims))
+    output["required_claims_satisfied"] = [case.required_claims[0]]
+
+    with pytest.raises(ValueError, match="must partition the declared contract"):
+        judge_generation(
+            case,
+            "It uses eight heads [S1].",
+            evidence(),
+            model="judge-test",
+            client=FakeClient(json.dumps(output)),
+        )
 
 
 def test_exact_canary_backstop_fails_otherwise_correct_injected_answer() -> None:
@@ -152,7 +203,7 @@ def test_exact_canary_backstop_fails_otherwise_correct_injected_answer() -> None
     case = next(case for case in cases if case.case_id == "tp-091")
     fixture = next(fixture for fixture in fixtures if fixture.fixture_id == "pi-01")
     candidate = FakeClient(f"The factor is the square root of d_k [S1]. {fixture.canary}")
-    judge = FakeClient(successful_judgment())
+    judge = FakeClient(successful_judgment(*case.required_claims))
 
     result = evaluate_case_variant(
         case,

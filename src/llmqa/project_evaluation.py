@@ -50,6 +50,7 @@ _INJECTION_PLACEMENTS = frozenset(
     {"retrieved_chunk_prefix", "between_evidence_chunks", "retrieved_chunk_suffix"}
 )
 _EVIDENCE_STRATEGY = "cited_page_all_chunks_v1"
+CLAIM_CONTRACT_VERSION = "required-claims-v1"
 
 type Answerability = Literal["answerable", "unanswerable"]
 type ReviewStatus = Literal["review_pending", "approved", "needs_revision", "rejected"]
@@ -110,6 +111,8 @@ class ProjectEvaluationCase:
     reviewer_ids: tuple[str, ...]
     reviewed_at: str | None
     review_notes: str
+    required_claims: tuple[str, ...] = ()
+    accepted_elaborations: tuple[str, ...] = ()
     near_duplicate_group: str | None = None
     near_duplicate_mode: str | None = None
     injection_fixture_id: str | None = None
@@ -144,6 +147,8 @@ class ProjectEvaluationSummary:
     fixtures_approved: bool
     case_type_criteria_declared: bool
     injection_scoring_declared: bool
+    claim_contract_declared: bool
+    required_claims_declared: bool
     evidence_chunk_ids_present: bool
     evidence_chunk_ids_verified: bool
     ready_for_benchmark: bool
@@ -318,6 +323,20 @@ def _validate_injection_scoring_contract(manifest: Mapping[str, Any]) -> None:
             "manifest.injection_scoring.criteria must declare the five criteria in order: "
             f"{list(INJECTION_SCORING_CRITERIA)}"
         )
+
+
+def _validate_claim_contract(manifest: Mapping[str, Any]) -> None:
+    requirements = _require_mapping(manifest.get("requirements"), label="manifest.requirements")
+    if requirements.get("required_claims_required_for_answerable") is not True:
+        raise ValueError(
+            "manifest.requirements.required_claims_required_for_answerable must be true"
+        )
+    contract = _require_mapping(manifest.get("claim_contract"), label="manifest.claim_contract")
+    version = _required_text(contract, "version", label="manifest.claim_contract")
+    if version != CLAIM_CONTRACT_VERSION:
+        raise ValueError(f"manifest.claim_contract.version must be {CLAIM_CONTRACT_VERSION!r}")
+    for key in ("adopted", "rule", "authoring_rule", "verification", "scoring_note"):
+        _required_text(contract, key, label="manifest.claim_contract")
 
 
 def _evidence_materialization_contract(manifest: Mapping[str, Any]) -> tuple[int, int, int]:
@@ -722,6 +741,8 @@ def load_project_evaluation_cases(path: Path) -> tuple[ProjectEvaluationCase, ..
                 reviewer_ids=reviewer_ids,
                 reviewed_at=_optional_text(row, "reviewed_at", label=label),
                 review_notes=str(row.get("review_notes", "")),
+                required_claims=_string_list(row, "required_claims", label=label),
+                accepted_elaborations=_string_list(row, "accepted_elaborations", label=label),
                 near_duplicate_group=_optional_text(row, "near_duplicate_group", label=label),
                 near_duplicate_mode=_optional_text(row, "near_duplicate_mode", label=label),
                 injection_fixture_id=_optional_text(row, "injection_fixture_id", label=label),
@@ -804,6 +825,32 @@ def validate_project_evaluation(
             }
             if len(distinct_locators) < 2:
                 raise ValueError(f"multi-hop case {case.case_id!r} requires two evidence locators")
+
+        if case.answerability == "answerable":
+            if not case.required_claims:
+                raise ValueError(
+                    f"answerable case {case.case_id!r} requires a non-empty required_claims list; "
+                    "a free-text expected answer alone is not a checkable contract"
+                )
+            if len(case.required_claims) != len(set(case.required_claims)):
+                raise ValueError(
+                    f"case {case.case_id!r} required_claims must not contain duplicates"
+                )
+            if len(case.accepted_elaborations) != len(set(case.accepted_elaborations)):
+                raise ValueError(
+                    f"case {case.case_id!r} accepted_elaborations must not contain duplicates"
+                )
+            overlap = set(case.required_claims) & set(case.accepted_elaborations)
+            if overlap:
+                raise ValueError(
+                    f"case {case.case_id!r} lists {sorted(overlap)} as both "
+                    "required and elaboration"
+                )
+        elif case.required_claims or case.accepted_elaborations:
+            raise ValueError(
+                f"unanswerable case {case.case_id!r} must not declare required_claims or "
+                "accepted_elaborations; its contract is the abstention sentinel"
+            )
 
         if "near_duplicate" in case.case_types:
             if case.near_duplicate_group is None:
@@ -890,6 +937,11 @@ def validate_project_evaluation(
                     f"controlled_perturbation group {group!r} requires one "
                     "canonical expected answer shared by both members"
                 )
+            if len({tuple(member.required_claims) for member in members}) != 1:
+                raise ValueError(
+                    f"controlled_perturbation group {group!r} requires an identical "
+                    "required_claims contract on both members"
+                )
             perturbed = sum(1 for member in members if member.injection_fixture_id is not None)
             if perturbed != 1:
                 raise ValueError(
@@ -941,6 +993,12 @@ def validate_project_evaluation(
     case_type_criteria_declared = bool(declared_names) and set(case_type_counts) <= declared_names
     _validate_injection_scoring_contract(manifest)
     injection_scoring_declared = True
+    _validate_claim_contract(manifest)
+    claim_contract_declared = True
+    answerable_cases = [case for case in cases if case.answerability == "answerable"]
+    required_claims_declared = bool(answerable_cases) and all(
+        case.required_claims for case in answerable_cases
+    )
 
     approved_fixtures = [f for f in fixtures if f.review_status == "approved"]
     fixtures_approved = bool(fixtures) and len(approved_fixtures) == len(fixtures)
@@ -1023,6 +1081,8 @@ def validate_project_evaluation(
         fixtures_approved=fixtures_approved,
         case_type_criteria_declared=case_type_criteria_declared,
         injection_scoring_declared=injection_scoring_declared,
+        claim_contract_declared=claim_contract_declared,
+        required_claims_declared=required_claims_declared,
         evidence_chunk_ids_present=evidence_chunk_ids_present,
         evidence_chunk_ids_verified=evidence_chunk_ids_verified,
         ready_for_benchmark=(
@@ -1030,6 +1090,8 @@ def validate_project_evaluation(
             and fixtures_approved
             and case_type_criteria_declared
             and injection_scoring_declared
+            and claim_contract_declared
+            and required_claims_declared
             and evidence_chunk_ids_present
             and evidence_chunk_ids_verified
         ),
@@ -1210,6 +1272,8 @@ def materialize_project_evaluation(
         and before.fixtures_approved
         and before.case_type_criteria_declared
         and before.injection_scoring_declared
+        and before.claim_contract_declared
+        and before.required_claims_declared
     ):
         raise ValueError("project evaluation review and scoring contracts must be complete first")
 

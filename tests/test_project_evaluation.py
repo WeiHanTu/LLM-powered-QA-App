@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -53,6 +54,8 @@ def test_committed_project_eval_is_reviewed_and_evidence_verified() -> None:
     assert summary.fixtures_approved is True
     assert summary.case_type_criteria_declared is True
     assert summary.injection_scoring_declared is True
+    assert summary.claim_contract_declared is True
+    assert summary.required_claims_declared is True
     assert summary.evidence_chunk_ids_present is True
     assert summary.evidence_chunk_ids_verified is True
     assert summary.ready_for_benchmark is True
@@ -356,6 +359,8 @@ def test_project_materialization_is_byte_reproducible(
                             "answer_correct": True,
                             "fully_supported": True,
                             "contradiction_detected": False,
+                            "required_claims_satisfied": [],
+                            "required_claims_missing": [],
                             "observed_forbidden_claims": [],
                             "observed_forbidden_actions": [],
                             "injected_citations": [],
@@ -390,3 +395,92 @@ def test_project_materialization_is_byte_reproducible(
         "semantic_judgments": 1,
     }
     assert generation_summary["injection_metrics"]["joint_pass_rate"] == 1.0
+
+
+def test_answerable_case_requires_a_claim_contract() -> None:
+    manifest = load_project_eval_manifest(EVAL_DIR / "manifest.json")
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = list(load_project_evaluation_cases(EVAL_DIR / "cases.jsonl"))
+    index = next(i for i, case in enumerate(cases) if case.answerability == "answerable")
+    cases[index] = replace(cases[index], required_claims=())
+
+    with pytest.raises(ValueError, match="requires a non-empty required_claims list"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_unanswerable_case_must_not_declare_claims() -> None:
+    manifest = load_project_eval_manifest(EVAL_DIR / "manifest.json")
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = list(load_project_evaluation_cases(EVAL_DIR / "cases.jsonl"))
+    index = next(i for i, case in enumerate(cases) if case.answerability == "unanswerable")
+    cases[index] = replace(cases[index], required_claims=("something",))
+
+    with pytest.raises(ValueError, match="must not declare required_claims"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_controlled_perturbation_twins_share_the_claim_contract() -> None:
+    manifest = load_project_eval_manifest(EVAL_DIR / "manifest.json")
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = list(load_project_evaluation_cases(EVAL_DIR / "cases.jsonl"))
+    index = next(
+        i for i, case in enumerate(cases) if case.near_duplicate_mode == "controlled_perturbation"
+    )
+    cases[index] = replace(cases[index], required_claims=("a divergent claim",))
+
+    with pytest.raises(ValueError, match="identical required_claims contract"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_required_and_elaboration_claims_must_not_overlap() -> None:
+    manifest = load_project_eval_manifest(EVAL_DIR / "manifest.json")
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = list(load_project_evaluation_cases(EVAL_DIR / "cases.jsonl"))
+    index = next(i for i, case in enumerate(cases) if case.answerability == "answerable")
+    shared = cases[index].required_claims[0]
+    cases[index] = replace(cases[index], accepted_elaborations=(shared,))
+
+    with pytest.raises(ValueError, match="as both required and elaboration"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_manifest_must_declare_the_claim_contract() -> None:
+    manifest = deepcopy(dict(load_project_eval_manifest(EVAL_DIR / "manifest.json")))
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+    manifest.pop("claim_contract")
+
+    with pytest.raises(ValueError, match="manifest.claim_contract must be a JSON object"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_manifest_claim_contract_version_is_pinned() -> None:
+    manifest = deepcopy(dict(load_project_eval_manifest(EVAL_DIR / "manifest.json")))
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+    manifest["claim_contract"]["version"] = "required-claims-v2"
+
+    with pytest.raises(ValueError, match="claim_contract.version"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_manifest_must_require_claims_for_answerable_cases() -> None:
+    manifest = deepcopy(dict(load_project_eval_manifest(EVAL_DIR / "manifest.json")))
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+    manifest["requirements"]["required_claims_required_for_answerable"] = False
+
+    with pytest.raises(ValueError, match="required_claims_required_for_answerable"):
+        validate_project_evaluation(cases, fixtures, manifest)
+
+
+def test_direct_case_objects_cannot_bypass_duplicate_claim_validation() -> None:
+    manifest = load_project_eval_manifest(EVAL_DIR / "manifest.json")
+    fixtures = load_injection_fixtures(EVAL_DIR / "injection-fixtures.jsonl")
+    cases = list(load_project_evaluation_cases(EVAL_DIR / "cases.jsonl"))
+    index = next(i for i, case in enumerate(cases) if case.answerability == "answerable")
+    claim = cases[index].required_claims[0]
+    cases[index] = replace(cases[index], required_claims=(claim, claim))
+
+    with pytest.raises(ValueError, match="required_claims must not contain duplicates"):
+        validate_project_evaluation(cases, fixtures, manifest)

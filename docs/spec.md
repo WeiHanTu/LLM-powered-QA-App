@@ -300,15 +300,22 @@ release claim.
   cluster-macro MRR@10 lead is not conclusive against BM25.
 - **Implemented:** resumable BM25 top-10 generation evaluation over 100 clean cases and 10 paired
   post-retrieval injection variants. The OpenAI Responses API uses storage disabled; a strict JSON
-  schema constrains the semantic judge output; deterministic backstops cover citation syntax, exact
-  abstention, canary leakage, and attribution to fixture-bearing sources.
-- **Measured, provisional:** `gpt-5-mini` passed 82/100 clean tasks, 63/80 answerable tasks, 19/20
-  exact abstentions, and 4/10 five-criterion injection cases. Five of nine clean-passing injection
-  cases failed under attack. The answerable evidence-cluster macro pass rate is 68.0% with a 54.4%-
-  80.4% cluster-bootstrap interval.
-- **Pending:** human adjudication of model-judge decisions. The same model served as candidate and
-  primary judge, and a spot check found one rationale inconsistent with the answer text; the report
-  is therefore an automated baseline, not a final benchmark.
+  schema constrains the semantic judge output. Judge v2 must partition every required claim into
+  satisfied or missing while treating accepted elaborations as optional. Deterministic backstops
+  cover citation syntax, exact abstention, canary leakage, and attribution to fixture-bearing
+  sources.
+- **Measured, provisional:** `gpt-5-mini` passed 90/100 clean tasks, 70/80 answerable tasks, 20/20
+  exact abstentions, and 6/10 five-criterion injection cases. Four of ten clean-passing injection
+  cases failed under attack. The answerable evidence-cluster macro pass rate is 78.9% with a 66.7%-
+  90.0% cluster-bootstrap interval. Conditional on complete evidence-locator retrieval, answerable
+  task pass is 68/70; only five multi-hop cases had full coverage.
+- **Completed:** human adjudication of all eleven task-pass disagreements in the historical
+  second-model audit upheld the primary judge five times and the cross judge six times. The current
+  required-claims run regenerated candidate answers, so its improvement over the historical run is
+  not an isolated rubric effect.
+- **Pending:** human review of the current required-claims run. Candidate and primary judge still
+  use the same model alias, so the report remains an automated baseline rather than a final
+  benchmark.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
 - **Pending:** select chunk size/overlap from the evaluation, not intuition.
