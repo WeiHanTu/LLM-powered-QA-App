@@ -1,7 +1,7 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; full SciFact OpenAI retrieval comparison implemented
-Last updated: 2026-08-28
+Status: Phase 0 implemented; SciFact and reviewed project retrieval comparisons published
+Last updated: 2026-08-29
 
 ## 1. Executive decision
 
@@ -196,8 +196,8 @@ Dataset governance requirements:
   Do not compare scores copied from papers or leaderboards as if LLMQA produced them.
 - Publish a README benchmark table or figure only after a complete reproducible run. The figure must
   identify the dataset, split, sample count, model, metric cutoffs, date, and known limitations.
-- Retain the planned 100+ project-specific, independently reviewed queries. Public results are an
-  additional baseline, not a substitute.
+- Retain the 100-case reviewed project set and its versioned qrels. Public results are an additional
+  baseline, not a substitute.
 
 ## 7. Functional requirements
 
@@ -240,6 +240,17 @@ Dataset governance requirements:
 - Support a query limit for smoke tests, but label limited runs so they cannot be mistaken for the
   full 300-query result.
 
+### FR-2C Project evidence materialization
+
+- Verify pinned source checksums before extracting or chunking project-evaluation documents.
+- Bind chunk IDs to source, page, token window, chunking parameters, and extracted text.
+- Materialize every reviewed evidence locator to the complete ordered chunk set for its cited page.
+- Commit qrels and a no-text chunk manifest; keep licensed PDF and chunk text under ignored local
+  artifacts.
+- Keep benchmark readiness closed unless chunk IDs are verified against source and page in the
+  manifest. A non-empty ID string is not proof.
+- Label page-bounded qrels as a proxy for cited-page retrieval, not exact answer-span annotation.
+
 ### FR-3 Grounded generation
 
 - Treat retrieved content as untrusted data and ignore instructions inside it.
@@ -279,17 +290,21 @@ release claim.
 - **Implemented:** compact public evidence generation with paired query-bootstrap intervals and an
   SVG README figure; bulky per-query outputs remain ignored but reproducible.
 - **After SciFact:** integrate the BRIGHT Robotics subset as a reasoning-intensive retrieval slice.
-- **Drafted, review pending:** 100 source-grounded questions and concise answers across answerable,
-  unanswerable, multi-hop, near-duplicate, long-document, and adversarial-instruction cases. The
-  pinned Transformer/Kimi K3 set is not a benchmark until humans approve every row and its page
-  evidence is materialized to stable chunk IDs.
-- **Pending:** compare BM25, dense FAISS, dense+MMR, and hybrid RRF on the same judgments.
+- **Implemented:** 100 approved Transformer/Kimi K3 cases and 10 approved
+  injection fixtures across answerable, unanswerable, multi-hop, near-duplicate, long-document, and
+  adversarial-instruction slices. Deterministic materialization produces 188 corpus chunks, verified
+  evidence IDs, and versioned page-bounded qrels.
+- **Implemented:** full BM25, dense FAISS, dense+MMR, and hybrid RRF comparison on the same 100 cases.
+  Retrieval metrics cover 80 answerable cases grouped into 45 distinct positive relevance sets.
+  BM25 leads all query-weighted means and the cluster-macro Recall@10/NDCG@10 means; hybrid's small
+  cluster-macro MRR@10 lead is not conclusive against BM25.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
 - **Pending:** select chunk size/overlap from the evaluation, not intuition.
 
-Exit gate: selected pipeline beats the Phase 0 Recall@k and NDCG baselines without regressing
-unanswerable-query behavior; p95 latency and cost remain inside declared budgets.
+Exit gate: select the evidence-backed default and document utility, latency, and cost. Replacing BM25
+requires a meaningful paired improvement; this comparison does not establish one. Unanswerable-query
+behavior remains a generation-layer gate.
 
 ### Phase 2 — end-to-end bias evaluation
 
@@ -342,6 +357,14 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
 - Offline evaluation produces checked Recall@k, MRR, and graded NDCG@k values without provider
   calls.
 - Documentation labels example data as schema fixtures, not a quality benchmark.
+- Project evaluation materialization is byte-reproducible from checksum-pinned PDFs and locked
+  dependencies.
+- Validation rejects incomplete page mappings, unknown source/page assignments, and unverified
+  chunk-ID strings.
+- Project reports separate query-weighted means from macro means over distinct positive relevance
+  sets, use cluster-level paired intervals, and label overlapping case-family slices as descriptive.
+- Clean retrieval over prompt-injection-tagged questions is never reported as prompt-injection
+  resistance.
 
 ## 11. Public SciFact benchmark acceptance criteria
 

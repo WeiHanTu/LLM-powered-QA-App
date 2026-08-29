@@ -1,0 +1,1543 @@
+{
+  "artifacts": {
+    "cases_sha256": "b1130d0c155e46f187e158143842e46d81288b34dd15b2f197713bf8a30716f1",
+    "raw_chunks_sha256": "48b9249db0d3c16970591acd94c3de3b5dff191f54f659a033024a35db861c6f",
+    "retrieval_judgments_sha256": "e1842fa02c2bdd965cf3d30215d145a3d9ae6ec1cc4324f05d39038d8cdc7c6f"
+  },
+  "chunking": {
+    "chunk_id_scheme": "sha256-v2-source-page-token-window",
+    "chunk_size_tokens": 400,
+    "encoding": "cl100k_base",
+    "overlap_tokens": 60
+  },
+  "chunks": [
+    {
+      "chunk_id": "d317abf485ddf5088c38",
+      "page": 1,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "80638944db066b0cf8b02ff157e0ff7b90155e6bdae339a594b6590e1b9f6406",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "15248fe1d38d5b1c3d89",
+      "page": 1,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "789df06ccea9a81346ed537bf48d3995cb16d7f39d08a800a4be154a3e760b9c",
+      "token_count": 345,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "bf1ffe69d522531dcf32",
+      "page": 2,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "031407c5a083f892340df66aa6b8d328ce22262c21386d5d48269736a8c8b893",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "a65be2fca2b6ec0bf5cb",
+      "page": 2,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "287e7ef899c79ad0409e01cb7b6c803b112fa8e8ada2cc04476bc2d882a54bcb",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "850462944a7e42e6fc57",
+      "page": 2,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "8f6b5e236e775edb93db0ce37cd4f2fae805fc0fb98369d77e84e05e23557de8",
+      "token_count": 188,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "16c8d908428d0c381bc7",
+      "page": 3,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "e7d06db0e18e5a7bf225ae3dbb5e119ce9a5debdf802045f1f70b575399732dd",
+      "token_count": 381,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "405ae008262cfc6304d9",
+      "page": 4,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "a318e9ced03040e3f0bf0f0086ecae5c8bb1bd5d670b461798f9266561188769",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "0cf3bc6dc0dc47079023",
+      "page": 4,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "d47b72f18e29ab757cce39285d9f10409a52a78fd5f9df84842d3020bd0a1fcf",
+      "token_count": 192,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "5929553c8043c95e0714",
+      "page": 5,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "533f00714bd288bc910682420819d6411e2fe05438245c03b366d9b4533d757b",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "a24311f70b7a592b0d3e",
+      "page": 5,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "afc41c93d1d90c8bf6f5bf2695f3c80ccd51375e81c244937603754e29cb2d4b",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "9b391ec031a44bf367b5",
+      "page": 5,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "4bd151e7fa50ed0f4b01a3acf82eb2623c2ef769f32ebc2581b184467bb87516",
+      "token_count": 64,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "d6125ec17606d4e41ac3",
+      "page": 6,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "3719354db5c41304410de8ad84e939a3f846bff7e5a62095167391bc7050431e",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "e13052ba62671d886f71",
+      "page": 6,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "bc77579b8b14a180552ae60bab3a58ea95b9145b9b80d42fdb01281f687b02b0",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "285c18e3d139497ae317",
+      "page": 6,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "3fd0ef999737b364249528c75d51fd5563ad80d511d4ce272e81913c86456ab8",
+      "token_count": 101,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "3ba865e6ba4e55007bcf",
+      "page": 7,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "25f0c8f53a405eb24480930f4972d30ea82aec4c5aa699580442cf63671aa2e5",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "7f995c007d9220d0b64a",
+      "page": 7,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "22de7841bc975f40c59baefe695498e8f16587eee2c5a54b231702077846f332",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "f4807570272ecb486347",
+      "page": 7,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "463884af539b7d283f8a5e113947be9e51954efb34b78954394b07880429be8c",
+      "token_count": 88,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "7ea71e77b536c8eb0fd0",
+      "page": 8,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "17372c8396cd73cc93400021f0a731427cd4c87117f4c1448e5f34642ca84485",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "97b4d45f8ec30b6ea8cc",
+      "page": 8,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "6de2ac0d6361e2f436a2fd2ebe6cbc49dec0c39e8daa34087c6a1eda30822b97",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "1443d18ae04f31fb2597",
+      "page": 8,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "ed87a4fe5865afa14723c2ba2fb8db6f480d1aa1b004e7a8e03a42d984327c54",
+      "token_count": 298,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "b08bbc4ea0385d24d750",
+      "page": 9,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "4b0518d75a683c70480fdaefff15ceb344b9dddeaf11fa840fdce784f94d40fc",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "c19dd87d3fce3649d814",
+      "page": 9,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "9ae100310fa2bc97e0ccf4353ff8fe9d867cf54d9ffcac2360427de0fc85c134",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "b4f8e980d2d60accf68a",
+      "page": 9,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "e48faf4ecfdeae798e0209968873bff3e4e033ae269983e95c06a4365b4bf27a",
+      "token_count": 112,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "5455593772939ad81514",
+      "page": 10,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "ca864e363f646931583cebf206bb39754f94c26c3096d9cbf2197ef54391e512",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "efd025f22e86f259b7e2",
+      "page": 10,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "b29fbbe46cecb98d98f4c7d3cf9d4d709dee75b01ee1e377cd1213cd81d0adae",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "ab939c3b42eebc3d49d4",
+      "page": 10,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "542c6077c5ae9087a4cf6b710c24b68239467a727789e014e650454f1a3d4249",
+      "token_count": 303,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "47a6d81953ab9eb5c9af",
+      "page": 11,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "bd03c16e631e4305a0254abec2b6167c4a31476ea2a3d4c20535ec242bd41eb3",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "716a99203030874ba5b3",
+      "page": 11,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "d98ef32595cec92b1984bbbb1e1f55fa09322e5d2b0554ce4d4d599e531f3232",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "411f2f52eaeba2726e49",
+      "page": 11,
+      "source_id": "attention-is-all-you-need",
+      "text_sha256": "65a3614768ff5d82250e2cc3bf6599952fc9e220c865b2990ff27a0695b0fe71",
+      "token_count": 61,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "5d901d308c061f621c9f",
+      "page": 1,
+      "source_id": "kimi-k3",
+      "text_sha256": "d87f4b3b7dfd5060d33f288a0e726b0fd5db474b29eba3bcf46897fb112f7e64",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "150bd8d756ee3ef01bd5",
+      "page": 1,
+      "source_id": "kimi-k3",
+      "text_sha256": "a0c742843b418d0bcec8abef80bff546a699c90c57051627ea86559193c2734a",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "bd8925bb6dce7bcb5fda",
+      "page": 1,
+      "source_id": "kimi-k3",
+      "text_sha256": "11f98e3a38d93fd0f3dc3a06f051dc5f4c5c1945e6c5cfa36e1482994de41695",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "e3e83a744384851e989f",
+      "page": 1,
+      "source_id": "kimi-k3",
+      "text_sha256": "d0acbad99abe89e40db9563264990fb54756096e7850346a0e40defeee7b78dc",
+      "token_count": 340,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "1fe14dd9b47249818222",
+      "page": 2,
+      "source_id": "kimi-k3",
+      "text_sha256": "23d307072ec2120e8a12f1056dfbeb6f3970b121b9f41adec391d6ef2bbcdeed",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "999d082ebde88cc8c47a",
+      "page": 2,
+      "source_id": "kimi-k3",
+      "text_sha256": "a1502f7460082fbda94e0c91880d3861639c83fb394602e3ac78bf71402ee21f",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "14e50311c6a3ccd1fc60",
+      "page": 2,
+      "source_id": "kimi-k3",
+      "text_sha256": "2cc04f9827b0450dcef48161279ca836487a3719ff9b342f9b21e2e4c17ed8d4",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "4e51e6e31d9ac96572e1",
+      "page": 2,
+      "source_id": "kimi-k3",
+      "text_sha256": "0f52759724b17083f76dc151f4ec2c415a63b3598a86fa11fa4c4967d38d1121",
+      "token_count": 140,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "06934f51e13d68d693e4",
+      "page": 3,
+      "source_id": "kimi-k3",
+      "text_sha256": "121837256ff979438f6af66e8195f12fe8626892b02b74139a6551d4bf4ffd2e",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "116f5d423b5d0acf7ef9",
+      "page": 3,
+      "source_id": "kimi-k3",
+      "text_sha256": "450217baf329783855d901ca0eb992e744231788d0dee48f4d723c51a834d19f",
+      "token_count": 296,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "3f60f8999de4aa7b6b02",
+      "page": 4,
+      "source_id": "kimi-k3",
+      "text_sha256": "4272ec45df4558381c02f238c2cf9059891ad5207efdf45d7d7c1e8115322c7b",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "f2d4fb5ddb24ba456ab2",
+      "page": 4,
+      "source_id": "kimi-k3",
+      "text_sha256": "604b35b8d79a618b8fb9fd15f796ac1ace139525df118122053183e524d890e0",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "5d95b1fae9416a9322bf",
+      "page": 4,
+      "source_id": "kimi-k3",
+      "text_sha256": "e618e3ed014f72e22e9c66d47d86ace2101e106e90157a42ff69cdc2df05501f",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "44a88b1c7d9bcfc2974e",
+      "page": 4,
+      "source_id": "kimi-k3",
+      "text_sha256": "c087a88f7c4c345a260fd3b4edfb6aded5a514b613805cb5e1a0c69d0423c15a",
+      "token_count": 103,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "092291fdf396672c930f",
+      "page": 5,
+      "source_id": "kimi-k3",
+      "text_sha256": "e63fc090ca8cda49307dda1e66c97ee05bb1233748fbb0ac7cfd20ff7225d310",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "bba4950228e4a6e44f01",
+      "page": 5,
+      "source_id": "kimi-k3",
+      "text_sha256": "107b4357fe14d5d359fbd3673421690ef87f94631f1614917947336d0f4383be",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "26abd1fd0c7fefbd2284",
+      "page": 5,
+      "source_id": "kimi-k3",
+      "text_sha256": "2fc26c91cf15fea09380b3b334382b3f55db281182e095849da25a380581e572",
+      "token_count": 283,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "18e0d56bfad49517c23b",
+      "page": 6,
+      "source_id": "kimi-k3",
+      "text_sha256": "f37026266492b996b53e78504db188b196cc9c1ccaee3da082e8402e098d92ee",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "750967c127ff29b84d03",
+      "page": 6,
+      "source_id": "kimi-k3",
+      "text_sha256": "58e992b1606caffc0d2b24a65152cd2cf7ebad5634101c12c73fbfa3fea482c6",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "6637220797f38548cc98",
+      "page": 6,
+      "source_id": "kimi-k3",
+      "text_sha256": "85e2296040fc4f2eab67d80cee13b4261654621a3e930e6bfadff42e8c9b79f4",
+      "token_count": 378,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "b62b010d762d5d324930",
+      "page": 7,
+      "source_id": "kimi-k3",
+      "text_sha256": "f2669de4660df28c468ec205b91a7aff3f0d5864262ff46a2cb15156f99c5b30",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "392e0eb842b353bb0acb",
+      "page": 7,
+      "source_id": "kimi-k3",
+      "text_sha256": "9d59178e5fa909494361df35c27789c8d4b606154b8f2fb0d570decf463c54bf",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "3a046f2b42380bbbb578",
+      "page": 7,
+      "source_id": "kimi-k3",
+      "text_sha256": "53f8e774cba986e6cce329ccc5211c802e9f0ee670cb7d30a75b87e6cb3d8b76",
+      "token_count": 303,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "7fa35f894321289c5bb4",
+      "page": 8,
+      "source_id": "kimi-k3",
+      "text_sha256": "8c5eacee671cfdbe4527ad5eda71af5ed583ca990f388fd5767c470889d4aca2",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "e0956ff21e38b3965cd5",
+      "page": 8,
+      "source_id": "kimi-k3",
+      "text_sha256": "81a61616c2f0cdb890b79146d9e438216075ec4fbd3dfd0e8e40f30f12e8d77c",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "f6b0bf175b2450c29763",
+      "page": 8,
+      "source_id": "kimi-k3",
+      "text_sha256": "8dc317c96bcb044d32879e6d97054f08e58c7867979a36589b89475ac050fb96",
+      "token_count": 358,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "1d558f9149e30d02aad1",
+      "page": 9,
+      "source_id": "kimi-k3",
+      "text_sha256": "37692d0d44bfd59ab3a173a79e26c90374864fdc81c0e5000076b0b97fbece94",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "29a3c0663d7cc6b6ce79",
+      "page": 9,
+      "source_id": "kimi-k3",
+      "text_sha256": "1aa783a5fb9c8163612d3a1e49fb9784e2190e5ef854b00d968cb26e27b41bdf",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "7e4250c36df419040799",
+      "page": 9,
+      "source_id": "kimi-k3",
+      "text_sha256": "9bbc60ca1623bf0e1d41d8adf3405c3556f685903ade840dd29aa4805b1bfe3d",
+      "token_count": 236,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "df43e082ed950af46011",
+      "page": 10,
+      "source_id": "kimi-k3",
+      "text_sha256": "dc0905c6ae51ff07530019fe67788df0f2916cc65f6221e9a7d0e47ef1effdeb",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "6da2bb50302b002f89ce",
+      "page": 10,
+      "source_id": "kimi-k3",
+      "text_sha256": "b83cc2697a7bc6c46cf2430172f1dd543138e8bc99d00e9f358aa78df60a52a8",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "2e09c6936c34a85cbb62",
+      "page": 10,
+      "source_id": "kimi-k3",
+      "text_sha256": "a286b79d739fe4b88fe2f71608b04991ee3dbea5961188c0c046db77a69de91b",
+      "token_count": 373,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "c38fe8bc2229907f3ede",
+      "page": 11,
+      "source_id": "kimi-k3",
+      "text_sha256": "b1b9259a3a88aecc9e4e6303687a48a0895ddfaa6691528d2a60d26d96106c1d",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "fc2e793120b443e59378",
+      "page": 11,
+      "source_id": "kimi-k3",
+      "text_sha256": "24382fec132aa1be78f39631d3bf7173d7ca1a833fac318b6998c02a5265934e",
+      "token_count": 193,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "9e726fee44b04f0d019a",
+      "page": 12,
+      "source_id": "kimi-k3",
+      "text_sha256": "280e2565b5af60796c590f150b11265382891b7cd3088f38520f301cede01a62",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "ebea4e63bc65637a501a",
+      "page": 12,
+      "source_id": "kimi-k3",
+      "text_sha256": "68528fdbd81e77a6ace2f2cfdd2c28f931e7f4b547b7385a7291de43497840da",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "c8089d305d462fedf7c3",
+      "page": 12,
+      "source_id": "kimi-k3",
+      "text_sha256": "003528f1049aefa6b82dad474ee67f7b23f2c7fc5716bb102fc412a239ce5234",
+      "token_count": 289,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "31c26903321a8108f5de",
+      "page": 13,
+      "source_id": "kimi-k3",
+      "text_sha256": "39faae42a1acdbe94bbe3ad15e59fba6ad2115bc2a5c90179e3fd4668be4afd0",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "acc61ee0004d5cc9cd82",
+      "page": 13,
+      "source_id": "kimi-k3",
+      "text_sha256": "03e5f40b1ca3d3e60873bb742c3e553a1636f1cb0babe10180dda8d961a3931d",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "fd47d0a925c1ee2da42a",
+      "page": 13,
+      "source_id": "kimi-k3",
+      "text_sha256": "9b38e5552bd5ae625ad044cbccbc840a993ff74741df4613ee315cc08271b571",
+      "token_count": 276,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "39235fb32d08ed0d57b3",
+      "page": 14,
+      "source_id": "kimi-k3",
+      "text_sha256": "5d0e7aa71370d4fea78d45f69ed132ab131c12aa5c6b921b588ebd034e929abe",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "6e8766cf0c84ddb55cd8",
+      "page": 14,
+      "source_id": "kimi-k3",
+      "text_sha256": "944a8d65019ead2e69c7e4fe51e9bdaedd0e58556bb45bc110eeffd2a94cadb1",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "35bf74b88136efd49232",
+      "page": 14,
+      "source_id": "kimi-k3",
+      "text_sha256": "4a7c147e029d88fda5c91de8fea22e9cb4103c6633f47e99168d691e3d39ed69",
+      "token_count": 375,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "b659ea48e68e028dbb21",
+      "page": 15,
+      "source_id": "kimi-k3",
+      "text_sha256": "aa4f39c520dec61ea4b5098aa4c70748e9f1b964f26da0331afedb912187661f",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "33d2d8bdb509d93f8834",
+      "page": 15,
+      "source_id": "kimi-k3",
+      "text_sha256": "42dc2f8adc4035107a1352c923024f8f211f299dc41af890dc610da4c70f8c79",
+      "token_count": 295,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "6550686242b107e7d78c",
+      "page": 16,
+      "source_id": "kimi-k3",
+      "text_sha256": "dd044d8a3832d0b710156ddc6c948af8fd8aaafa6b0e55e83372fb0640b03101",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "e0798befb2eca54c70b1",
+      "page": 16,
+      "source_id": "kimi-k3",
+      "text_sha256": "78856c513b9a259f09530fe4f70777ab4c5c252174cef12581ffa22775ca0b8c",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "5fec88b6cb1a1d85190e",
+      "page": 16,
+      "source_id": "kimi-k3",
+      "text_sha256": "48f6e3a2ab845386a17c59c4067ab0d498ed730542cf3ffb63203e700aaa1263",
+      "token_count": 394,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "b2a0a5efc566ea2049ef",
+      "page": 17,
+      "source_id": "kimi-k3",
+      "text_sha256": "39960896fbcc6a6edcebd3f81237fad2ed5f1b8cae6e934f0377c626e933dd4a",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "e8e343bdd27934c5cf1c",
+      "page": 17,
+      "source_id": "kimi-k3",
+      "text_sha256": "c78c35b6678833b549d37737a6f31d990ee42c5e2be45f0a2062e1f24298187a",
+      "token_count": 364,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "2f652f56659761b9129a",
+      "page": 18,
+      "source_id": "kimi-k3",
+      "text_sha256": "384671d74465364c5a97038d5f3691fb5c04994bbb66dc4d489c88a8d7c24e51",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "6c54c5865c273942213e",
+      "page": 18,
+      "source_id": "kimi-k3",
+      "text_sha256": "9b2b9cc4440aa1e575820bad9b2669893b89134e9328a10ff8cb6058c97b3926",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "c34c33da6feadde537e5",
+      "page": 18,
+      "source_id": "kimi-k3",
+      "text_sha256": "2ef775715c2532ab9f753b63fd49a701173e0068f62b18019b7ad973f8023a2a",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "ac16078885005944bda5",
+      "page": 18,
+      "source_id": "kimi-k3",
+      "text_sha256": "653c981e99c2e9c28a0517975528982d0ae5f9d202c921ed58e98c9599955c1c",
+      "token_count": 103,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "fe5f30ce46bf00b301ad",
+      "page": 19,
+      "source_id": "kimi-k3",
+      "text_sha256": "568bb249c78110d4de217a343237078f9161112a302a6109e5159ba3a01a5c82",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "157bce0de2953bd8f6e2",
+      "page": 19,
+      "source_id": "kimi-k3",
+      "text_sha256": "bbad1288f21c58a0a311091cbdc88124bddecb5fd61a9539b3bbd1c143fdfc0e",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "491582a5116447dd0177",
+      "page": 19,
+      "source_id": "kimi-k3",
+      "text_sha256": "a3b394a7fdf167265e5d878525b49d43647113ab0c36dcfb4ea825b9d62b89aa",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "a1d32c7f89f38ed198a3",
+      "page": 19,
+      "source_id": "kimi-k3",
+      "text_sha256": "f03d4ad56d109f869a8c2249b5467ae4c458ff249d5512d857e9a558199fb0cb",
+      "token_count": 238,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "2d0cafa15755080bdbc8",
+      "page": 20,
+      "source_id": "kimi-k3",
+      "text_sha256": "e3075e337394435813f42d10953a31feeb973c357bcf2e4126c1a33ea4b6f4e4",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "904a7c02c1034edc9efd",
+      "page": 20,
+      "source_id": "kimi-k3",
+      "text_sha256": "018fd317378ae7042d29a6508501506602f085d69b2c3a161e8b8925afafa1c9",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "f96b6ac94208cdfee5a4",
+      "page": 20,
+      "source_id": "kimi-k3",
+      "text_sha256": "9a8cc176d592f93001730768569824bafd7b9f419400e23a4f16667d2ad9c232",
+      "token_count": 381,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "cca24950980ba5d6ff23",
+      "page": 21,
+      "source_id": "kimi-k3",
+      "text_sha256": "300b22cda02d8f0e666d189111a94623583621768dec5bd6eab24a1cabee509c",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "5b759a3284a8bceecd15",
+      "page": 21,
+      "source_id": "kimi-k3",
+      "text_sha256": "c48c70363e76ade8f8c9f563a21ffc67240078b6213d95c1ec9ef64164becaf0",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "9728d423b7b9649b230f",
+      "page": 21,
+      "source_id": "kimi-k3",
+      "text_sha256": "d890fe9de32434caf48cdac43aa34dfb9a2ccf6cb9b323898e8147103da5249d",
+      "token_count": 293,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "c80f6b615bd3c72d00dc",
+      "page": 22,
+      "source_id": "kimi-k3",
+      "text_sha256": "a264f2b6454e6f87e22c35da20b8db7893853b6b0c7cf8f2d60e983b43e245ca",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "3e3c692840c90207c17d",
+      "page": 22,
+      "source_id": "kimi-k3",
+      "text_sha256": "4f74b49805b9b2c434f84dc227aee070e648d08d74ec3ac5abea6899e1af7b45",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "54cadbdfac9f1a91e701",
+      "page": 22,
+      "source_id": "kimi-k3",
+      "text_sha256": "e317d0d0ce82de27fe90bd161704bc9076671906883fc46cd57e4bc881ae812b",
+      "token_count": 367,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "9622c1e9323a52d655af",
+      "page": 23,
+      "source_id": "kimi-k3",
+      "text_sha256": "1365bf0aa4d9f17b0d07d561a641fbaa663d5a2d0dc4fc34636f55774889c6d0",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "f8477cccff440cd816cc",
+      "page": 23,
+      "source_id": "kimi-k3",
+      "text_sha256": "bcaa0e40235068868a6cfe0ebfa8c0f93b7035bc5cda5c9c4816f2deb8cad35f",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "306a680aaacf2c09ae6e",
+      "page": 23,
+      "source_id": "kimi-k3",
+      "text_sha256": "c15e2389c04969ff2afca94784e070a1f0aa1f1b093576fb453b9587e9025ba0",
+      "token_count": 365,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "c44e6ce1e54e148c3f4e",
+      "page": 24,
+      "source_id": "kimi-k3",
+      "text_sha256": "afe02df91b03eef09a0333ff5cc75e97f08648f4b1830eb5ed207a3c941f5866",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "b960b37653444099e375",
+      "page": 24,
+      "source_id": "kimi-k3",
+      "text_sha256": "fbcad9d828292704830f882c07f446aa98957b24cbf732b069b168bb6b6991ce",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "446cddc117f50f7303ef",
+      "page": 24,
+      "source_id": "kimi-k3",
+      "text_sha256": "318a2bcc4eadae5960c81803b0ec53e9c526efc2fc2ae89601c7f9d4c14d3c66",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "9db846fdd6ad3fbe8c58",
+      "page": 24,
+      "source_id": "kimi-k3",
+      "text_sha256": "163854b717e75944c7825c079cbe003f4e25023055cc14dd55ef137cfe072ccc",
+      "token_count": 133,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "72a243411afb505a879c",
+      "page": 25,
+      "source_id": "kimi-k3",
+      "text_sha256": "f16ecdf0531717c2c38f7294aa486d9dee3a1c41e1a989327fc3e5638371d8a3",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "24edc0b38db24c4d3d38",
+      "page": 25,
+      "source_id": "kimi-k3",
+      "text_sha256": "067d3e9303601440e81bbf34aa72db6603d33a59589682650590a7cd99530888",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "0bf4814f94f5a303f303",
+      "page": 25,
+      "source_id": "kimi-k3",
+      "text_sha256": "3229f49d376082ac72886f4975ee2f3c6fd58bff0ac6d182e3550e529fe0d5fd",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "a2d835e65cb7461dc55b",
+      "page": 25,
+      "source_id": "kimi-k3",
+      "text_sha256": "e7fb657ce2ddc86ae934efb3ac41874422cafaf391298686c58fda5cc31062c3",
+      "token_count": 97,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "4871be556807daf51e4f",
+      "page": 26,
+      "source_id": "kimi-k3",
+      "text_sha256": "37d318776d9f75c49e9147330a925c339cdf282e505989183f8da2fa167f0ac2",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "97bc603c516e4e9a5389",
+      "page": 26,
+      "source_id": "kimi-k3",
+      "text_sha256": "491b2b8f5fb20cc16decd238eecf62792d57b65831e4926c4d91f5da5efe96dd",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "6dcfb4db23fa128ab25a",
+      "page": 26,
+      "source_id": "kimi-k3",
+      "text_sha256": "abe868ddda1eefe16a2959ac9a8ca0f05afaab7d3964d0390112cbcf7edc97d6",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "245e1c6ac5197232b80b",
+      "page": 26,
+      "source_id": "kimi-k3",
+      "text_sha256": "105be592067dfe5ebd5e7eeab2a3c51d6b15369ed7cafe64f5642c426f537e03",
+      "token_count": 245,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "5921e2912a85d6c77569",
+      "page": 27,
+      "source_id": "kimi-k3",
+      "text_sha256": "2231db5e623e1da3626827b8101810b1b8f6c7ae8003a6a9076603e6e192869c",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "41dd973a9c6ab0b78fa3",
+      "page": 27,
+      "source_id": "kimi-k3",
+      "text_sha256": "8d2a27cee6792fb90246e1942d2555c8032e36aff22cc9ecf577afc746f63a3c",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "325ad1b8366df2659daa",
+      "page": 27,
+      "source_id": "kimi-k3",
+      "text_sha256": "3686b1014cd751d378c9ff8edcf617f1d62ce94df10e9afb6972783ee7026bbf",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "37a97becdbce811259ee",
+      "page": 27,
+      "source_id": "kimi-k3",
+      "text_sha256": "88d55586aa35ea66b6c0920769df3db2559014fad371e6dd649959d2abd02e8a",
+      "token_count": 400,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "ff3b18b3fb3e6b850646",
+      "page": 27,
+      "source_id": "kimi-k3",
+      "text_sha256": "f09a9b4621e705e6a7488b7334efcbdad5344c9912b838e59742bd33bb91dc12",
+      "token_count": 146,
+      "token_start": 1360
+    },
+    {
+      "chunk_id": "6a8b0257156060ccb2e7",
+      "page": 28,
+      "source_id": "kimi-k3",
+      "text_sha256": "4e04fe647f93d7e8cb649d0bf7b2e1412410ceccafc3961104e1f5d5e56276c1",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "d90863c74c4086300aa5",
+      "page": 28,
+      "source_id": "kimi-k3",
+      "text_sha256": "7ee757ccd22fdbfdc7cc56d1adb8f13c1f38cacf3cbb26412367ab255751cd6f",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "fbb005562390ca4475a7",
+      "page": 28,
+      "source_id": "kimi-k3",
+      "text_sha256": "95350ae53334c8e953fd6379d7eb6a945950dc0d4fa35e41bb6f691c3a3ff7fe",
+      "token_count": 371,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "54f4ee506511de11876e",
+      "page": 29,
+      "source_id": "kimi-k3",
+      "text_sha256": "b17a930aea3e6b45a42a292804ddb662d312e7862e8a005e316205fd33984dbf",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "389823f20bdfcdc566af",
+      "page": 29,
+      "source_id": "kimi-k3",
+      "text_sha256": "d1b8867c89cd9ab24c789dfacccf9e873d1704aa184dc28a1fb3c5ec6277aad9",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "814312c79d4c1c87bfe7",
+      "page": 29,
+      "source_id": "kimi-k3",
+      "text_sha256": "007d6eb2b17df8584d37a87220587996603b40d380c884ba2bcbb311df73de8c",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "60b6e32d167083323b53",
+      "page": 29,
+      "source_id": "kimi-k3",
+      "text_sha256": "eb80e2474456809c5dd149030448dd62ce9400573d82126b6cb4c2067b7a1f83",
+      "token_count": 66,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "2d050226ce53b6ea2b7d",
+      "page": 30,
+      "source_id": "kimi-k3",
+      "text_sha256": "94b027f4a0d0df0e8e4e92918feca3a1dd6685e5dc4024bc06913c4301c28167",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "daad5e135a63a534e012",
+      "page": 30,
+      "source_id": "kimi-k3",
+      "text_sha256": "b9821042ee338d5c8337c98378181f77204ceaa6f0e9786ecc5ba737575c425f",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "1d7f1b50b3aad00b17b2",
+      "page": 30,
+      "source_id": "kimi-k3",
+      "text_sha256": "da5917372648c520834907dc5a1c2ff55b13b2b7554a2dc31ca5f874e4d4ea76",
+      "token_count": 347,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "0cb194e90dbf7bacda91",
+      "page": 31,
+      "source_id": "kimi-k3",
+      "text_sha256": "fd10397e7c9f30c6140ea789f6957c24ad2e9bcc12072f32a24f1faacdcbd006",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "3ea7c5a4b1851be630b1",
+      "page": 31,
+      "source_id": "kimi-k3",
+      "text_sha256": "a7e15fa2469365d63e1341138851b4ef82d9e77bc970dbdaa4a44e3b4efd5d37",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "10fd0064407f06688aef",
+      "page": 31,
+      "source_id": "kimi-k3",
+      "text_sha256": "a3aa2cf623bd5669b9e31b39e99fe021196bce370740f659d5315210483acb73",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "0a712a9eb63b06599b41",
+      "page": 31,
+      "source_id": "kimi-k3",
+      "text_sha256": "aace7852a917730e1431b93300cd06c2820ec7674be6f281a924442813c2c299",
+      "token_count": 128,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "e6ddbf95c7edb124ad89",
+      "page": 32,
+      "source_id": "kimi-k3",
+      "text_sha256": "361ea91be3f37fb65fcfb860acee474a9b1e9fc86342be51f391c5e1d4819f46",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "1bad3835a34420e8981d",
+      "page": 32,
+      "source_id": "kimi-k3",
+      "text_sha256": "9a9a616a2e7d3d5c587949a0fabee73db5f63b13fbb87ecf3646cfcb30a0c20c",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "770dc08fe6bf3ce08b0f",
+      "page": 32,
+      "source_id": "kimi-k3",
+      "text_sha256": "7f512d2d847d5256183c72995cac2b545c86aea5241b2a721cdeb2145ea17948",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "eb5bbaabebabaa49ef9b",
+      "page": 32,
+      "source_id": "kimi-k3",
+      "text_sha256": "5de6dfe3a2704f87599c533898992560e164930993cc738a6404703bab35a3b0",
+      "token_count": 77,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "ce62a2c657070a13423d",
+      "page": 33,
+      "source_id": "kimi-k3",
+      "text_sha256": "b196d3bf979526b1806730d97fbddae84c6bd22b84d071ace67d8f1ca6c793a0",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "53d8b63d5698b59a6e1b",
+      "page": 33,
+      "source_id": "kimi-k3",
+      "text_sha256": "35e5485550f7f45bba08164ca8382e603a343ce02ceaa58d891a311575a5dc61",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "bdb0cad462de23d6be0d",
+      "page": 33,
+      "source_id": "kimi-k3",
+      "text_sha256": "1e0426f0e42f170304843c775e9c0853a88dd11a36e064d0ff82acf0be579ad3",
+      "token_count": 274,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "024d6bcb0da99af7e762",
+      "page": 34,
+      "source_id": "kimi-k3",
+      "text_sha256": "5248fa1cc27fdc3da265d0e08abf02487263c2079c43bfcea85b43a12fa63b31",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "fe5e248077c406cee19d",
+      "page": 34,
+      "source_id": "kimi-k3",
+      "text_sha256": "1d6a66bd10c7b50189ebe099ee5059208542b4dbb2c411d8d2bf07279b9405ac",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "33bdb28c1a3fcfffb1bc",
+      "page": 34,
+      "source_id": "kimi-k3",
+      "text_sha256": "8a5575be363b5602f7228eb3a75576548f5fe2dd098405901d8310b4a83e263c",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "892b3c2582cf5f3b5f0d",
+      "page": 34,
+      "source_id": "kimi-k3",
+      "text_sha256": "0ba2d602ec1e7db639c2564f75653655d74adee2a5e32aee002d37896b5281f0",
+      "token_count": 329,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "a1822324adf366a9e9d5",
+      "page": 35,
+      "source_id": "kimi-k3",
+      "text_sha256": "72864afc2a8c6d221a30d572412692a34fd2a9e1505107b1c06d9aecf07a0a04",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "36fe0a14de4c0dd1b460",
+      "page": 35,
+      "source_id": "kimi-k3",
+      "text_sha256": "003b69a96c146d9e4f5114b7ab1950194d7aecb950d1f25c7fe68944eb7eba48",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "ef7aac8339ac43cb2e76",
+      "page": 35,
+      "source_id": "kimi-k3",
+      "text_sha256": "0871b96d5d10eba1906d8d1f572abfdbf57893c8b0bb94a4adfb858946df96c7",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "95bd9a4c06d2eb0c28ae",
+      "page": 35,
+      "source_id": "kimi-k3",
+      "text_sha256": "d9e51e2169abb37d509eb54d61f6961b27906bc9ed7f757d290f8ab936dae160",
+      "token_count": 354,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "d02e74a4f0892971f004",
+      "page": 36,
+      "source_id": "kimi-k3",
+      "text_sha256": "b7444aea383292a08aef6c09659ecf4af7d34686fff1643ea88c5555ee019515",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "dc5974e02a22b7569186",
+      "page": 36,
+      "source_id": "kimi-k3",
+      "text_sha256": "06fd3e2ae85ef94a1e512e4f0e9f30dd40d0efa6e40864aea7447490b5ba0051",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "c603084348f2a4a87720",
+      "page": 36,
+      "source_id": "kimi-k3",
+      "text_sha256": "332d81c357c12e8b805d119f32b856623804b77dea577a4b44b186286f6aa482",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "ca8b3f92c50fb212c92b",
+      "page": 36,
+      "source_id": "kimi-k3",
+      "text_sha256": "8bad339973ddd7464b4309441c224597538e778a45524b83de254033529e6015",
+      "token_count": 400,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "319dae7a8f0b91f9736c",
+      "page": 36,
+      "source_id": "kimi-k3",
+      "text_sha256": "3bfa83e90ce023f8ee7592c7c64fa4b565311db91692ca6671f78f8ed5428ed4",
+      "token_count": 99,
+      "token_start": 1360
+    },
+    {
+      "chunk_id": "70cd35de5561b2942eff",
+      "page": 37,
+      "source_id": "kimi-k3",
+      "text_sha256": "aa7140376d5355d2048b74c527e2f4273cf78220f4e62a52eacf37c8d2693266",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "ed6f2d45bec9dcbd8eaf",
+      "page": 37,
+      "source_id": "kimi-k3",
+      "text_sha256": "46199b896ee7b1aaa9e57d4cf5e743a36da99d0d5b239593f24b6d70c0dbcb42",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "c59229a32983b0e779cf",
+      "page": 37,
+      "source_id": "kimi-k3",
+      "text_sha256": "4bdc993ee1c9345d7cd5035530434bde4d3454eabf1ca902865816e8d4b9443d",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "bd69ff62fa4ff21daf88",
+      "page": 37,
+      "source_id": "kimi-k3",
+      "text_sha256": "1997671c478dc8db128a3e8cd645d8333fe4678f36060356aadd6aef9c5a2d5b",
+      "token_count": 332,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "3900008c5f3283076a33",
+      "page": 38,
+      "source_id": "kimi-k3",
+      "text_sha256": "75d38137feb4ae816292e40032209a851b162ab05064faf19ae73fc21a4cf58c",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "775228f7d6ef1184a63d",
+      "page": 38,
+      "source_id": "kimi-k3",
+      "text_sha256": "48f49c33db26180133235c48da4e12a1767f19b9296dbe49c65c7b84db0b831a",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "1da3b384faa2bd069fa3",
+      "page": 38,
+      "source_id": "kimi-k3",
+      "text_sha256": "6f0d465eea763b3d981a67bc46254be9f9a24363d2d938f8225eb28db27e51c3",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "1b9ef100f918cb63519f",
+      "page": 38,
+      "source_id": "kimi-k3",
+      "text_sha256": "49b4ed8c73598f9dd7a17f1273c8f909d4e9603fec7481484a87b30465a9895e",
+      "token_count": 369,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "9d6504e622ddae20f109",
+      "page": 39,
+      "source_id": "kimi-k3",
+      "text_sha256": "33a3f3b314c45dd3eb5c8ccadb92a835e32fad5220e001b4d543db54b9efaf3f",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "de53cf1fb297be1d1d97",
+      "page": 39,
+      "source_id": "kimi-k3",
+      "text_sha256": "646ff0c7d9cd1c0e6ad94d9e25d01fd74cae6e252359a1df0483426ad67a7164",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "e26ac3cafd4561db702e",
+      "page": 39,
+      "source_id": "kimi-k3",
+      "text_sha256": "14d7bd41bccfea2db40fb7635ea75e60dffe78c5040cf6dec644122b8f09c928",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "25bdefb9e65f17a13026",
+      "page": 39,
+      "source_id": "kimi-k3",
+      "text_sha256": "cf6710b93c32006371338fb1139138e020fdecbbb86af0e121069fde64d2e484",
+      "token_count": 400,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "4177a058a177a273e14c",
+      "page": 39,
+      "source_id": "kimi-k3",
+      "text_sha256": "2f1f796c7990a6d9306de5044a9d9bcba5dc41db95d03a5caf1315b3c7a02864",
+      "token_count": 98,
+      "token_start": 1360
+    },
+    {
+      "chunk_id": "8cc7522a39a01a1f8be7",
+      "page": 40,
+      "source_id": "kimi-k3",
+      "text_sha256": "8295cb63218eef1d32c4d857f50bae2e469a925675f4ebcc479e68fe2a6b0e55",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "3a35edf1f83ff292efc3",
+      "page": 40,
+      "source_id": "kimi-k3",
+      "text_sha256": "9f67673298a3081c3bef8f5008e19219a4e116831423c79e32e99a64494bb0cb",
+      "token_count": 266,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "0c6972a138f64c8335d9",
+      "page": 41,
+      "source_id": "kimi-k3",
+      "text_sha256": "946922d37deaab4c6e129bb4affe092bf46c391e2461619ece627c7076fa0d23",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "0d8376f51d4497ace108",
+      "page": 41,
+      "source_id": "kimi-k3",
+      "text_sha256": "bd5c5fc076a0e4a10d8e27e136f88c352a4a49b20e160446099aef12cef955d6",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "882ed1524324999f6769",
+      "page": 41,
+      "source_id": "kimi-k3",
+      "text_sha256": "57ee880c64851004a1a932483457fd989c5fbf9ab8a8e8819a122d1f28376467",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "82836efe74b84afede92",
+      "page": 41,
+      "source_id": "kimi-k3",
+      "text_sha256": "1de894e5369a51dfa0cd7380757e72405e256fc7dadee026c75ded1e4c748c10",
+      "token_count": 79,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "41d4ec3592b6fe27f4af",
+      "page": 42,
+      "source_id": "kimi-k3",
+      "text_sha256": "406793f77f3ba11d2c14e935fa7163e43aa088bb7e0418ac23c35371662576a3",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "170bfe9214a440323505",
+      "page": 42,
+      "source_id": "kimi-k3",
+      "text_sha256": "ba7982843925b458fc4dedf484bd1be0a3692fc9e2feae1a6a773d723af5d63c",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "eb4d04fb4954b83c3744",
+      "page": 42,
+      "source_id": "kimi-k3",
+      "text_sha256": "96229d9ff7e13ee34e4630112ead19cf9fdfc6f91d38019f7bd8c73f9b0d2928",
+      "token_count": 225,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "dd044f0ac25cbc6d0962",
+      "page": 43,
+      "source_id": "kimi-k3",
+      "text_sha256": "1606bb532d636b9e475e58c193b3b6e703f92205bc1d78c150c69493a4531d1b",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "a19723334fbff9a252d1",
+      "page": 43,
+      "source_id": "kimi-k3",
+      "text_sha256": "512592fa166aee249bb52d9d567649c14e5c979b2558051b3c827b183d6a2668",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "9f0a7892834f03b5d6a0",
+      "page": 43,
+      "source_id": "kimi-k3",
+      "text_sha256": "8d9705f3be9a0eac1c884d6c6b383427a9b30a44f70ca2b689ef976c6089e053",
+      "token_count": 274,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "657ca27526a5e9fffc69",
+      "page": 44,
+      "source_id": "kimi-k3",
+      "text_sha256": "f09c6ad0b3986887f345fc059ffb404ff88b8f6612190382fff31fdeeea97c24",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "a54e025773fe96683dd8",
+      "page": 44,
+      "source_id": "kimi-k3",
+      "text_sha256": "3192bcdf81fdaf24bf6c9b192044b51fd2a38d2d423a65a8047ec4ba3761f9a2",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "a59c071da4ad375cb651",
+      "page": 44,
+      "source_id": "kimi-k3",
+      "text_sha256": "21df2e459e56793447a1af65e086a1eb2bf1b2f17a241b83abc4afe36c17d56f",
+      "token_count": 367,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "cb1c3c1ec564a8e34b62",
+      "page": 45,
+      "source_id": "kimi-k3",
+      "text_sha256": "9364bc0c9ab66488ef7a3a255c601c025635af57dfb06d996c112a82704f3648",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "24619562c3d602861e1e",
+      "page": 45,
+      "source_id": "kimi-k3",
+      "text_sha256": "f616a5bf2c95fad4f0c0cea61ee175a891cdbe1072beeb6e300697aeb5611f74",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "fa9abbd6295eb233e552",
+      "page": 45,
+      "source_id": "kimi-k3",
+      "text_sha256": "3fed22aa19c0523ae3a3d3796710afddccf7e10d139fc51302aafb84d251c2c0",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "979f3bfa2599bf91561e",
+      "page": 45,
+      "source_id": "kimi-k3",
+      "text_sha256": "f29cea5c4f9e1917d671c7f06ef0d817f50ca0436f99eee6f9afbedff7353d71",
+      "token_count": 210,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "49cda727d5a1ab33603e",
+      "page": 46,
+      "source_id": "kimi-k3",
+      "text_sha256": "e03d8b46da5e4e6048af39929b42ee33aa947c487a4715f001916547fc29dabf",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "98c2445415808f7f9c55",
+      "page": 46,
+      "source_id": "kimi-k3",
+      "text_sha256": "49b1a1d392793d5d35358ff2115172747bebc9ccbc1d2298c48d6e445be94f3a",
+      "token_count": 400,
+      "token_start": 340
+    },
+    {
+      "chunk_id": "809fa95ef943cbbcd2ab",
+      "page": 46,
+      "source_id": "kimi-k3",
+      "text_sha256": "d7c26e765af946d7fa5c4ba826103d0caf5e3f7fad5ec9a7359f282d61f6eb1b",
+      "token_count": 400,
+      "token_start": 680
+    },
+    {
+      "chunk_id": "3a3272ef487d33b80aa9",
+      "page": 46,
+      "source_id": "kimi-k3",
+      "text_sha256": "f3762157c14acd653905f0c39da46690f4f8ea8aabd03e9e63410a5748ceb2fa",
+      "token_count": 67,
+      "token_start": 1020
+    },
+    {
+      "chunk_id": "64af1fe7d022c35431dd",
+      "page": 47,
+      "source_id": "kimi-k3",
+      "text_sha256": "4ae8af09228edf91d884488c9feeadee6735005e98adf3defd302baa301a2b27",
+      "token_count": 400,
+      "token_start": 0
+    },
+    {
+      "chunk_id": "86845181728d23a1743c",
+      "page": 47,
+      "source_id": "kimi-k3",
+      "text_sha256": "24af4bebff7d91beaa664b8d234dbed07fd6f41132b0e03b35b6babf323de47b",
+      "token_count": 225,
+      "token_start": 340
+    }
+  ],
+  "dataset": "technical-papers-v1",
+  "evidence_strategy": "cited_page_all_chunks_v1",
+  "implementation_versions": {
+    "pypdf": "6.16.2",
+    "tiktoken": "0.14.0"
+  },
+  "limitation": "Relevance is page-bounded: every deterministic chunk on a human-reviewed cited page is labeled relevant. These are cited-page judgments, not human-annotated answer-span or exact-passage judgments.",
+  "schema_version": 1,
+  "sources": [
+    {
+      "chunk_count": 29,
+      "filename": "attention-is-all-you-need-neurips-2017.pdf",
+      "pages": 11,
+      "sha256": "d87d482d5ae7960e2e43d7dd6d21377e60e73e8fce1bf2a01aff7aca8a08c537",
+      "source_id": "attention-is-all-you-need"
+    },
+    {
+      "chunk_count": 159,
+      "filename": "kimi-k3-2607.24653v2.pdf",
+      "pages": 47,
+      "sha256": "1a21e4d15de52eb0d4cf09cdbffc6248c497ba6897572cc5574af237c13da51d",
+      "source_id": "kimi-k3"
+    }
+  ]
+}

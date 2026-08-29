@@ -20,6 +20,10 @@ from llmqa.benchmark import (
 )
 from llmqa.benchmark_reporting import write_public_benchmark_report
 from llmqa.cli import main
+from llmqa.project_benchmark_reporting import (
+    build_project_benchmark_snapshot,
+    write_project_benchmark_report,
+)
 
 
 def _fixture_members() -> dict[str, str]:
@@ -266,3 +270,112 @@ def test_public_report_is_compact_and_contains_bootstrap_intervals(tmp_path: Pat
     assert "per_query" not in snapshot_path.read_text(encoding="utf-8")
     assert len(snapshot["runs"][0]["metrics"]["Recall@10"]["ci_95"]) == 2
     ET.fromstring(figure_path.read_text(encoding="utf-8"))
+
+
+def test_project_report_uses_distinct_evidence_clusters(tmp_path: Path) -> None:
+    query_ids = [f"q{index:03d}" for index in range(80)]
+    group_ids = {
+        query_id: "group-a" if index < 40 else "group-b" if index < 60 else "group-c"
+        for index, query_id in enumerate(query_ids)
+    }
+    group_values = {"group-a": 0.2, "group-b": 0.4, "group-c": 0.6}
+    runs: list[dict[str, object]] = []
+    for retriever, offset in (
+        ("bm25", 0.0),
+        ("dense", 0.1),
+        ("dense-mmr", 0.05),
+        ("hybrid", 0.15),
+    ):
+        values = [group_values[group_ids[query_id]] + offset for query_id in query_ids]
+        per_query = [
+            {
+                "query_id": query_id,
+                "recall_at_k": value,
+                "reciprocal_rank": value,
+                "ndcg_at_k": value,
+                "retrieved_ids": [],
+            }
+            for query_id, value in zip(query_ids, values, strict=True)
+        ]
+        mean = sum(values) / len(values)
+        runs.append(
+            {
+                "retriever": retriever,
+                "evaluation": {
+                    "k": 10,
+                    "query_count": 100,
+                    "answerable_query_count": 80,
+                    "unanswerable_query_count": 20,
+                    "mean_recall_at_k": mean,
+                    "mean_reciprocal_rank": mean,
+                    "mean_ndcg_at_k": mean,
+                    "per_query": per_query,
+                },
+                "retrieval_latency_ms_p50": 1.0,
+                "retrieval_latency_ms_p95": 2.0,
+                "run_file": f"runs/{retriever}.jsonl",
+            }
+        )
+    summary = {
+        "schema_version": 1,
+        "dataset": "technical-papers-v1",
+        "split": "reviewed-v1",
+        "source_url": None,
+        "archive_md5": None,
+        "license": "fixture",
+        "citation": "fixture",
+        "provenance": {"evidence_strategy": "cited_page_all_chunks_v1"},
+        "corpus_count": 188,
+        "query_count": 100,
+        "total_query_count": 100,
+        "limited_run": False,
+        "k": 10,
+        "fetch_k": 40,
+        "mmr_lambda": 0.75,
+        "bm25_k1": 1.2,
+        "bm25_b": 0.75,
+        "rrf_rank_constant": 60,
+        "dense_weight": 1.0,
+        "sparse_weight": 1.0,
+        "embedding_model": "fixture-embedding",
+        "embedding_dimensions": 3,
+        "embedding_batch_size": 16,
+        "build_seconds": {},
+        "dense_vector_storage_bytes": 1024,
+        "relevance_group_ids": group_ids,
+        "unique_relevance_group_count": 3,
+        "runs": runs,
+    }
+    summary_path = tmp_path / "summary.json"
+    snapshot_path = tmp_path / "snapshot.json"
+    figure_path = tmp_path / "figure.svg"
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    write_project_benchmark_report(
+        summary_path,
+        snapshot_path,
+        figure_path,
+        run_date="2026-08-29",
+        bootstrap_resamples=100,
+        bootstrap_seed=7,
+    )
+
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    bm25_recall = snapshot["runs"][0]["metrics"]["Recall@10"]
+    assert bm25_recall["query_mean"] == pytest.approx(0.35)
+    assert bm25_recall["evidence_cluster_macro_mean"] == pytest.approx(0.4)
+    assert snapshot["statistical_method"]["cluster_count"] == 3
+    assert "per_query" not in snapshot_path.read_text(encoding="utf-8")
+    ET.fromstring(figure_path.read_text(encoding="utf-8"))
+
+    sliced_snapshot = build_project_benchmark_snapshot(
+        summary,
+        run_date="2026-08-29",
+        case_slices={
+            query_id: ("answerable", "long_document" if index < 20 else "multi_hop")
+            for index, query_id in enumerate(query_ids)
+        },
+        bootstrap_resamples=100,
+        bootstrap_seed=7,
+    )
+    assert sliced_snapshot["diagnostic_slices"]["long_document"]["query_count"] == 20

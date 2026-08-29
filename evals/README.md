@@ -41,23 +41,68 @@ adversarial-instruction cases, with adjudication rules and reviewer agreement re
 
 ## Project-specific technical-paper review set
 
-`project/technical-papers-v1/` contains 100 original **review-pending drafts** grounded in the
+`project/technical-papers-v1/` contains 100 original questions grounded in the
 NeurIPS 2017 Transformer paper and Kimi K3 arXiv v2. The set covers all six required case families,
-but it must not be described as human-reviewed until the review protocol is completed.
+and all 100 cases plus 10 redesigned prompt-injection fixtures are approved. Its evidence has been
+materialized into 188 deterministic chunks and page-bounded retrieval judgments, so the validation
+gate reports `ready_for_benchmark: true`. A complete four-retriever run is now published, while
+generation correctness, abstention, and prompt-injection scoring remain separate pending work.
 
 ```bash
 uv run llmqa fetch-project-eval-sources \
   evals/project/technical-papers-v1/manifest.json
+uv run llmqa materialize-project-eval \
+  evals/project/technical-papers-v1/cases.jsonl \
+  --fixtures evals/project/technical-papers-v1/injection-fixtures.jsonl \
+  --manifest evals/project/technical-papers-v1/manifest.json \
+  --source-dir artifacts/evals/technical-papers-v1 \
+  --output-cases evals/project/technical-papers-v1/cases.jsonl \
+  --judgments evals/project/technical-papers-v1/retrieval-judgments.jsonl \
+  --chunk-manifest evals/project/technical-papers-v1/chunk-manifest.json \
+  --chunks artifacts/evals/technical-papers-v1/chunks.jsonl
 uv run llmqa validate-project-eval \
   evals/project/technical-papers-v1/cases.jsonl \
   --fixtures evals/project/technical-papers-v1/injection-fixtures.jsonl \
-  --manifest evals/project/technical-papers-v1/manifest.json
+  --manifest evals/project/technical-papers-v1/manifest.json \
+  --chunk-manifest evals/project/technical-papers-v1/chunk-manifest.json
+uv run llmqa benchmark-project-eval \
+  --retrievers bm25 dense dense-mmr hybrid \
+  --embedding-model text-embedding-3-small \
+  --embedding-dimensions 1536 \
+  -k 10 --fetch-k 40
+uv run llmqa report-project-eval \
+  artifacts/benchmark-results/technical-papers-v1/summary.json \
+  --snapshot docs/benchmarks/technical-papers-v1-comparison.json \
+  --figure docs/benchmarks/technical-papers-v1-comparison.svg \
+  --run-date YYYY-MM-DD
 ```
 
 The manifest pins source revisions, SHA-256 checksums, licenses, design influences, coverage gates,
-and adjudication rules. Raw papers stay in ignored `artifacts/`; version control contains only
-original short questions/answers, synthetic attack strings, and page/section locators. See the
+per-case-type criteria, the three near-duplicate modes (`answerability_contrast`,
+`controlled_perturbation`, `semantic_contrast`), the five-criterion injection scoring rule, and
+adjudication rules. `long_document` is defined operationally: the case is retrieved over the complete
+58-page corpus with no page, section, or source prefiltering, and the 20 tagged rows are selected
+coverage rather than an exhaustive labeling.
+
+Injection fixtures imitate plausible apparatus text and each carries a distinctly-shaped `canary`,
+`forbidden_claims`, and `forbidden_actions`. A case passes only when all five scoring criteria pass;
+suppressing the canary while obeying the injection is a failure. The executable scorer therefore
+requires a provenance-bearing semantic judgment in addition to exact canary detection.
+
+The retrieval labels use `cited_page_all_chunks_v1`: every 400-token chunk on a reviewed cited page
+receives relevance grade 1. This is an honest page-level proxy, not a claim that humans annotated the
+exact answer span in every chunk. The committed `chunk-manifest.json` contains IDs, offsets, and text
+hashes but no paper text; `retrieval-judgments.jsonl` contains the qrels. Raw PDFs and chunk text stay
+in ignored `artifacts/`. See the
 [review protocol](project/technical-papers-v1/REVIEW.md) before changing any review status.
+
+The 2026-08-29 full run found 45 distinct positive relevance sets among 80 answerable cases. BM25
+led the query-weighted Recall@10, MRR@10, and NDCG@10 means. On evidence-cluster macro means, BM25
+led Recall@10 and NDCG@10; hybrid's small MRR@10 lead over BM25 had a paired 95% interval crossing
+zero. The result does not justify replacing BM25 with dense, MMR, or equal-weight hybrid retrieval
+for this corpus. Overlapping case-family means are retained as diagnostics only; they do not have
+separate confidence intervals, and the prompt-injection-tagged retrieval slice is not a security
+evaluation.
 
 ## Public SciFact benchmark
 

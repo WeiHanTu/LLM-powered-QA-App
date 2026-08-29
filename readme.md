@@ -74,6 +74,40 @@ limitations. SciFact is CC BY-NC 2.0, so raw data and bulky per-query artifacts 
 are not redistributed. The result is evidence for this benchmark, not proof of production quality
 or fairness.
 
+### Reviewed technical-paper retrieval
+
+The project-specific comparison uses all 100 reviewed Transformer/Kimi K3 cases over 188 chunks.
+Retrieval metrics cover the 80 answerable cases; the 20 unanswerable cases remain reserved for
+generation-abstention evaluation. Because those 80 cases collapse to 45 distinct relevance sets,
+the figure reports evidence-cluster macro means and cluster-bootstrap intervals instead of treating
+every question as an independent evidence sample.
+
+![Technical-paper retrieval benchmark with evidence-cluster bootstrap intervals](docs/benchmarks/technical-papers-v1-openai-comparison-2026-08-29.svg)
+
+| Retriever | Recall@10 | MRR@10 | NDCG@10 |
+|---|---:|---:|---:|
+| BM25 (`k1=1.2`, `b=0.75`) | **0.5185** | 0.7838 | **0.5211** |
+| Dense FAISS | 0.4639 | 0.7463 | 0.4670 |
+| Dense + MMR (`lambda=0.75`) | 0.4655 | 0.7352 | 0.4581 |
+| Hybrid RRF (`k=60`) | 0.4997 | **0.7889** | 0.5111 |
+
+BM25 also leads all query-weighted means: Recall@10 `0.5549`, MRR@10 `0.8160`, and NDCG@10
+`0.5551`. Hybrid's cluster-macro MRR is only `0.0051` above BM25, and its paired 95% interval
+crosses zero. There is no defensible evidence here that dense retrieval, MMR, or equal-weight hybrid
+improves this corpus. BM25 remains the default project baseline while chunking, query formulation,
+embedding choice, and fusion weights are tuned.
+
+The descriptive case-family slices do not reverse that decision: BM25 leads Recall@10 and NDCG@10
+on the 15 multi-hop cases. Two live calls using the same OpenAI embedding-model alias also produced
+small dense-ranking differences, so exact dense reruns require cached vectors or a provider-pinned
+model snapshot.
+
+The compact [project evidence record](docs/benchmarks/technical-papers-v1-openai-comparison-2026-08-29.json)
+contains provenance hashes, both query-weighted and cluster-macro means, 10,000-resample paired
+intervals, latency scope, and limitations. Page-bounded qrels are not exact answer-span labels, and
+the five answerable prompt-injection-tagged rows in this clean retrieval run do not measure
+prompt-injection resistance.
+
 ```bash
 uv run llmqa fetch-scifact
 uv run llmqa benchmark-scifact --retrievers bm25 -k 10 --fetch-k 40
@@ -152,9 +186,14 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 
 ## Important limitations
 
-- The project now has 100 source-grounded **draft** questions for review, not 100 human-reviewed
-  judgments. Until the review protocol is complete and page evidence is materialized to stable
-  chunk IDs, SciFact remains the only runnable benchmark and is not evidence about eventual users.
+- The 100-case technical-paper set is reviewed and its deterministic evidence gate is open, but no
+  generation-quality, abstention, or prompt-injection score has been reported. The published project
+  result measures retrieval only.
+- Project qrels label every chunk on a reviewed cited page as relevant. They measure cited-page
+  retrieval, not exact answer-span retrieval; treating them as passage-level human judgments would
+  overstate the annotation quality.
+- The 80 answerable questions resolve to 45 distinct positive relevance sets. Project uncertainty is
+  therefore reported over those evidence clusters, not as 80 independent evidence samples.
 - The target exposure distribution is a policy decision that must be justified with domain experts
   and affected communities; uniform exposure is not automatically fair.
 - Source-level labels are coarse. Chunk-, author-, geography-, and intersection-level audits are

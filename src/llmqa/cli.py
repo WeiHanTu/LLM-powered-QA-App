@@ -27,11 +27,15 @@ from llmqa.fairness import (
     audit_exposure,
     fair_greedy_rerank,
 )
+from llmqa.project_benchmark import load_project_retrieval_benchmark
+from llmqa.project_benchmark_reporting import write_project_benchmark_report
 from llmqa.project_evaluation import (
     fetch_project_evaluation_sources,
     load_injection_fixtures,
+    load_project_chunk_manifest,
     load_project_eval_manifest,
     load_project_evaluation_cases,
+    materialize_project_evaluation,
     validate_project_evaluation,
 )
 
@@ -183,6 +187,40 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--embedding-dimensions", type=int, default=1536)
     benchmark.add_argument("--embedding-batch-size", type=int, default=128)
 
+    project_benchmark = subparsers.add_parser(
+        "benchmark-project-eval",
+        help="run LLMQA retrievers on verified project-evaluation chunks and qrels",
+    )
+    project_benchmark.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    project_benchmark.add_argument(
+        "--chunks",
+        type=Path,
+        default=Path("artifacts/evals/technical-papers-v1/chunks.jsonl"),
+    )
+    project_benchmark.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/benchmark-results/technical-papers-v1"),
+    )
+    project_benchmark.add_argument(
+        "--retrievers", nargs="+", choices=RETRIEVER_NAMES, default=["bm25"]
+    )
+    project_benchmark.add_argument("-k", type=int, default=10)
+    project_benchmark.add_argument("--fetch-k", type=int, default=40)
+    project_benchmark.add_argument("--mmr-lambda", type=float, default=0.75)
+    project_benchmark.add_argument("--bm25-k1", type=float, default=1.2)
+    project_benchmark.add_argument("--bm25-b", type=float, default=0.75)
+    project_benchmark.add_argument("--rrf-rank-constant", type=int, default=60)
+    project_benchmark.add_argument("--dense-weight", type=float, default=1.0)
+    project_benchmark.add_argument("--sparse-weight", type=float, default=1.0)
+    project_benchmark.add_argument("--embedding-model", default="text-embedding-3-small")
+    project_benchmark.add_argument("--embedding-dimensions", type=int, default=1536)
+    project_benchmark.add_argument("--embedding-batch-size", type=int, default=128)
+
     report = subparsers.add_parser(
         "report-scifact",
         help="generate compact public JSON and SVG evidence from a full SciFact run",
@@ -194,6 +232,22 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--bootstrap-resamples", type=int, default=10_000)
     report.add_argument("--bootstrap-seed", type=int, default=20_260_828)
 
+    project_report = subparsers.add_parser(
+        "report-project-eval",
+        help="generate compact JSON and SVG evidence from a full project retrieval run",
+    )
+    project_report.add_argument("summary", type=Path)
+    project_report.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    project_report.add_argument("--snapshot", type=Path, required=True)
+    project_report.add_argument("--figure", type=Path, required=True)
+    project_report.add_argument("--run-date", required=True)
+    project_report.add_argument("--bootstrap-resamples", type=int, default=10_000)
+    project_report.add_argument("--bootstrap-seed", type=int, default=20_260_829)
+
     validate_project_eval = subparsers.add_parser(
         "validate-project-eval",
         help="validate coverage, provenance, evidence, and review state for project QA cases",
@@ -201,6 +255,20 @@ def build_parser() -> argparse.ArgumentParser:
     validate_project_eval.add_argument("cases", type=Path)
     validate_project_eval.add_argument("--fixtures", type=Path, required=True)
     validate_project_eval.add_argument("--manifest", type=Path, required=True)
+    validate_project_eval.add_argument("--chunk-manifest", type=Path)
+
+    materialize_project_eval = subparsers.add_parser(
+        "materialize-project-eval",
+        help="build deterministic project chunks, evidence IDs, and retrieval judgments",
+    )
+    materialize_project_eval.add_argument("cases", type=Path)
+    materialize_project_eval.add_argument("--fixtures", type=Path, required=True)
+    materialize_project_eval.add_argument("--manifest", type=Path, required=True)
+    materialize_project_eval.add_argument("--source-dir", type=Path, required=True)
+    materialize_project_eval.add_argument("--output-cases", type=Path, required=True)
+    materialize_project_eval.add_argument("--judgments", type=Path, required=True)
+    materialize_project_eval.add_argument("--chunk-manifest", type=Path, required=True)
+    materialize_project_eval.add_argument("--chunks", type=Path, required=True)
 
     fetch_project_eval = subparsers.add_parser(
         "fetch-project-eval-sources",
@@ -325,6 +393,63 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "benchmark-project-eval":
+        retriever_names = args.retrievers
+        needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in retriever_names)
+        if needs_dense:
+            require_openai_api_key()
+        provider = (
+            OpenAIEmbeddingProvider(
+                model=args.embedding_model,
+                dimensions=args.embedding_dimensions,
+                batch_size=args.embedding_batch_size,
+            )
+            if needs_dense
+            else None
+        )
+        dataset = load_project_retrieval_benchmark(args.eval_dir, args.chunks)
+        outcome = run_retrieval_benchmark(
+            dataset,
+            retriever_names,
+            k=args.k,
+            fetch_k=args.fetch_k,
+            mmr_lambda=args.mmr_lambda,
+            bm25_k1=args.bm25_k1,
+            bm25_b=args.bm25_b,
+            rrf_rank_constant=args.rrf_rank_constant,
+            dense_weight=args.dense_weight,
+            sparse_weight=args.sparse_weight,
+            embedding_provider=provider,
+        )
+        summary_path = write_benchmark_artifacts(outcome, args.output_dir)
+        print(
+            json.dumps(
+                {
+                    "summary_path": str(summary_path),
+                    "dataset": outcome.report.dataset,
+                    "corpus_count": outcome.report.corpus_count,
+                    "query_count": outcome.report.query_count,
+                    "answerable_query_count": outcome.report.runs[
+                        0
+                    ].evaluation.answerable_query_count,
+                    "unique_relevance_group_count": outcome.report.unique_relevance_group_count,
+                    "runs": [
+                        {
+                            "retriever": run.retriever,
+                            "mean_recall_at_k": run.evaluation.mean_recall_at_k,
+                            "mean_reciprocal_rank": run.evaluation.mean_reciprocal_rank,
+                            "mean_ndcg_at_k": run.evaluation.mean_ndcg_at_k,
+                            "retrieval_latency_ms_p50": run.retrieval_latency_ms_p50,
+                            "retrieval_latency_ms_p95": run.retrieval_latency_ms_p95,
+                        }
+                        for run in outcome.report.runs
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
     if args.command == "report-scifact":
         write_public_benchmark_report(
             args.summary,
@@ -346,12 +471,51 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "report-project-eval":
+        write_project_benchmark_report(
+            args.summary,
+            args.snapshot,
+            args.figure,
+            run_date=args.run_date,
+            evaluation_directory=args.eval_dir,
+            bootstrap_resamples=args.bootstrap_resamples,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot_path": str(args.snapshot),
+                    "figure_path": str(args.figure),
+                    "status": "generated",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
     if args.command == "validate-project-eval":
         manifest = load_project_eval_manifest(args.manifest)
         cases = load_project_evaluation_cases(args.cases)
         fixtures = load_injection_fixtures(args.fixtures)
-        summary = validate_project_evaluation(cases, fixtures, manifest)
-        print(json.dumps(asdict(summary), indent=2))
+        chunk_manifest = (
+            load_project_chunk_manifest(args.chunk_manifest) if args.chunk_manifest else None
+        )
+        evaluation_summary = validate_project_evaluation(cases, fixtures, manifest, chunk_manifest)
+        print(json.dumps(asdict(evaluation_summary), indent=2))
+        return 0
+
+    if args.command == "materialize-project-eval":
+        materialization_summary = materialize_project_evaluation(
+            args.cases,
+            args.fixtures,
+            args.manifest,
+            args.source_dir,
+            args.output_cases,
+            args.judgments,
+            args.chunk_manifest,
+            args.chunks,
+        )
+        print(json.dumps(asdict(materialization_summary), indent=2))
         return 0
 
     if args.command == "fetch-project-eval-sources":

@@ -1,0 +1,392 @@
+{
+  "build_seconds": {
+    "bm25": 0.009995875007007271,
+    "dense": 2.8301996249938384,
+    "queries": 1.1961193750030361
+  },
+  "citation": "Attention Is All You Need (NeurIPS 2017 proceedings), https://papers.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html; Kimi K3: Open Frontier Intelligence (arXiv:2607.24653v2 (2026-08-07)), https://arxiv.org/abs/2607.24653v2",
+  "configuration": {
+    "bm25_b": 0.75,
+    "bm25_k1": 1.2,
+    "dense_weight": 1.0,
+    "embedding_batch_size": 128,
+    "embedding_dimensions": 1536,
+    "embedding_model": "text-embedding-3-small",
+    "faiss_index": "IndexFlatIP with L2-normalized vectors",
+    "fetch_k": 40,
+    "k": 10,
+    "mmr_lambda": 0.75,
+    "rrf_rank_constant": 60,
+    "sparse_weight": 1.0
+  },
+  "dataset": {
+    "answerable_query_count": 80,
+    "corpus_count": 188,
+    "evidence_strategy": "cited_page_all_chunks_v1",
+    "license": "attention-is-all-you-need: Publisher-hosted proceedings copy; no redistribution license asserted; kimi-k3: CC BY-NC-ND 4.0",
+    "name": "technical-papers-v1",
+    "provenance": {
+      "cases_sha256": "b1130d0c155e46f187e158143842e46d81288b34dd15b2f197713bf8a30716f1",
+      "chunk_manifest_sha256": "9291ee5f3e6c4abe97c596765ebf6df595d2124b27ffe276ae53010b8c2b3b2e",
+      "evidence_strategy": "cited_page_all_chunks_v1",
+      "project_manifest_sha256": "c75ef7f50ea7faa7f81db31b56dd19438f6e71a04c8e0d36615bcec4dc22f612",
+      "raw_chunks_sha256": "48b9249db0d3c16970591acd94c3de3b5dff191f54f659a033024a35db861c6f",
+      "retrieval_judgments_sha256": "e1842fa02c2bdd965cf3d30215d145a3d9ae6ec1cc4324f05d39038d8cdc7c6f",
+      "sources": [
+        {
+          "download_url": "https://papers.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf",
+          "landing_page": "https://papers.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html",
+          "license": "Publisher-hosted proceedings copy; no redistribution license asserted",
+          "pages": 11,
+          "sha256": "d87d482d5ae7960e2e43d7dd6d21377e60e73e8fce1bf2a01aff7aca8a08c537",
+          "source_id": "attention-is-all-you-need",
+          "title": "Attention Is All You Need",
+          "version": "NeurIPS 2017 proceedings"
+        },
+        {
+          "download_url": "https://arxiv.org/pdf/2607.24653v2",
+          "landing_page": "https://arxiv.org/abs/2607.24653v2",
+          "license": "CC BY-NC-ND 4.0",
+          "pages": 47,
+          "sha256": "1a21e4d15de52eb0d4cf09cdbffc6248c497ba6897572cc5574af237c13da51d",
+          "source_id": "kimi-k3",
+          "title": "Kimi K3: Open Frontier Intelligence",
+          "version": "arXiv:2607.24653v2 (2026-08-07)"
+        }
+      ]
+    },
+    "query_count": 100,
+    "split": "reviewed-v1",
+    "unanswerable_query_count": 20,
+    "unique_evidence_cluster_count": 45
+  },
+  "dense_vector_storage_bytes": 2310189,
+  "diagnostic_slices": {
+    "long_document": {
+      "overlapping_slice": true,
+      "query_count": 20,
+      "runs": {
+        "bm25": {
+          "MRR@10": 0.8708333333333332,
+          "NDCG@10": 0.5502738938982538,
+          "Recall@10": 0.5161111111111112
+        },
+        "dense": {
+          "MRR@10": 0.75,
+          "NDCG@10": 0.4633018041837456,
+          "Recall@10": 0.4419444444444444
+        },
+        "dense-mmr": {
+          "MRR@10": 0.7402777777777778,
+          "NDCG@10": 0.45832094702818094,
+          "Recall@10": 0.47250000000000003
+        },
+        "hybrid": {
+          "MRR@10": 0.8416666666666666,
+          "NDCG@10": 0.5207392855180364,
+          "Recall@10": 0.4927777777777778
+        }
+      }
+    },
+    "multi_hop": {
+      "overlapping_slice": true,
+      "query_count": 15,
+      "runs": {
+        "bm25": {
+          "MRR@10": 0.5800000000000001,
+          "NDCG@10": 0.3290533027240952,
+          "Recall@10": 0.3148066748066748
+        },
+        "dense": {
+          "MRR@10": 0.6074074074074074,
+          "NDCG@10": 0.2599349219379366,
+          "Recall@10": 0.20766788766788766
+        },
+        "dense-mmr": {
+          "MRR@10": 0.6066666666666667,
+          "NDCG@10": 0.28342990453832423,
+          "Recall@10": 0.22910052910052908
+        },
+        "hybrid": {
+          "MRR@10": 0.5606349206349207,
+          "NDCG@10": 0.2939792338922945,
+          "Recall@10": 0.2735938135938136
+        }
+      }
+    },
+    "near_duplicate": {
+      "overlapping_slice": true,
+      "query_count": 14,
+      "runs": {
+        "bm25": {
+          "MRR@10": 0.738095238095238,
+          "NDCG@10": 0.5347839971151941,
+          "Recall@10": 0.5764652014652015
+        },
+        "dense": {
+          "MRR@10": 0.5997732426303853,
+          "NDCG@10": 0.4955447896197911,
+          "Recall@10": 0.5709706959706959
+        },
+        "dense-mmr": {
+          "MRR@10": 0.605952380952381,
+          "NDCG@10": 0.45426686398147675,
+          "Recall@10": 0.5178571428571429
+        },
+        "hybrid": {
+          "MRR@10": 0.744047619047619,
+          "NDCG@10": 0.5334168083029873,
+          "Recall@10": 0.5531135531135531
+        }
+      }
+    },
+    "prompt_injection": {
+      "overlapping_slice": true,
+      "query_count": 5,
+      "runs": {
+        "bm25": {
+          "MRR@10": 0.7666666666666666,
+          "NDCG@10": 0.6038155312908636,
+          "Recall@10": 0.6666666666666666
+        },
+        "dense": {
+          "MRR@10": 0.7666666666666666,
+          "NDCG@10": 0.5586804327465437,
+          "Recall@10": 0.6266666666666667
+        },
+        "dense-mmr": {
+          "MRR@10": 0.7666666666666666,
+          "NDCG@10": 0.5412403981867243,
+          "Recall@10": 0.6266666666666667
+        },
+        "hybrid": {
+          "MRR@10": 0.9,
+          "NDCG@10": 0.6546629948854749,
+          "Recall@10": 0.6666666666666666
+        }
+      }
+    }
+  },
+  "evidence_status": "verified_project_retrieval_comparison",
+  "limitations": [
+    "The 100 reviewed cases contain 80 answerable retrieval queries but only 45 distinct positive relevance sets.",
+    "Qrels label every chunk on a cited page, not manually isolated answer spans.",
+    "Retrieval metrics exclude the 20 unanswerable cases; generation abstention must be evaluated separately.",
+    "Prompt-injection resistance is not measured by this clean retrieval run.",
+    "Cluster-bootstrap intervals describe variation across this evidence inventory, not production or user-population uncertainty.",
+    "Search latency excludes OpenAI query embedding time because query vectors were precomputed for an equal local-search comparison.",
+    "Repeated live calls with the same embedding model alias produced small dense-ranking differences; exact reruns require captured vectors or a provider-pinned snapshot.",
+    "API token usage and dollar cost were not captured in this run.",
+    "No correction was applied for multiple retriever and metric comparisons.",
+    "Case-family slice means are descriptive, overlap, and have no separate confidence intervals; they must not be treated as independent confirmatory tests."
+  ],
+  "run_date": "2026-08-29",
+  "runs": [
+    {
+      "metrics": {
+        "MRR@10": {
+          "delta_vs_bm25": 0.0,
+          "evidence_cluster_ci_95": [
+            0.6916666666666667,
+            0.8701867283950618
+          ],
+          "evidence_cluster_macro_mean": 0.7837654320987655,
+          "paired_delta_ci_95": [
+            0.0,
+            0.0
+          ],
+          "query_mean": 0.8160416666666667
+        },
+        "NDCG@10": {
+          "delta_vs_bm25": 0.0,
+          "evidence_cluster_ci_95": [
+            0.45664387836840264,
+            0.5833000248716216
+          ],
+          "evidence_cluster_macro_mean": 0.5211301364202628,
+          "paired_delta_ci_95": [
+            0.0,
+            0.0
+          ],
+          "query_mean": 0.555149459846905
+        },
+        "Recall@10": {
+          "delta_vs_bm25": 0.0,
+          "evidence_cluster_ci_95": [
+            0.4468634004884004,
+            0.5901663105413105
+          ],
+          "evidence_cluster_macro_mean": 0.51845407678741,
+          "paired_delta_ci_95": [
+            0.0,
+            0.0
+          ],
+          "query_mean": 0.5548595848595849
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.15925051411613822,
+        "p95": 0.2420190983684733,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "bm25"
+    },
+    {
+      "metrics": {
+        "MRR@10": {
+          "delta_vs_bm25": -0.03745149911816578,
+          "evidence_cluster_ci_95": [
+            0.648490520282187,
+            0.8374104938271604
+          ],
+          "evidence_cluster_macro_mean": 0.7463139329805998,
+          "paired_delta_ci_95": [
+            -0.12455136684303349,
+            0.04925947971781307
+          ],
+          "query_mean": 0.7293353174603174
+        },
+        "NDCG@10": {
+          "delta_vs_bm25": -0.0541675267374869,
+          "evidence_cluster_ci_95": [
+            0.395911930348788,
+            0.5375072842449304
+          ],
+          "evidence_cluster_macro_mean": 0.466962609682776,
+          "paired_delta_ci_95": [
+            -0.10870818187136616,
+            0.0012177150964421
+          ],
+          "query_mean": 0.4965184988750904
+        },
+        "Recall@10": {
+          "delta_vs_bm25": -0.05454008954008954,
+          "evidence_cluster_ci_95": [
+            0.37608377425044087,
+            0.5539378306878305
+          ],
+          "evidence_cluster_macro_mean": 0.4639139872473205,
+          "paired_delta_ci_95": [
+            -0.11584674738841405,
+            0.009097442680775962
+          ],
+          "query_mean": 0.5110210622710623
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.032957992516458035,
+        "p95": 0.051048226305283585,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "dense"
+    },
+    {
+      "metrics": {
+        "MRR@10": {
+          "delta_vs_bm25": -0.04852557319223985,
+          "evidence_cluster_ci_95": [
+            0.6337815255731923,
+            0.8306805114638448
+          ],
+          "evidence_cluster_macro_mean": 0.7352398589065255,
+          "paired_delta_ci_95": [
+            -0.14195343915343916,
+            0.044117768959435616
+          ],
+          "query_mean": 0.7226884920634921
+        },
+        "NDCG@10": {
+          "delta_vs_bm25": -0.06303789749694837,
+          "evidence_cluster_ci_95": [
+            0.3912971406069744,
+            0.5228200648257625
+          ],
+          "evidence_cluster_macro_mean": 0.45809223892331435,
+          "paired_delta_ci_95": [
+            -0.11835499095866034,
+            -0.008006809696905632
+          ],
+          "query_mean": 0.4865410324262934
+        },
+        "Recall@10": {
+          "delta_vs_bm25": -0.052951431284764615,
+          "evidence_cluster_ci_95": [
+            0.38603086419753085,
+            0.5456278659611992
+          ],
+          "evidence_cluster_macro_mean": 0.46550264550264553,
+          "paired_delta_ci_95": [
+            -0.10597958214624881,
+            0.0026679894179893874
+          ],
+          "query_mean": 0.5181646825396825
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.28647901490330696,
+        "p95": 0.4906169284367934,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "dense-mmr"
+    },
+    {
+      "metrics": {
+        "MRR@10": {
+          "delta_vs_bm25": 0.005097001763668425,
+          "evidence_cluster_ci_95": [
+            0.6926190476190476,
+            0.8737037037037036
+          ],
+          "evidence_cluster_macro_mean": 0.7888624338624338,
+          "paired_delta_ci_95": [
+            -0.061538359788359795,
+            0.07422817460317455
+          ],
+          "query_mean": 0.781904761904762
+        },
+        "NDCG@10": {
+          "delta_vs_bm25": -0.010004229832041443,
+          "evidence_cluster_ci_95": [
+            0.43693546912986037,
+            0.5837066511387312
+          ],
+          "evidence_cluster_macro_mean": 0.5111259065882214,
+          "paired_delta_ci_95": [
+            -0.0514375229496168,
+            0.031171762413060432
+          ],
+          "query_mean": 0.5400581050374169
+        },
+        "Recall@10": {
+          "delta_vs_bm25": -0.018737620404287073,
+          "evidence_cluster_ci_95": [
+            0.42243250576583913,
+            0.5773901438068104
+          ],
+          "evidence_cluster_macro_mean": 0.499716456383123,
+          "paired_delta_ci_95": [
+            -0.05557407407407407,
+            0.01733024691358021
+          ],
+          "query_mean": 0.5471321733821733
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.2768335398286581,
+        "p95": 0.41885176906362176,
+        "scope": "local ranked search with query embeddings precomputed"
+      },
+      "retriever": "hybrid"
+    }
+  ],
+  "schema_version": 1,
+  "statistical_method": {
+    "cluster_count": 45,
+    "confidence_level": 0.95,
+    "multiple_comparison_correction": false,
+    "name": "paired nonparametric evidence-cluster bootstrap",
+    "resamples": 10000,
+    "seed": 20260829,
+    "unit": "distinct positive relevance set"
+  }
+}

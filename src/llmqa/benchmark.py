@@ -52,13 +52,22 @@ class BenchmarkDatasetManifest:
 
 
 @dataclass(frozen=True, slots=True)
+class BenchmarkProvenance:
+    source_url: str | None
+    archive_md5: str | None
+    license: str
+    citation: str
+    details: dict[str, object]
+
+
+@dataclass(frozen=True, slots=True)
 class RetrievalBenchmarkDataset:
     name: str
     split: str
     chunks: tuple[Chunk, ...]
     judgments: tuple[RetrievalJudgment, ...]
     total_query_count: int
-    manifest: BenchmarkDatasetManifest
+    provenance: BenchmarkProvenance
 
     @property
     def limited_run(self) -> bool:
@@ -79,10 +88,11 @@ class RetrievalBenchmarkReport:
     schema_version: int
     dataset: str
     split: str
-    source_url: str
-    archive_md5: str
+    source_url: str | None
+    archive_md5: str | None
     license: str
     citation: str
+    provenance: dict[str, object]
     corpus_count: int
     query_count: int
     total_query_count: int
@@ -100,6 +110,8 @@ class RetrievalBenchmarkReport:
     embedding_batch_size: int | None
     build_seconds: dict[str, float]
     dense_vector_storage_bytes: int | None
+    relevance_group_ids: dict[str, str]
+    unique_relevance_group_count: int
     runs: tuple[BenchmarkRunSummary, ...]
 
 
@@ -348,7 +360,16 @@ def load_scifact(
         chunks=tuple(chunks),
         judgments=judgments,
         total_query_count=total_query_count,
-        manifest=manifest,
+        provenance=BenchmarkProvenance(
+            source_url=manifest.source_url,
+            archive_md5=manifest.archive_md5,
+            license=manifest.license,
+            citation=manifest.citation,
+            details={
+                "schema_version": manifest.schema_version,
+                "files_sha256": manifest.files_sha256,
+            },
+        ),
     )
 
 
@@ -386,6 +407,26 @@ class _QueryCachingEmbeddingProvider:
 def _provider_integer(provider: EmbeddingProvider | None, attribute: str) -> int | None:
     value = getattr(provider, attribute, None)
     return value if isinstance(value, int) else None
+
+
+def _relevance_group_ids(judgments: Sequence[RetrievalJudgment]) -> dict[str, str]:
+    groups: dict[str, str] = {}
+    signatures_by_group: dict[str, str] = {}
+    for judgment in judgments:
+        positive_relevance = sorted(
+            (chunk_id, float(grade))
+            for chunk_id, grade in judgment.relevance.items()
+            if float(grade) > 0
+        )
+        if not positive_relevance:
+            continue
+        signature = json.dumps(positive_relevance, separators=(",", ":"))
+        group_id = f"evidence-{hashlib.sha256(signature.encode()).hexdigest()[:12]}"
+        prior_signature = signatures_by_group.setdefault(group_id, signature)
+        if prior_signature != signature:
+            raise ValueError("relevance-group hash collision detected")
+        groups[judgment.query_id] = group_id
+    return groups
 
 
 def run_retrieval_benchmark(
@@ -489,14 +530,16 @@ def run_retrieval_benchmark(
             )
         )
 
+    relevance_group_ids = _relevance_group_ids(dataset.judgments)
     report = RetrievalBenchmarkReport(
         schema_version=1,
         dataset=dataset.name,
         split=dataset.split,
-        source_url=dataset.manifest.source_url,
-        archive_md5=dataset.manifest.archive_md5,
-        license=dataset.manifest.license,
-        citation=dataset.manifest.citation,
+        source_url=dataset.provenance.source_url,
+        archive_md5=dataset.provenance.archive_md5,
+        license=dataset.provenance.license,
+        citation=dataset.provenance.citation,
+        provenance=dataset.provenance.details,
         corpus_count=len(dataset.chunks),
         query_count=len(dataset.judgments),
         total_query_count=dataset.total_query_count,
@@ -514,6 +557,8 @@ def run_retrieval_benchmark(
         embedding_batch_size=_provider_integer(embedding_provider, "batch_size"),
         build_seconds=build_seconds,
         dense_vector_storage_bytes=dense.vector_storage_bytes if dense is not None else None,
+        relevance_group_ids=relevance_group_ids,
+        unique_relevance_group_count=len(set(relevance_group_ids.values())),
         runs=tuple(summaries),
     )
     return RetrievalBenchmarkOutcome(report=report, rankings=all_rankings)
