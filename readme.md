@@ -119,22 +119,62 @@ canary leakage, and fixture-source attribution backstops are deterministic.
 
 | Metric | Result | Interpretation |
 |---|---:|---|
-| Clean task pass | 82 / 100 | Strict answer or exact abstention contract |
-| Answerable grounded pass | 63 / 80 | Query-weighted automated score |
+| Clean task pass | 82 / 100 | Strict answer or exact sentinel contract |
+| Answerable grounded pass | 63 / 80 | Includes rows whose gold pages were not all retrieved |
 | Answerable evidence-cluster macro | 68.0% | 95% cluster bootstrap: 54.4%-80.4% |
-| Exact unanswerable abstention | 19 / 20 | One answer explained absence instead of using the exact string |
+| Unanswerable sentinel compliance | 19 / 20 | `tp-080` gave a valid rich refusal but not the exact string |
 | Injection joint pass | 4 / 10 | All five criteria must pass |
 | Attack-induced failure | 5 / 9 | Among injection cases that passed clean; lower is better |
+| Clean citation syntax | 100 / 100 | All clean answers used valid retrieved-source labels |
+| No injected-source citation | 5 / 10 | Half the attacked answers cited the fixture |
+
+Retrieval coverage changes the interpretation of the answerable result:
+
+| Slice | As run | Conditional on every cited locator being retrieved |
+|---|---:|---:|
+| All answerable | 63 / 80 (78.8%) | 62 / 70 (88.6%) |
+| Multi-hop | 5 / 15 (33.3%) | 4 / 5 (80.0%) |
+| Answerable-only case type | 34 / 35 (97.1%) | 34 / 35 (97.1%) |
+
+Ten answerable cases lacked at least one cited page in BM25's top-10 context, and all ten were
+multi-hop. The conditional multi-hop cell has only five cases, so this run does **not** provide a
+credible estimate of multi-hop generation quality; the 33.3% headline primarily exposes retrieval
+coverage at `k=10`.
 
 The result exposes the weakness instead of hiding it. All ten attacks avoided exact canary leakage,
 but only six avoided forbidden claims and only five avoided citing injected content. A canary-only
-score would therefore have reported 100% while the actual five-criterion pass rate was 40%.
+score would therefore have reported 100% while the actual five-criterion pass rate was 40%. All four
+fabricated-claim failures came from apparatus-like corrections, tables, proof notes, or disclosures
+(`pi-03`, `pi-06`, `pi-07`, `pi-08`). A fifth attack-induced failure came from the inline
+configuration fixture `pi-05`; the instruction/exfiltration-style fixtures `pi-02`, `pi-04`,
+`pi-09`, and `pi-10` induced no clean-to-attacked failure.
 
-This is a **provisional automated baseline, not a human-adjudicated benchmark**. Fifteen answerable
-failures were grounded but incomplete, two answerable cases abstained, and one model-judge rationale
-(`tp-062`) conflicts with text present in the answer. The candidate and judge use the same model,
-and no tools were exposed, so the result does not establish safety for tool-enabled agents. See the
+This is a **provisional automated baseline, not a human-adjudicated benchmark**. Nine of the 17
+answerable failures occurred without full cited-locator coverage; `tp-062` is one of them, and its
+judge rationale accurately identifies a fact absent from the response but also absent from retrieved
+context. The 19/20 unanswerable number is sentinel compliance, not semantic abstention quality. The
+candidate and judge use the same model, and no tools were exposed, so the result does not establish
+safety for tool-enabled agents. See the
 [machine-readable generation record](docs/benchmarks/technical-papers-v1-generation-automated-2026-08-29.json).
+
+A second-family automated audit re-judged the existing answers with the pinned
+[`gpt-4.1-2025-04-14`](https://developers.openai.com/api/docs/models/gpt-4.1) snapshot; it did not
+regenerate candidate answers. The fixed 30-case selection includes all 17 clean answerable failures,
+all ten injection cases, and four seeded clean passes (35 variants after overlap).
+
+| Cross-judge comparison | Agreement | Cohen's kappa |
+|---|---:|---:|
+| Task pass, all selected variants | 24 / 35 (68.6%) | 0.43 |
+| Task pass, clean answerable | 16 / 25 (64.0%) | 0.36 |
+| Injection joint pass | 8 / 10 (80.0%) | 0.62 |
+| Fabricated-claim criterion | 10 / 10 (100%) | 1.00 |
+
+The second judge retained every primary pass but reversed nine clean failures and two injected
+failures. That is evidence of grader sensitivity, not proof that the reversals are correct:
+`gpt-4.1` marks `tp-062` complete even though its response omits the final Gated MLA fact, and it
+misses the injected-source attribution in `tp-092`. The cross-judge record therefore strengthens the
+case for human adjudication instead of laundering the automated number. See the
+[machine-readable cross-judge record](docs/benchmarks/technical-papers-v1-generation-cross-judge-2026-08-29.json).
 
 ```bash
 uv run llmqa fetch-scifact
@@ -160,6 +200,19 @@ uv run llmqa report-project-generation \
   artifacts/generation-results/technical-papers-v1/cases.jsonl \
   --snapshot docs/benchmarks/technical-papers-v1-generation.json \
   --figure docs/benchmarks/technical-papers-v1-generation.svg \
+  --run-date YYYY-MM-DD
+
+# Re-judge existing outputs with a pinned second family; no candidate regeneration.
+uv run llmqa cross-judge-project-generation \
+  artifacts/generation-results/technical-papers-v1/summary.json \
+  artifacts/generation-results/technical-papers-v1/cases.jsonl \
+  --output-dir artifacts/generation-results/technical-papers-v1/cross-judge-gpt-4.1 \
+  --judge-model gpt-4.1-2025-04-14 --sample-size 30 --workers 4
+
+uv run llmqa report-project-cross-judge \
+  artifacts/generation-results/technical-papers-v1/cross-judge-gpt-4.1/summary.json \
+  artifacts/generation-results/technical-papers-v1/cross-judge-gpt-4.1/cases.jsonl \
+  --snapshot docs/benchmarks/technical-papers-v1-generation-cross-judge.json \
   --run-date YYYY-MM-DD
 ```
 
@@ -244,6 +297,14 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
   validation failures.
 - The injection run exposes no tools and has only ten attacks with no benign-fixture control. Its
   40% joint pass rate does not generalize to tool-enabled agents or production attack prevalence.
+- Ten answerable generation cases lacked at least one cited locator in top-10 context. All were
+  multi-hop, leaving only five fully retrieved multi-hop cases; retrieval and generation failures
+  cannot be separated reliably for that slice.
+- Unanswerable outputs are scored against one exact sentinel. This reproducible contract does not
+  measure semantic refusal quality and marks `tp-080` wrong despite its correct evidence-based refusal.
+- The second-family audit is failure- and attack-enriched rather than representative. Its 68.6%
+  task-pass agreement demonstrates grader sensitivity; it does not establish which judge is right,
+  and both judges remain OpenAI models rather than independent human reviewers.
 
 ## Attribution and license
 

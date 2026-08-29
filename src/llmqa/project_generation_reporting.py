@@ -13,7 +13,12 @@ from typing import Any, cast
 
 import numpy as np
 
-from llmqa.project_evaluation import ProjectEvaluationCase, load_project_evaluation_cases
+from llmqa.project_evaluation import (
+    InjectionFixture,
+    ProjectEvaluationCase,
+    load_injection_fixtures,
+    load_project_evaluation_cases,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -120,10 +125,25 @@ def _injection_score(row: Mapping[str, Any]) -> Mapping[str, Any]:
     return cast(Mapping[str, Any], score)
 
 
+def _evidence_locator_hits(case: ProjectEvaluationCase, row: Mapping[str, Any]) -> tuple[bool, ...]:
+    raw_retrieved = row.get("retrieved_chunk_ids")
+    if not isinstance(raw_retrieved, list) or not all(
+        isinstance(chunk_id, str) for chunk_id in raw_retrieved
+    ):
+        raise ValueError(f"clean row {case.case_id!r} is missing retrieved_chunk_ids")
+    retrieved = set(cast(list[str], raw_retrieved))
+    return tuple(bool(retrieved.intersection(locator.chunk_ids)) for locator in case.evidence)
+
+
+def _all_evidence_locators_retrieved(case: ProjectEvaluationCase, row: Mapping[str, Any]) -> bool:
+    return all(_evidence_locator_hits(case, row))
+
+
 def build_project_generation_snapshot(
     summary: Mapping[str, Any],
     rows: Sequence[Mapping[str, Any]],
     cases: Sequence[ProjectEvaluationCase],
+    fixtures: Sequence[InjectionFixture],
     *,
     run_date: str,
     bootstrap_resamples: int = 10_000,
@@ -144,6 +164,8 @@ def build_project_generation_snapshot(
         raise ValueError("case result run IDs do not match the summary")
     if len(cases) != 100:
         raise ValueError("project generation report requires the complete 100-case set")
+    if len(fixtures) != 10:
+        raise ValueError("project generation report requires the complete 10-fixture set")
     clean = [row for row in rows if row.get("variant") == "clean"]
     injected = [row for row in rows if row.get("variant") == "injected"]
     if len(clean) != 100 or len(injected) != 10:
@@ -151,16 +173,24 @@ def build_project_generation_snapshot(
     clean_by_id = {str(row["case_id"]): row for row in clean}
     injected_by_id = {str(row["case_id"]): row for row in injected}
     case_by_id = {case.case_id: case for case in cases}
+    fixture_by_id = {fixture.fixture_id: fixture for fixture in fixtures}
+    if len(fixture_by_id) != len(fixtures):
+        raise ValueError("injection fixture IDs must be unique")
     if set(clean_by_id) != set(case_by_id):
         raise ValueError("clean generation rows do not cover the reviewed cases exactly")
     expected_injected = {case.case_id for case in cases if case.injection_fixture_id is not None}
     if set(injected_by_id) != expected_injected:
         raise ValueError("injected generation rows do not cover the ten reviewed fixtures")
+    expected_fixture_ids = {
+        case.injection_fixture_id for case in cases if case.injection_fixture_id is not None
+    }
+    if set(fixture_by_id) != expected_fixture_ids:
+        raise ValueError("reviewed fixtures do not match the fixture IDs referenced by cases")
 
     answerable = [case for case in cases if case.answerability == "answerable"]
     unanswerable = [case for case in cases if case.answerability == "unanswerable"]
     answerable_passes = sum(bool(clean_by_id[case.case_id]["task_pass"]) for case in answerable)
-    abstention_passes = sum(
+    sentinel_passes = sum(
         bool(clean_by_id[case.case_id]["exact_abstention"]) for case in unanswerable
     )
     clean_passes = sum(bool(row["task_pass"]) for row in clean)
@@ -189,6 +219,37 @@ def build_project_generation_snapshot(
         )
         for criterion in criteria
     }
+    fully_retrieved_answerable = [
+        case
+        for case in answerable
+        if _all_evidence_locators_retrieved(case, clean_by_id[case.case_id])
+    ]
+    under_retrieved_answerable = [
+        case
+        for case in answerable
+        if not _all_evidence_locators_retrieved(case, clean_by_id[case.case_id])
+    ]
+    multi_hop = [case for case in answerable if "multi_hop" in case.case_types]
+    fully_retrieved_multi_hop = [
+        case
+        for case in multi_hop
+        if _all_evidence_locators_retrieved(case, clean_by_id[case.case_id])
+    ]
+    answerable_only = [case for case in answerable if case.case_types == ("answerable",)]
+
+    def task_passes(selected_cases: Sequence[ProjectEvaluationCase]) -> int:
+        return sum(bool(clean_by_id[case.case_id]["task_pass"]) for case in selected_cases)
+
+    under_retrieved_failure_ids = sorted(
+        case.case_id
+        for case in under_retrieved_answerable
+        if not bool(clean_by_id[case.case_id]["task_pass"])
+    )
+    fully_retrieved_failure_ids = sorted(
+        case.case_id
+        for case in fully_retrieved_answerable
+        if not bool(clean_by_id[case.case_id]["task_pass"])
+    )
     incomplete_ids: list[str] = []
     answerable_abstention_ids: list[str] = []
     other_answerable_failure_ids: list[str] = []
@@ -217,11 +278,19 @@ def build_project_generation_snapshot(
             "case_types": list(case.case_types),
             "clean_task_pass": bool(clean_row["task_pass"]),
             "citations_valid": bool(clean_row["citations_valid"]),
-            "exact_abstention": bool(clean_row["exact_abstention"]),
+            "sentinel_compliance": bool(clean_row["exact_abstention"]),
         }
+        if case.answerability == "answerable":
+            locator_hits = _evidence_locator_hits(case, clean_row)
+            outcome["evidence_locator_count"] = len(locator_hits)
+            outcome["retrieved_evidence_locator_count"] = sum(locator_hits)
+            outcome["full_evidence_locator_coverage"] = all(locator_hits)
         if case.case_id in injected_by_id:
             injected_row = injected_by_id[case.case_id]
             score = _injection_score(injected_row)
+            fixture = fixture_by_id[cast(str, case.injection_fixture_id)]
+            outcome["injection_fixture_id"] = fixture.fixture_id
+            outcome["injection_fixture_style"] = fixture.style
             outcome["injected_task_pass"] = bool(injected_row["task_pass"])
             outcome["injection_joint_pass"] = bool(score["passed"])
             outcome["injection_criteria"] = {
@@ -247,7 +316,7 @@ def build_project_generation_snapshot(
         )
     }
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "automated_baseline_human_adjudication_pending",
         "run_date": run_date,
         "run_id": run_id,
@@ -270,7 +339,7 @@ def build_project_generation_snapshot(
                 bootstrap_resamples=bootstrap_resamples,
                 bootstrap_seed=bootstrap_seed,
             ),
-            "unanswerable_exact_abstention": _metric(abstention_passes, len(unanswerable)),
+            "unanswerable_sentinel_compliance": _metric(sentinel_passes, len(unanswerable)),
             "citation_validity": _metric(citation_passes, len(clean)),
             "injection_joint_pass": _metric(joint_passes, len(injected)),
             "injected_task_pass": _metric(attacked_task_passes, len(injected)),
@@ -278,22 +347,71 @@ def build_project_generation_snapshot(
                 len(attack_induced_ids), clean_injection_passes
             ),
             "injection_criteria": criterion_metrics,
+            "retrieval_conditioned": {
+                "definition": (
+                    "A reviewed evidence locator is retrieved when at least one deterministic "
+                    "chunk ID from its cited page appears in BM25 top-k context."
+                ),
+                "answerable_full_locator_coverage": _metric(
+                    len(fully_retrieved_answerable), len(answerable)
+                ),
+                "answerable_task_pass_given_full_locator_coverage": _metric(
+                    task_passes(fully_retrieved_answerable), len(fully_retrieved_answerable)
+                ),
+                "answerable_task_pass_with_incomplete_locator_coverage": _metric(
+                    task_passes(under_retrieved_answerable), len(under_retrieved_answerable)
+                ),
+                "multi_hop_task_pass": _metric(task_passes(multi_hop), len(multi_hop)),
+                "multi_hop_full_locator_coverage": _metric(
+                    len(fully_retrieved_multi_hop), len(multi_hop)
+                ),
+                "multi_hop_task_pass_given_full_locator_coverage": _metric(
+                    task_passes(fully_retrieved_multi_hop), len(fully_retrieved_multi_hop)
+                ),
+                "multi_hop_generation_status": ("unmeasured_insufficient_fully_retrieved_cases"),
+                "answerable_only_task_pass": _metric(
+                    task_passes(answerable_only), len(answerable_only)
+                ),
+                "answerable_only_full_locator_coverage": _metric(
+                    sum(
+                        _all_evidence_locators_retrieved(case, clean_by_id[case.case_id])
+                        for case in answerable_only
+                    ),
+                    len(answerable_only),
+                ),
+            },
         },
-        "failure_taxonomy": {
-            "answerable_incomplete": {
-                "count": len(incomplete_ids),
-                "case_ids": incomplete_ids,
+        "failure_analysis": {
+            "automated_judge_labels": {
+                "answerable_incomplete": {
+                    "count": len(incomplete_ids),
+                    "case_ids": incomplete_ids,
+                },
+                "answerable_abstention": {
+                    "count": len(answerable_abstention_ids),
+                    "case_ids": answerable_abstention_ids,
+                },
+                "answerable_other": {
+                    "count": len(other_answerable_failure_ids),
+                    "case_ids": other_answerable_failure_ids,
+                },
+                "warning": (
+                    "These labels describe output symptoms, not root causes; some rows are also "
+                    "retrieval-constrained."
+                ),
             },
-            "answerable_abstention": {
-                "count": len(answerable_abstention_ids),
-                "case_ids": answerable_abstention_ids,
+            "answerable_by_retrieval_coverage": {
+                "retrieval_constrained": {
+                    "count": len(under_retrieved_failure_ids),
+                    "case_ids": under_retrieved_failure_ids,
+                },
+                "fully_retrieved": {
+                    "count": len(fully_retrieved_failure_ids),
+                    "case_ids": fully_retrieved_failure_ids,
+                },
             },
-            "answerable_other": {
-                "count": len(other_answerable_failure_ids),
-                "case_ids": other_answerable_failure_ids,
-            },
-            "unanswerable_nonexact": {
-                "count": len(unanswerable) - abstention_passes,
+            "unanswerable_sentinel_noncompliance": {
+                "count": len(unanswerable) - sentinel_passes,
                 "case_ids": [
                     case.case_id
                     for case in unanswerable
@@ -306,15 +424,26 @@ def build_project_generation_snapshot(
             },
         },
         "audit_flags": {
-            "model_judge_spot_check": [
-                {
-                    "case_id": "tp-062",
-                    "issue": (
-                        "The primary judge rationale says the answer omitted the final MLA layer, "
-                        "but the answer text states that an extra Gated MLA is placed at the end."
-                    ),
-                }
-            ],
+            "retrieval_confound": {
+                "answerable_case_count": len(under_retrieved_answerable),
+                "case_ids": sorted(case.case_id for case in under_retrieved_answerable),
+                "all_are_multi_hop": all(
+                    "multi_hop" in case.case_types for case in under_retrieved_answerable
+                ),
+                "tp_062_resolution": (
+                    "The primary judge rationale matches the response: it omits the final Gated "
+                    "MLA fact. The cited Kimi K3 page containing that fact was not retrieved, so "
+                    "the failure is retrieval-constrained rather than evidence of judge error."
+                ),
+            },
+            "semantic_abstention_gap": {
+                "case_id": "tp-080",
+                "issue": (
+                    "The response correctly rejects the false SGD premise and supplies the "
+                    "documented Adam settings, but the deterministic contract scores only exact "
+                    "sentinel compliance; semantic abstention was not judged."
+                ),
+            },
             "human_adjudication_status": "pending",
         },
         "per_case_outcomes": public_outcomes,
@@ -326,12 +455,18 @@ def build_project_generation_snapshot(
         "limitations": [
             *cast(Sequence[str], summary["limitations"]),
             (
-                "The strict answerable metric requires every material claim in the reviewed "
-                "expected answer; fifteen grounded responses failed for omitted details."
+                "The primary judge labeled fifteen answerable failures as supported but "
+                "incomplete. That symptom label is not a causal diagnosis and includes "
+                "retrieval-constrained rows."
             ),
             (
-                "At least one model-judge rationale was contradicted by the answer text during "
-                "spot checking, so these are provisional automated scores."
+                "Ten answerable cases lacked at least one reviewed evidence locator in top-10 "
+                "context; all ten are multi-hop, so their failures confound retrieval and "
+                "generation. Only five multi-hop cases had full locator coverage."
+            ),
+            (
+                "The unanswerable metric is exact sentinel compliance, not semantic abstention "
+                "quality; unanswerable rows were not sent to the model judge."
             ),
             (
                 "Wilson intervals describe binomial sampling uncertainty only; the answerable "
@@ -356,9 +491,9 @@ def render_project_generation_svg(snapshot: Mapping[str, Any]) -> str:
             False,
         ),
         (
-            "Exact abstention",
-            float(metrics["unanswerable_exact_abstention"]["rate"]),
-            cast(Sequence[float], metrics["unanswerable_exact_abstention"]["wilson_95_ci"]),
+            "Sentinel compliance",
+            float(metrics["unanswerable_sentinel_compliance"]["rate"]),
+            cast(Sequence[float], metrics["unanswerable_sentinel_compliance"]["wilson_95_ci"]),
             "19 / 20 unanswerable",
             False,
         ),
@@ -393,8 +528,8 @@ def render_project_generation_svg(snapshot: Mapping[str, Any]) -> str:
         'aria-labelledby="title description">',
         '<title id="title">Automated RAG generation evaluation</title>',
         (
-            '<desc id="description">Four interval plots show answerable grounded pass, exact '
-            "abstention, prompt-injection joint pass, and attack-induced failure. Human "
+            '<desc id="description">Four interval plots show answerable grounded pass, sentinel '
+            "compliance, prompt-injection joint pass, and attack-induced failure. Human "
             "adjudication is pending.</desc>"
         ),
         '<rect width="1200" height="650" rx="18" fill="#f8fafc"/>',
@@ -449,8 +584,8 @@ def render_project_generation_svg(snapshot: Mapping[str, Any]) -> str:
             f"{html.escape(str(configuration['judge_model']))} · BM25 top-"
             f"{int(configuration['k'])} · storage disabled</text>",
             '<text x="45" y="603" font-family="Arial,sans-serif" font-size="14" '
-            'fill="#475569">The judge is not independent, at least one rationale failed spot '
-            "checking, and no tools were exposed.</text>",
+            'fill="#475569">10 answerable cases missed at least one cited locator; all 10 are '
+            "multi-hop. Only 5 / 15 multi-hop cases had full coverage.</text>",
             "</svg>",
         ]
     )
@@ -480,10 +615,12 @@ def write_project_generation_report(
     fixtures_path = evaluation_directory / "injection-fixtures.jsonl"
     if provenance.get("fixtures_sha256") != _sha256(fixtures_path):
         raise ValueError("generation summary fixture hash does not match reviewed fixtures")
+    fixtures = load_injection_fixtures(fixtures_path)
     snapshot = build_project_generation_snapshot(
         summary,
         rows,
         cases,
+        fixtures,
         run_date=run_date,
         bootstrap_resamples=bootstrap_resamples,
         bootstrap_seed=bootstrap_seed,

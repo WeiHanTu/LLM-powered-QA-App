@@ -38,6 +38,11 @@ from llmqa.project_evaluation import (
     materialize_project_evaluation,
     validate_project_evaluation,
 )
+from llmqa.project_generation_cross_judge import (
+    DEFAULT_CROSS_JUDGE_MODEL,
+    run_project_generation_cross_judge,
+    write_project_cross_judge_report,
+)
 from llmqa.project_generation_evaluation import run_project_generation_evaluation
 from llmqa.project_generation_reporting import write_project_generation_report
 
@@ -297,6 +302,37 @@ def build_parser() -> argparse.ArgumentParser:
     generation_report.add_argument("--run-date", required=True)
     generation_report.add_argument("--bootstrap-resamples", type=int, default=10_000)
     generation_report.add_argument("--bootstrap-seed", type=int, default=20_260_829)
+
+    cross_judge = subparsers.add_parser(
+        "cross-judge-project-generation",
+        help="re-judge a stratified generation subset with a second model family",
+    )
+    cross_judge.add_argument("primary_summary", type=Path)
+    cross_judge.add_argument("primary_results", type=Path)
+    cross_judge.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    cross_judge.add_argument(
+        "--chunks",
+        type=Path,
+        default=Path("artifacts/evals/technical-papers-v1/chunks.jsonl"),
+    )
+    cross_judge.add_argument("--output-dir", type=Path, required=True)
+    cross_judge.add_argument("--judge-model", default=DEFAULT_CROSS_JUDGE_MODEL)
+    cross_judge.add_argument("--sample-size", type=int, default=30)
+    cross_judge.add_argument("--seed", type=int, default=20_260_829)
+    cross_judge.add_argument("--workers", type=int, default=4)
+
+    cross_judge_report = subparsers.add_parser(
+        "report-project-cross-judge",
+        help="publish compact cross-judge agreement evidence",
+    )
+    cross_judge_report.add_argument("summary", type=Path)
+    cross_judge_report.add_argument("results", type=Path)
+    cross_judge_report.add_argument("--snapshot", type=Path, required=True)
+    cross_judge_report.add_argument("--run-date", required=True)
 
     validate_project_eval = subparsers.add_parser(
         "validate-project-eval",
@@ -594,6 +630,43 @@ def main(argv: list[str] | None = None) -> int:
                 indent=2,
             )
         )
+        return 0
+
+    if args.command == "cross-judge-project-generation":
+        require_openai_api_key()
+        summary_path = run_project_generation_cross_judge(
+            args.primary_summary,
+            args.primary_results,
+            args.eval_dir,
+            args.chunks,
+            args.output_dir,
+            judge_model=args.judge_model,
+            sample_size=args.sample_size,
+            seed=args.seed,
+            max_workers=args.workers,
+        )
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        print(
+            json.dumps(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": summary["run_id"],
+                    "counts": summary["counts"],
+                    "agreement": summary["agreement"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-project-cross-judge":
+        write_project_cross_judge_report(
+            args.summary,
+            args.results,
+            args.snapshot,
+            run_date=args.run_date,
+        )
+        print(json.dumps({"snapshot_path": str(args.snapshot), "status": "generated"}, indent=2))
         return 0
 
     if args.command == "validate-project-eval":
