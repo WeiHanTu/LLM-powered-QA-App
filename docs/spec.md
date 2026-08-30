@@ -323,15 +323,21 @@ release claim.
   satisfied or missing while treating accepted elaborations as optional. Deterministic backstops
   cover citation syntax, exact abstention, canary leakage, and attribution to fixture-bearing
   sources.
-- **Measured, provisional:** `gpt-5-mini` passed 90/100 clean tasks, 70/80 answerable tasks, 20/20
-  exact abstentions, and 6/10 five-criterion injection cases. Four of ten clean-passing injection
-  cases failed under attack. The answerable evidence-cluster macro pass rate is 78.9% with a 66.7%-
-  90.0% cluster-bootstrap interval. Conditional on complete evidence-locator retrieval, answerable
-  task pass is 68/70; only five multi-hop cases had full coverage.
+- **Measured and human-approved with AI assistance:** the automated judge scored 90/100 clean and
+  70/80 answerable tasks. Review of all 110 variants changed `tp-074` from pass to fail, yielding
+  89/100 clean, 69/80 answerable, 20/20 exact abstentions, and 6/10 five-criterion injection cases.
+  Four of ten clean-passing injection cases failed under attack. The approved answerable
+  evidence-cluster macro is 76.7% with a 64.4%-87.8% cluster-bootstrap interval. Conditional on
+  complete evidence-locator retrieval, answerable task pass is 67/70; only five multi-hop cases had
+  full coverage. The artifact discloses that an AI prepared the decisions and reviewer `wei-han`
+  explicitly approved them; it is not an independent human panel.
 - **Completed:** human adjudication of all eleven task-pass disagreements in the historical
   second-model audit upheld the primary judge five times and the cross judge six times. The current
   required-claims run regenerated candidate answers, so its improvement over the historical run is
   not an isolated rubric effect.
+- **Completed:** schema-v3 adjudication of the regenerated required-claims run is bound to run
+  `68f31a98962453b5a9b6`, its exact raw artifacts, claim contract, selected variants, and reviewed
+  case set. The public snapshot retains automated metrics beside the human-approved values.
 - **Implemented and rejected as default:** one frozen question-decomposition + BM25 RRF
   configuration raised full multi-hop locator coverage from 5/15 to 6/15 but left total locator
   hits unchanged at 25/44. Its limited generation experiment reduced automated required-claim task
@@ -369,13 +375,13 @@ release claim.
   aggregate rather than per-query dominance: 56 to 96 cases are expansion-only wins, so a separately
   preregistered query-adaptive selector is not disproven. The evidence record is
   `docs/benchmarks/multihop-rag-parent-expansion-2026-08-29.json`.
-- **Implemented review binding:** generation reporting accepts only schema-v2 direct human review
-  bound to the exact run ID, cases contract, claim contract, selected variant set, raw summary,
-  raw results, and adjudication artifact hash. Partial review cannot replace the automated headline;
-  only direct review of all 110 variants can publish `metrics_human_reviewed`.
-- **Pending:** human review of the current required-claims run. Candidate and primary judge still
-  use the same model alias, so the report remains an automated baseline rather than a final
-  benchmark.
+- **Implemented review binding:** generation reporting accepts only schema-v3 human-approved,
+  AI-assisted review bound to the exact run ID, cases contract, claim contract, selected variant set,
+  raw summary, raw results, and adjudication artifact hash. It records claim-level answer judgments,
+  separates sentinel compliance from semantic refusal, and requires all five injection criteria.
+  Partial review cannot replace the automated headline; only explicit human approval of all 110
+  variant records can publish `metrics_human_reviewed`. The artifact discloses AI preparation and
+  does not claim an independent human panel.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
 - **Next candidate:** the retrieved-slate size `k` itself, measured end to end. On the full external
@@ -391,8 +397,10 @@ release claim.
 - **Pending:** select chunk size/overlap, and the slate size `k`, from the evaluation, not intuition.
 
 Exit gate: select the evidence-backed default and document utility, latency, and cost. Replacing BM25
-requires a meaningful paired improvement; this comparison does not establish one. The automated
-generation gate is measured but remains open until human adjudication is recorded.
+requires a meaningful paired improvement; this comparison does not establish one. The generation
+review gate is closed for this fixed run. External validity remains limited by the two-paper corpus,
+ten attacks, absent benign-fixture control, provider-side model aliasing, and lack of tool-enabled
+evaluation.
 
 ### Phase 2 — end-to-end bias evaluation
 

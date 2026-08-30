@@ -563,7 +563,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--adjudication",
         type=Path,
         default=None,
-        help="direct human-review record bound to this run by ID and artifact hashes",
+        help="human-approved AI-assisted review bound to this run by ID and artifact hashes",
     )
 
     cross_judge = subparsers.add_parser(
