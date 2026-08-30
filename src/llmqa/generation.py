@@ -70,12 +70,15 @@ def generate_grounded_answer(
     results: list[SearchResult],
     *,
     model: str,
+    max_output_tokens: int | None = None,
     client: ResponsesClient | None = None,
 ) -> GroundedAnswer:
     """Generate one grounded answer and validate its bracketed source references."""
 
     if not question.strip():
         raise ValueError("question must not be empty")
+    if max_output_tokens is not None and max_output_tokens <= 0:
+        raise ValueError("max_output_tokens must be positive")
     if not results:
         return GroundedAnswer(
             text=ABSTENTION,
@@ -95,8 +98,12 @@ def generate_grounded_answer(
         model=model,
         instructions=SYSTEM_INSTRUCTIONS,
         input=f"Question:\n{question.strip()}\n\nRetrieved passages:\n{context}",
+        max_output_tokens=max_output_tokens,
         store=False,
     )
+    status = getattr(response, "status", None)
+    if isinstance(status, str) and status != "completed":
+        raise RuntimeError(f"generation response ended with status {status!r}")
     text = str(getattr(response, "output_text", "")).strip()
     if not text:
         raise RuntimeError("the model returned no text")
@@ -112,9 +119,10 @@ def generate_grounded_answer(
     valid = text == ABSTENTION or (bool(cited) and all(1 <= item <= len(results) for item in cited))
     usage = getattr(response, "usage", None)
     response_id = getattr(response, "id", None)
+    response_model = getattr(response, "model", None)
     return GroundedAnswer(
         text=text,
-        model=model,
+        model=response_model if isinstance(response_model, str) else model,
         cited_source_numbers=cited,
         citations_valid=valid,
         response_id=response_id if isinstance(response_id, str) else None,

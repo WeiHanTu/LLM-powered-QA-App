@@ -45,12 +45,17 @@ def test_grounded_answer_validates_citations_and_disables_storage() -> None:
     client = FakeClient("The launch is Friday [S1].")
 
     answer = generate_grounded_answer(
-        "When is launch?", evidence(), model="test-model", client=client
+        "When is launch?",
+        evidence(),
+        model="test-model",
+        max_output_tokens=321,
+        client=client,
     )
 
     assert answer.citations_valid
     assert answer.cited_source_numbers == (1,)
     assert client.responses.kwargs["store"] is False
+    assert client.responses.kwargs["max_output_tokens"] == 321
 
 
 def test_exact_abstention_does_not_require_a_citation() -> None:

@@ -365,10 +365,17 @@ uv run llmqa report-scifact artifacts/benchmark-results/scifact/summary.json \
   --figure docs/benchmarks/scifact-comparison.svg \
   --run-date YYYY-MM-DD
 
-# Requires OPENAI_API_KEY; raw responses remain under ignored artifacts/.
+# Plan first without an API key. The command refuses live work if this contract drifts or exceeds
+# the declared ceiling.
 uv run llmqa evaluate-project-generation \
-  --candidate-model gpt-5-mini --judge-model gpt-5-mini \
-  --workers 4 -k 10
+  --plan-only --preflight artifacts/generation-results/technical-papers-v1/preflight.json \
+  --max-cost-usd 2.50 --workers 4 -k 10
+
+# After reviewing the preflight, rerun without --plan-only. This requires OPENAI_API_KEY;
+# raw responses remain under ignored artifacts/.
+uv run llmqa evaluate-project-generation \
+  --preflight artifacts/generation-results/technical-papers-v1/preflight.json \
+  --max-cost-usd 2.50 --workers 4 -k 10
 
 uv run llmqa report-project-generation \
   artifacts/generation-results/technical-papers-v1/summary.json \
@@ -399,6 +406,8 @@ uv run llmqa benchmark-project-eval \
 # Opt-in generation experiment; BM25 remains the application default.
 uv run llmqa evaluate-project-generation \
   --retriever bm25-decomposed-rrf \
+  --plan-only --preflight artifacts/generation-results/multihop-rrf/preflight.json \
+  --max-cost-usd 1.00 \
   --case-ids tp-061 tp-062 tp-063 tp-064 tp-065 tp-066 tp-067 tp-068 \
     tp-069 tp-070 tp-071 tp-072 tp-073 tp-074 tp-075
 
@@ -411,6 +420,8 @@ uv run llmqa benchmark-project-eval \
 # Limited source-aware generation experiment; still not the application default.
 uv run llmqa evaluate-project-generation \
   --retriever bm25-source-aware \
+  --plan-only --preflight artifacts/generation-results/source-aware/preflight.json \
+  --max-cost-usd 1.00 \
   --case-ids tp-061 tp-062 tp-063 tp-064 tp-065 tp-066 tp-067 tp-068 \
     tp-069 tp-070 tp-071 tp-072 tp-073 tp-074 tp-075
 

@@ -77,10 +77,13 @@ uv run llmqa report-project-eval \
   --figure docs/benchmarks/technical-papers-v1-comparison.svg \
   --run-date YYYY-MM-DD
 uv run llmqa evaluate-project-generation \
-  --candidate-model gpt-5-mini \
-  --judge-model gpt-5-mini \
+  --plan-only \
+  --preflight artifacts/generation-results/technical-papers-v1/preflight.json \
+  --max-cost-usd 2.50 \
   --workers 4 \
   -k 10
+# Review the preflight, then rerun the same command without --plan-only. Live execution requires
+# OPENAI_API_KEY and the exact bound contract.
 uv run llmqa report-project-generation \
   artifacts/generation-results/technical-papers-v1/summary.json \
   artifacts/generation-results/technical-papers-v1/cases.jsonl \

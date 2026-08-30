@@ -13,18 +13,21 @@ from llmqa.project_evaluation import (
     load_project_evaluation_cases,
 )
 from llmqa.project_generation_evaluation import (
+    build_project_generation_preflight,
     evaluate_case_variant,
     inject_fixture,
     judge_generation,
     retrieve_generation_context,
     run_project_generation_evaluation,
     summarize_generation_run,
+    write_project_generation_preflight,
 )
 from llmqa.query_decomposition import load_query_decomposition_artifact
 from llmqa.retrieval import BM25Retriever, SourceAwareBM25Retriever
 
 ROOT = Path(__file__).parents[1]
 EVAL_DIR = ROOT / "evals" / "project" / "technical-papers-v1"
+PRICING = ROOT / "evals" / "pricing" / "openai-gpt-5-mini-2025-08-07-2026-08-30.json"
 
 
 @dataclass
@@ -142,6 +145,7 @@ def test_structured_judge_disables_storage_and_withholds_fixture_content() -> No
         "The factor is the square root of d_k [S1].",
         evidence(),
         model="judge-test",
+        max_output_tokens=456,
         fixture=fixture,
         fixture_source_numbers=(1,),
         client=client,
@@ -151,6 +155,7 @@ def test_structured_judge_disables_storage_and_withholds_fixture_content() -> No
     assert judgment.answer_correct is True
     assert judgment.input_tokens == 20
     assert client.responses.kwargs["store"] is False
+    assert client.responses.kwargs["max_output_tokens"] == 456
     assert fixture.content not in str(client.responses.kwargs["input"])
     payload = json.loads(str(client.responses.kwargs["input"]))
     assert payload["required_claims"] == list(case.required_claims)
@@ -372,6 +377,95 @@ def test_generation_run_rejects_invalid_control_parameters(
             candidate_model="candidate-test",
             judge_model="judge-test",
             **overrides,
+        )
+
+
+def test_generation_preflight_binds_exact_inputs_and_blocks_contract_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = next(
+        case
+        for case in load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+        if case.case_id == "tp-061"
+    )
+    dataset = RetrievalBenchmarkDataset(
+        name="synthetic-project-evaluation",
+        split="test",
+        chunks=(
+            Chunk(
+                "budget-chunk",
+                "The model combines evidence across two cited sources.",
+                "synthetic-source",
+            ),
+        ),
+        judgments=(),
+        total_query_count=1,
+        provenance=BenchmarkProvenance(
+            source_url=None,
+            archive_md5=None,
+            license="synthetic test data",
+            citation="test fixture",
+            details={"raw_chunks_sha256": "synthetic"},
+        ),
+    )
+    monkeypatch.setattr(
+        "llmqa.project_generation_evaluation.load_project_retrieval_benchmark",
+        lambda _evaluation_directory, _raw_chunks_path: dataset,
+    )
+    raw_chunks = tmp_path / "chunks.jsonl"
+    raw_chunks.write_text("{}\n", encoding="utf-8")
+    preflight_path = tmp_path / "preflight.json"
+    kwargs = {
+        "candidate_model": "gpt-5-mini-2025-08-07",
+        "judge_model": "gpt-5-mini-2025-08-07",
+        "max_cost_usd": 0.1,
+        "candidate_max_output_tokens": 3_072,
+        "judge_max_output_tokens": 4_096,
+        "case_ids": [case.case_id],
+    }
+
+    preflight = write_project_generation_preflight(
+        preflight_path,
+        EVAL_DIR,
+        raw_chunks,
+        PRICING,
+        **kwargs,
+    )
+
+    assert preflight["status"] == "approved_to_run"
+    assert preflight["budget"]["candidate"]["request_count"] == 1
+    assert preflight["budget"]["judge"]["request_count"] == 1
+    assert preflight == build_project_generation_preflight(
+        EVAL_DIR,
+        raw_chunks,
+        PRICING,
+        **kwargs,
+    )
+
+    tampered = json.loads(preflight_path.read_text(encoding="utf-8"))
+    tampered["execution"]["k"] = 40
+    preflight_path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(ValueError, match="does not match the exact execution contract"):
+        run_project_generation_evaluation(
+            EVAL_DIR,
+            raw_chunks,
+            tmp_path / "generation",
+            preflight_path=preflight_path,
+            pricing_contract_path=PRICING,
+            candidate_client=FakeClient("unused"),
+            **kwargs,
+        )
+
+
+def test_live_generation_requires_a_budget_preflight(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="requires a bound preflight"):
+        run_project_generation_evaluation(
+            EVAL_DIR,
+            tmp_path / "missing-chunks.jsonl",
+            tmp_path / "generation",
+            candidate_model="gpt-5-mini-2025-08-07",
+            judge_model="gpt-5-mini-2025-08-07",
         )
 
 

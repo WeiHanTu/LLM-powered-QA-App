@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "status": "frozen_before_provider_calls",
+  "frozen_at": "2026-08-30T09:01:26Z",
+  "experiment_id": "technical-papers-v1-slate-size-k10-k40-v1",
+  "objective": "Screen whether the retrieval coverage gained by expanding BM25 context from 10 to 40 chunks improves required-claim answer quality enough to justify its token and latency cost.",
+  "scope": {
+    "case_ids": [
+      "tp-061",
+      "tp-062",
+      "tp-063",
+      "tp-064",
+      "tp-065",
+      "tp-066",
+      "tp-067",
+      "tp-068",
+      "tp-069",
+      "tp-070",
+      "tp-071",
+      "tp-072",
+      "tp-073",
+      "tp-074",
+      "tp-075"
+    ],
+    "case_selection": "All 15 reviewed answerable multi-hop cases in technical-papers-v1; no outcome-based subsampling.",
+    "variants": [
+      "clean"
+    ],
+    "excluded": [
+      "Prompt-injection variants are excluded because the intervention is retrieved-slate size, not attack resistance.",
+      "Unanswerable and single-hop cases are deferred until this mechanism probe clears its advance gate."
+    ]
+  },
+  "fixed_contract": {
+    "candidate_model": "gpt-5-mini-2025-08-07",
+    "judge_model": "gpt-5-mini-2025-08-07",
+    "candidate_max_output_tokens": 3072,
+    "judge_max_output_tokens": 4096,
+    "candidate_prompt_sha256": "08c055aecf9e939ea2524e3fb8c008f8e703f05f6a33c17f17111a313afabd0b",
+    "judge_prompt_sha256": "395de1ee90c69e4c3ef0a10ee356128fe5cb6990819a28c3c1273857f3526da3",
+    "judge_prompt_version": "generation-judge-required-claims-v2",
+    "claim_contract_version": "required-claims-v1",
+    "retriever": "bm25",
+    "bm25_k1": 1.2,
+    "bm25_b": 0.75,
+    "token_encoding": "o200k_base",
+    "input_safety_multiplier": 1.15,
+    "cases_sha256": "38993e0ef0b35a3abb7dd4a5f6e4546290c200d28a4b645cadb1e04ac5a48711",
+    "fixtures_sha256": "d78a6a8cf4a7694c272f871373930827122ec55f0892b459419f31ff52fa1104",
+    "raw_chunks_sha256": "48b9249db0d3c16970591acd94c3de3b5dff191f54f659a033024a35db861c6f",
+    "pricing_contract_sha256": "583f9334422b2067cd22404361ce909409d820ee1731a743f19a79d8c27e6b4d"
+  },
+  "arms": [
+    {
+      "name": "bm25-k10",
+      "k": 10,
+      "preflight_id": "1d09cd265136aa00eb6e",
+      "cost_upper_bound_usd": 0.26471625,
+      "max_cost_usd": 0.3,
+      "full_evidence_locator_coverage_before_generation": {
+        "successes": 5,
+        "total": 15
+      }
+    },
+    {
+      "name": "bm25-k40",
+      "k": 40,
+      "preflight_id": "0e893461a0bb43d6db5c",
+      "cost_upper_bound_usd": 0.36582275,
+      "max_cost_usd": 0.45,
+      "full_evidence_locator_coverage_before_generation": {
+        "successes": 10,
+        "total": 15
+      }
+    }
+  ],
+  "combined_max_cost_usd": 0.75,
+  "combined_preflight_cost_upper_bound_usd": 0.630539,
+  "execution": {
+    "arm_processes": "Launch both arms contemporaneously with one worker per arm and ascending case order.",
+    "ordering_limitation": "Exact request interleaving is service-dependent rather than a randomized treatment sequence; the exact pinned snapshot limits model-alias drift.",
+    "resume_policy": "Each arm writes an immutable run manifest and atomically checkpoints completed case rows. Resume only with the identical preflight and run contract.",
+    "storage": "OpenAI response storage remains disabled."
+  },
+  "endpoints": {
+    "primary": "Human-approved paired task pass over all 15 cases.",
+    "secondary": [
+      "Automated required-claim task pass before human review.",
+      "Required claims satisfied and missing.",
+      "Fully supported answers and contradiction detection.",
+      "Citation validity.",
+      "Full evidence-locator coverage.",
+      "Candidate and judge input/output tokens and p50/p95 latency.",
+      "Conservative standard-token cost estimate and cost per additional passing answer."
+    ],
+    "paired_analysis": "Report the full 2-by-2 task-pass table, gains, losses, ties, absolute paired difference, and McNemar exact p-value. Do not describe a 15-case result as definitive population evidence.",
+    "exploratory_slice": {
+      "coverage_gain_case_ids": [
+        "tp-064",
+        "tp-065",
+        "tp-068",
+        "tp-072",
+        "tp-075"
+      ],
+      "interpretation": "These five cases identify the retrieval mechanism but are not a separately powered confirmatory sample."
+    }
+  },
+  "advance_gate": {
+    "required": [
+      "The k=40 arm has more human-approved task-pass gains than losses against k=10.",
+      "Citation-valid count does not decrease.",
+      "Human review finds no increase in unsupported or contradictory answers.",
+      "Both arms complete within their individual caps and the combined conservative ceiling remains at or below $0.75."
+    ],
+    "on_pass": "Advance to a separately preregistered confirmation that includes single-hop and unanswerable cases.",
+    "on_fail": "Keep k=10 as the default and publish the larger-slate result as a negative mechanism probe."
+  },
+  "review_gate": "Automated judgments remain provisional. No public answer-quality aggregate from this experiment is approved until a companion decision artifact covers all 30 arm-by-case records and is explicitly approved by the project owner.",
+  "limitations": [
+    "The corpus contains only two technical papers.",
+    "The candidate and automated judge use the same model snapshot, creating correlated self-evaluation risk.",
+    "The experiment is powered as a screening probe, not a conclusive statistical comparison.",
+    "Provider billing data is not returned by the Responses API; reported dollar cost is a conservative estimate from recorded tokens and the versioned standard-price contract."
+  ]
+}

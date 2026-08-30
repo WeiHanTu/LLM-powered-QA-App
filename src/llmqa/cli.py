@@ -64,7 +64,10 @@ from llmqa.project_generation_cross_judge import (
     run_project_generation_cross_judge,
     write_project_cross_judge_report,
 )
-from llmqa.project_generation_evaluation import run_project_generation_evaluation
+from llmqa.project_generation_evaluation import (
+    run_project_generation_evaluation,
+    write_project_generation_preflight,
+)
 from llmqa.project_generation_reporting import write_project_generation_report
 from llmqa.project_multihop_reporting import write_multihop_retrieval_report
 from llmqa.query_decomposition import (
@@ -514,8 +517,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/generation-results/technical-papers-v1"),
     )
-    generation_eval.add_argument("--candidate-model", default="gpt-5-mini")
-    generation_eval.add_argument("--judge-model", default="gpt-5-mini")
+    generation_eval.add_argument("--candidate-model", default="gpt-5-mini-2025-08-07")
+    generation_eval.add_argument("--judge-model", default="gpt-5-mini-2025-08-07")
     generation_eval.add_argument("-k", type=int, default=10)
     generation_eval.add_argument("--bm25-k1", type=float, default=1.2)
     generation_eval.add_argument("--bm25-b", type=float, default=0.75)
@@ -537,6 +540,21 @@ def build_parser() -> argparse.ArgumentParser:
     generation_eval.add_argument("--fetch-k", type=int, default=40)
     generation_eval.add_argument("--rrf-rank-constant", type=int, default=60)
     generation_eval.add_argument("--workers", type=int, default=1)
+    generation_eval.add_argument("--candidate-max-output-tokens", type=int, default=3_072)
+    generation_eval.add_argument("--judge-max-output-tokens", type=int, default=4_096)
+    generation_eval.add_argument("--input-safety-multiplier", type=float, default=1.15)
+    generation_eval.add_argument(
+        "--pricing-contract",
+        type=Path,
+        default=Path("evals/pricing/openai-gpt-5-mini-2025-08-07-2026-08-30.json"),
+    )
+    generation_eval.add_argument("--max-cost-usd", type=float, required=True)
+    generation_eval.add_argument("--preflight", type=Path, required=True)
+    generation_eval.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="write the deterministic budget preflight without requiring an API key",
+    )
     generation_eval.add_argument(
         "--case-ids",
         nargs="+",
@@ -545,7 +563,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     generation_report = subparsers.add_parser(
         "report-project-generation",
-        help="publish a provisional automated generation-evaluation JSON and SVG",
+        help="publish automated metrics plus an optional run-bound approved review",
     )
     generation_report.add_argument("summary", type=Path)
     generation_report.add_argument("case_results", type=Path)
@@ -1175,6 +1193,34 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "evaluate-project-generation":
+        query_decomposition_path = (
+            args.query_decompositions if args.retriever == "bm25-decomposed-rrf" else None
+        )
+        source_plan_path = args.source_plans if args.retriever == "bm25-source-aware" else None
+        if args.plan_only:
+            preflight = write_project_generation_preflight(
+                args.preflight,
+                args.eval_dir,
+                args.chunks,
+                args.pricing_contract,
+                candidate_model=args.candidate_model,
+                judge_model=args.judge_model,
+                max_cost_usd=args.max_cost_usd,
+                candidate_max_output_tokens=args.candidate_max_output_tokens,
+                judge_max_output_tokens=args.judge_max_output_tokens,
+                input_safety_multiplier=args.input_safety_multiplier,
+                k=args.k,
+                bm25_k1=args.bm25_k1,
+                bm25_b=args.bm25_b,
+                retriever_name=args.retriever,
+                query_decomposition_path=query_decomposition_path,
+                source_plan_path=source_plan_path,
+                fetch_k=args.fetch_k,
+                rrf_rank_constant=args.rrf_rank_constant,
+                case_ids=args.case_ids,
+            )
+            print(json.dumps(preflight, indent=2))
+            return 0
         require_openai_api_key()
         summary_path = run_project_generation_evaluation(
             args.eval_dir,
@@ -1186,14 +1232,18 @@ def main(argv: list[str] | None = None) -> int:
             bm25_k1=args.bm25_k1,
             bm25_b=args.bm25_b,
             retriever_name=args.retriever,
-            query_decomposition_path=(
-                args.query_decompositions if args.retriever == "bm25-decomposed-rrf" else None
-            ),
-            source_plan_path=(args.source_plans if args.retriever == "bm25-source-aware" else None),
+            query_decomposition_path=query_decomposition_path,
+            source_plan_path=source_plan_path,
             fetch_k=args.fetch_k,
             rrf_rank_constant=args.rrf_rank_constant,
             case_ids=args.case_ids,
             max_workers=args.workers,
+            candidate_max_output_tokens=args.candidate_max_output_tokens,
+            judge_max_output_tokens=args.judge_max_output_tokens,
+            preflight_path=args.preflight,
+            pricing_contract_path=args.pricing_contract,
+            max_cost_usd=args.max_cost_usd,
+            input_safety_multiplier=args.input_safety_multiplier,
         )
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
         print(

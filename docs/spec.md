@@ -1,7 +1,7 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; Phase 1 retrieval published; generation remains provisional
-Last updated: 2026-08-29
+Status: Phase 0 implemented; Phase 1 reviewed generation published; slate-size probe preregistered
+Last updated: 2026-08-30
 
 ## 1. Executive decision
 
@@ -181,7 +181,7 @@ fairness for LLMQA's eventual users, documents, languages, or policy targets.
 |---|---|---|---|
 | 1 | BEIR SciFact | Compare BM25, dense FAISS, dense + MMR, and hybrid RRF | Implement first: 5,183 abstracts, 300 test queries, 339 positive qrels |
 | 2 | BRIGHT Robotics | Stress reasoning-intensive retrieval | Add after the SciFact harness is stable; report separately rather than averaging domains |
-| 3 | BBQ | Diagnose generator bias in ambiguous versus disambiguated QA | Phase 2 adapter; never report it as retrieval fairness |
+| 3 | BBQ | Diagnose generator bias in ambiguous versus disambiguated QA | Phase 2, preregistered budget-bounded subset; report as a BBQ-derived diagnostic, never as retrieval fairness or a full BBQ score |
 | 4 | CRAG | Evaluate factual answers, missing answers, and dynamic knowledge | Defer because its web/KG setup does not match the current uploaded-document product |
 
 Current verified public comparison (2026-08-28): all four LLMQA retrievers ran on the full SciFact
@@ -384,13 +384,18 @@ release claim.
   does not claim an independent human panel.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
-- **Next candidate:** the retrieved-slate size `k` itself, measured end to end. On the full external
-  set, complete evidence coverage runs 31.8% at `k=10`, 47.5% at `k=22`, and 60.2% at `k=40`. That is
+- **Preregistered next candidate:** the retrieved-slate size `k` itself, measured end to end. On the
+  full external set, complete evidence coverage runs 31.8% at `k=10`, 47.5% at `k=22`, and 60.2%
+  at `k=40`. That is
   the largest retrieval effect observed on this benchmark and it has never been evaluated, while
   three candidates and two frozen cohorts were spent contesting one or two queries on 49-case
   slices. Retrieval coverage is not answer quality: a larger slate costs generation tokens and
   carries lost-in-the-middle risk, so `k` must be selected from a generation-layer measurement with
-  cost and latency reported, not from the retrieval curve alone.
+  cost and latency reported, not from the retrieval curve alone. The first mechanism probe freezes
+  all 15 reviewed multi-hop cases at `k=10` versus `k=40`, pins `gpt-5-mini-2025-08-07`, and binds
+  each arm to a versioned pricing contract and deterministic preflight. The conservative arm bounds
+  are $0.2647 and $0.3658, below the combined $0.75 ceiling. No answer-quality result is publishable
+  until all 30 arm-by-case records receive explicit owner approval.
 - **Deferred:** evidence-conditioned iterative retrieval. Freeze another untouched confirmation
   cohort before evaluation; do not tune against its gold answers or evidence locators, and do not run
   generation unless retrieval clears the paired gate.
@@ -407,8 +412,25 @@ evaluation.
 - Build controlled counterfactual RAG cases for the intended domain and document which attributes
   should be irrelevant.
 - Run BBQ and culturally appropriate variants as diagnostic benchmarks, not universal scores.
-- Compare no-RAG, vanilla-RAG, MMR-RAG, and fair-reranked RAG at fixed model settings.
-- Add paired bootstrap confidence intervals and regression thresholds.
+- Do not run the complete 58,492-example BBQ benchmark during the current project phase: the
+  estimated OpenAI API cost exceeds the project budget. This is a budget constraint, not a claim
+  that a full BBQ evaluation lacks methodological value. Use a preregistered, template-stratified
+  subset spanning ambiguous and disambiguated contexts, social and intersectional categories,
+  negative and non-negative questions, and stereotype-aligned and stereotype-conflicting answers.
+- Publish the subset size, random seed, selected template IDs, category strata, model snapshot,
+  prompt contract, token usage, and estimated API cost. Label every aggregate as a BBQ-derived
+  diagnostic; never present a subset score as a full BBQ result or as retrieval fairness evidence.
+- Cache immutable raw provider responses so parsing, deterministic scoring, and template-clustered
+  bootstrap intervals can be recomputed offline without paying for another generation run. Require
+  a conservative preflight cost estimate and hard run-budget guard before any provider call.
+- Compare two initial arms at fixed model settings: a minimal neutral-prompt baseline receiving the
+  BBQ context directly, and the same context processed through LLMQA's grounded-answer and
+  abstention contract.
+- Defer vanilla-RAG, MMR-RAG, and fair-reranked RAG comparisons until the evaluation defines a
+  legitimate multi-document corpus with distractors, reviewed candidate-group labels, and an
+  explicit target distribution. Standard BBQ supplies one short context per case and cannot by
+  itself measure retrieval fairness.
+- Add paired, template-clustered bootstrap confidence intervals and regression thresholds.
 
 Exit gate: no statistically or practically material regression on declared fairness slices; all
 mitigations include utility deltas and a human review of failure clusters.
@@ -519,6 +541,11 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
   a future adaptive selector unless a valid selection signal and a new confirmation contract are
   evaluated. No provider call is made for the rejected fixed candidate.
 - CI uses local schema fixtures and never downloads MultiHop-RAG or calls OpenAI.
+- Every live project-generation run requires a deterministic preflight bound to the exact cases,
+  chunks, prompts, model snapshot, output-token ceilings, pricing-contract hash, and dollar ceiling.
+  The command refuses provider work when the contract drifts or its conservative upper bound
+  exceeds the declared budget. Exact billed cost remains unavailable; reports use recorded tokens
+  and the versioned standard-price contract without assuming a cached-input discount.
 
 ## 13. Open decisions requiring domain input
 

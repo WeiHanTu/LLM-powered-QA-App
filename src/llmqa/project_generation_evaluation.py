@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 import numpy as np
+import tiktoken
 from openai import OpenAI
 
 from llmqa.domain import Chunk, MetadataValue, SearchResult, SourceScopedQuery
@@ -24,7 +25,9 @@ from llmqa.generation import (
     GroundedAnswer,
     ResponsesClient,
     generate_grounded_answer,
+    render_context,
 )
+from llmqa.openai_budget import estimate_generation_budget, load_openai_pricing_contract
 from llmqa.project_benchmark import load_project_retrieval_benchmark
 from llmqa.project_evaluation import (
     CLAIM_CONTRACT_VERSION,
@@ -46,6 +49,7 @@ from llmqa.source_planning import load_source_plan_artifact, source_plan_sha256
 GENERATION_EVALUATION_VERSION = "project-generation-v4"
 JUDGE_PROMPT_VERSION = "generation-judge-required-claims-v2"
 INJECTION_PLACEMENT_VERSION = "post-retrieval-fixture-placement-v1"
+GENERATION_TOKEN_ENCODING = "o200k_base"
 type GenerationVariant = Literal["clean", "injected"]
 type GenerationRetrieverName = Literal[
     "bm25",
@@ -122,6 +126,7 @@ class SemanticJudgment:
     transformed_canary_leakage_detected: bool
     rationale: str
     judge_model: str
+    judge_response_model: str
     judge_id: str
     judged_at: str
     response_id: str | None
@@ -159,6 +164,7 @@ class GenerationCaseResult:
     exact_abstention: bool
     task_pass: bool
     candidate_model: str
+    candidate_response_model: str
     candidate_response_id: str | None
     candidate_latency_ms: float
     candidate_input_tokens: int | None
@@ -418,6 +424,7 @@ def judge_generation(
     results: Sequence[SearchResult],
     *,
     model: str,
+    max_output_tokens: int | None = None,
     fixture: InjectionFixture | None = None,
     fixture_source_numbers: Sequence[int] = (),
     client: ResponsesClient | None = None,
@@ -425,12 +432,15 @@ def judge_generation(
 ) -> SemanticJudgment:
     """Obtain and validate one schema-constrained semantic judgment."""
 
+    if max_output_tokens is not None and max_output_tokens <= 0:
+        raise ValueError("max_output_tokens must be positive")
     openai_client = client or OpenAI()
     started = time.perf_counter()
     api_response = openai_client.responses.create(
         model=model,
         instructions=JUDGE_INSTRUCTIONS,
         input=_judge_payload(case, response, results, fixture, fixture_source_numbers),
+        max_output_tokens=max_output_tokens,
         text={
             "format": {
                 "type": "json_schema",
@@ -490,6 +500,7 @@ def judge_generation(
             )
     response_id = getattr(api_response, "id", None)
     normalized_response_id = response_id if isinstance(response_id, str) else None
+    response_model = getattr(api_response, "model", None)
     usage = getattr(api_response, "usage", None)
     return SemanticJudgment(
         answer_correct=answer_correct,
@@ -505,6 +516,7 @@ def judge_generation(
         ),
         rationale=_required_string(parsed, "rationale"),
         judge_model=model,
+        judge_response_model=response_model if isinstance(response_model, str) else model,
         judge_id=f"openai:{model}:{normalized_response_id or 'response-id-unavailable'}",
         judged_at=judged_at or _utc_now(),
         response_id=normalized_response_id,
@@ -539,6 +551,8 @@ def evaluate_case_variant(
     variant: GenerationVariant,
     candidate_model: str,
     judge_model: str,
+    candidate_max_output_tokens: int | None = None,
+    judge_max_output_tokens: int | None = None,
     fixture: InjectionFixture | None = None,
     candidate_client: ResponsesClient | None = None,
     judge_client: ResponsesClient | None = None,
@@ -563,6 +577,7 @@ def evaluate_case_variant(
         case.question,
         list(generation_results),
         model=candidate_model,
+        max_output_tokens=candidate_max_output_tokens,
         client=candidate_client,
     )
     candidate_latency_ms = (time.perf_counter() - started) * 1000
@@ -573,6 +588,7 @@ def evaluate_case_variant(
             answer.text,
             judge_results,
             model=judge_model,
+            max_output_tokens=judge_max_output_tokens,
             fixture=fixture,
             fixture_source_numbers=fixture_source_numbers,
             client=judge_client,
@@ -634,6 +650,7 @@ def evaluate_case_variant(
         exact_abstention=answer.text == ABSTENTION,
         task_pass=task_pass,
         candidate_model=candidate_model,
+        candidate_response_model=answer.model,
         candidate_response_id=answer.response_id,
         candidate_latency_ms=candidate_latency_ms,
         candidate_input_tokens=answer.input_tokens,
@@ -688,6 +705,261 @@ def _token_total(rows: Sequence[Mapping[str, Any]], field: str) -> int | None:
     values = [row.get(field) for row in rows]
     integers = [value for value in values if isinstance(value, int) and not isinstance(value, bool)]
     return sum(integers) if integers else None
+
+
+def _select_generation_cases(
+    cases: Sequence[ProjectEvaluationCase],
+    case_ids: Sequence[str] | None,
+) -> tuple[ProjectEvaluationCase, ...]:
+    if not cases:
+        raise ValueError("at least one project case must be selected")
+    case_by_id = {case.case_id: case for case in cases}
+    if case_ids is None:
+        return tuple(cases)
+    requested = tuple(dict.fromkeys(case_ids))
+    unknown = set(requested) - set(case_by_id)
+    if unknown:
+        raise ValueError(f"unknown project case IDs: {sorted(unknown)}")
+    selected = tuple(case for case in cases if case.case_id in set(requested))
+    if not selected:
+        raise ValueError("at least one project case must be selected")
+    return selected
+
+
+def _generation_retrieval_dependencies(
+    evaluation_directory: Path,
+    raw_chunks_path: Path,
+    *,
+    retriever_name: GenerationRetrieverName,
+    query_decomposition_path: Path | None,
+    source_plan_path: Path | None,
+    bm25_k1: float,
+    bm25_b: float,
+    rrf_rank_constant: int,
+) -> tuple[
+    BM25Retriever,
+    Mapping[str, Sequence[str]] | None,
+    SourceAwareBM25Retriever | None,
+    Mapping[str, Sequence[SourceScopedQuery]] | None,
+]:
+    dataset = load_project_retrieval_benchmark(evaluation_directory, raw_chunks_path)
+    bm25_retriever = BM25Retriever(dataset.chunks, k1=bm25_k1, b=bm25_b)
+    decomposition_mapping: Mapping[str, Sequence[str]] | None = None
+    if retriever_name == "bm25-decomposed-rrf":
+        if query_decomposition_path is None:
+            raise ValueError("decomposed retrieval requires a query-decomposition artifact")
+        _, decomposition_mapping = load_query_decomposition_artifact(
+            query_decomposition_path,
+            evaluation_directory,
+        )
+    source_plan_mapping: Mapping[str, Sequence[SourceScopedQuery]] | None = None
+    source_aware_retriever: SourceAwareBM25Retriever | None = None
+    if retriever_name == "bm25-source-aware":
+        if source_plan_path is None:
+            raise ValueError("source-aware retrieval requires a source-plan artifact")
+        _, source_plan_mapping = load_source_plan_artifact(
+            source_plan_path,
+            evaluation_directory,
+        )
+        source_aware_retriever = SourceAwareBM25Retriever(
+            dataset.chunks,
+            k1=bm25_k1,
+            b=bm25_b,
+            rank_constant=rrf_rank_constant,
+        )
+    return (
+        bm25_retriever,
+        decomposition_mapping,
+        source_aware_retriever,
+        source_plan_mapping,
+    )
+
+
+def build_project_generation_preflight(
+    evaluation_directory: Path,
+    raw_chunks_path: Path,
+    pricing_contract_path: Path,
+    *,
+    candidate_model: str,
+    judge_model: str,
+    max_cost_usd: float,
+    candidate_max_output_tokens: int,
+    judge_max_output_tokens: int,
+    input_safety_multiplier: float = 1.15,
+    k: int = 10,
+    bm25_k1: float = 1.2,
+    bm25_b: float = 0.75,
+    retriever_name: GenerationRetrieverName = "bm25",
+    query_decomposition_path: Path | None = None,
+    source_plan_path: Path | None = None,
+    fetch_k: int = 40,
+    rrf_rank_constant: int = 60,
+    case_ids: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Build a deterministic, conservative cost gate without calling a provider."""
+
+    if candidate_model != judge_model:
+        raise ValueError("one-contract preflight requires identical candidate and judge models")
+    if k <= 0:
+        raise ValueError("k must be positive")
+    if fetch_k < k:
+        raise ValueError("fetch_k must be at least k")
+    if rrf_rank_constant <= 0:
+        raise ValueError("rrf_rank_constant must be positive")
+    pricing = load_openai_pricing_contract(pricing_contract_path, model=candidate_model)
+    cases = load_project_evaluation_cases(evaluation_directory / "cases.jsonl")
+    fixtures = load_injection_fixtures(evaluation_directory / "injection-fixtures.jsonl")
+    selected_cases = _select_generation_cases(cases, case_ids)
+    fixture_by_id = {fixture.fixture_id: fixture for fixture in fixtures}
+    (
+        bm25_retriever,
+        decomposition_mapping,
+        source_aware_retriever,
+        source_plan_mapping,
+    ) = _generation_retrieval_dependencies(
+        evaluation_directory,
+        raw_chunks_path,
+        retriever_name=retriever_name,
+        query_decomposition_path=query_decomposition_path,
+        source_plan_path=source_plan_path,
+        bm25_k1=bm25_k1,
+        bm25_b=bm25_b,
+        rrf_rank_constant=rrf_rank_constant,
+    )
+    encoding = tiktoken.get_encoding(GENERATION_TOKEN_ENCODING)
+    candidate_requests = 0
+    candidate_input_tokens = 0
+    judge_requests = 0
+    judge_input_tokens = 0
+
+    def count_tokens(*parts: str) -> int:
+        return sum(len(encoding.encode(part)) for part in parts)
+
+    for case in selected_cases:
+        clean_results = retrieve_generation_context(
+            case,
+            bm25_retriever,
+            retriever_name=retriever_name,
+            decomposition_mapping=decomposition_mapping,
+            source_aware_retriever=source_aware_retriever,
+            source_plan_mapping=source_plan_mapping,
+            k=k,
+            fetch_k=fetch_k,
+            rrf_rank_constant=rrf_rank_constant,
+        )
+        variants: list[
+            tuple[
+                Sequence[SearchResult],
+                Sequence[SearchResult],
+                InjectionFixture | None,
+                Sequence[int],
+            ]
+        ] = [(clean_results, clean_results, None, ())]
+        if case.injection_fixture_id is not None:
+            declared_fixture = fixture_by_id[case.injection_fixture_id]
+            injected = inject_fixture(clean_results, declared_fixture)
+            variants.append(
+                (
+                    injected.results,
+                    injected.judge_results,
+                    declared_fixture,
+                    injected.fixture_source_numbers,
+                )
+            )
+        for generation_results, judge_results, fixture, fixture_sources in variants:
+            candidate_requests += 1
+            candidate_input = (
+                f"Question:\n{case.question.strip()}\n\nRetrieved passages:\n"
+                f"{render_context(list(generation_results))}"
+            )
+            candidate_input_tokens += count_tokens(SYSTEM_INSTRUCTIONS, candidate_input)
+            if case.answerability != "answerable" and fixture is None:
+                continue
+            judge_requests += 1
+            response_free_payload = _judge_payload(
+                case,
+                "",
+                judge_results,
+                fixture,
+                fixture_sources,
+            )
+            judge_input_tokens += (
+                count_tokens(JUDGE_INSTRUCTIONS, response_free_payload)
+                + candidate_max_output_tokens
+            )
+
+    budget = estimate_generation_budget(
+        pricing,
+        candidate_request_count=candidate_requests,
+        candidate_input_tokens=candidate_input_tokens,
+        candidate_max_output_tokens=candidate_max_output_tokens,
+        judge_request_count=judge_requests,
+        judge_input_tokens=judge_input_tokens,
+        judge_max_output_tokens=judge_max_output_tokens,
+        input_safety_multiplier=input_safety_multiplier,
+        max_cost_usd=max_cost_usd,
+    )
+    artifacts: dict[str, object] = {
+        "raw_chunks_sha256": _sha256(raw_chunks_path),
+        "cases_sha256": _sha256(evaluation_directory / "cases.jsonl"),
+        "fixtures_sha256": _sha256(evaluation_directory / "injection-fixtures.jsonl"),
+        "query_decomposition_sha256": (
+            _sha256(query_decomposition_path)
+            if retriever_name == "bm25-decomposed-rrf" and query_decomposition_path is not None
+            else None
+        ),
+        "source_plan_sha256": (
+            _sha256(source_plan_path)
+            if retriever_name == "bm25-source-aware" and source_plan_path is not None
+            else None
+        ),
+    }
+    execution = {
+        "candidate_model": candidate_model,
+        "judge_model": judge_model,
+        "candidate_max_output_tokens": candidate_max_output_tokens,
+        "judge_max_output_tokens": judge_max_output_tokens,
+        "k": k,
+        "bm25_k1": bm25_k1,
+        "bm25_b": bm25_b,
+        "retriever": retriever_name,
+        "fetch_k": fetch_k,
+        "rrf_rank_constant": rrf_rank_constant,
+        "selected_case_ids": [case.case_id for case in selected_cases],
+        "token_encoding": GENERATION_TOKEN_ENCODING,
+    }
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "status": "approved_to_run" if budget.within_budget else "blocked_over_budget",
+        "evaluation_version": GENERATION_EVALUATION_VERSION,
+        "execution": execution,
+        "artifacts": artifacts,
+        "budget": budget.as_dict(),
+    }
+    payload["preflight_id"] = _stable_hash(payload)[:20]
+    return payload
+
+
+def write_project_generation_preflight(
+    destination: Path,
+    *args: Any,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Materialize one deterministic preflight artifact for later exact validation."""
+
+    payload = build_project_generation_preflight(*args, **kwargs)
+    _atomic_write(destination, _json_bytes(payload))
+    return payload
+
+
+def _validated_preflight(path: Path, expected: Mapping[str, Any]) -> dict[str, Any]:
+    raw = _read_json(path)
+    if dict(raw) != dict(expected):
+        raise ValueError("generation preflight does not match the exact execution contract")
+    budget = raw.get("budget")
+    if raw.get("status") != "approved_to_run" or not isinstance(budget, dict):
+        raise ValueError("generation preflight is not approved to run")
+    return cast(dict[str, Any], raw)
 
 
 def _semantic_rows(rows: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
@@ -745,13 +1017,35 @@ def summarize_generation_run(
     expected_injected_count = int(run_manifest["selected_injection_case_count"])
     complete = len(clean) == expected_clean_count and len(injected) == expected_injected_count
     limited_run = bool(run_manifest["limited_run"])
+    candidate_input_tokens = _token_total(rows, "candidate_input_tokens")
+    candidate_output_tokens = _token_total(rows, "candidate_output_tokens")
+    judge_input_tokens = _token_total(semantic, "input_tokens")
+    judge_output_tokens = _token_total(semantic, "output_tokens")
+    configuration = cast(Mapping[str, Any], run_manifest["configuration"])
+    budget_preflight = configuration.get("budget_preflight")
+    estimated_standard_token_cost_usd: float | None = None
+    if (
+        isinstance(budget_preflight, dict)
+        and candidate_input_tokens is not None
+        and candidate_output_tokens is not None
+        and judge_input_tokens is not None
+        and judge_output_tokens is not None
+        and isinstance(budget_preflight.get("input_per_million_usd"), int | float)
+        and isinstance(budget_preflight.get("output_per_million_usd"), int | float)
+    ):
+        total_input = candidate_input_tokens + judge_input_tokens
+        total_output = candidate_output_tokens + judge_output_tokens
+        estimated_standard_token_cost_usd = (
+            total_input * float(budget_preflight["input_per_million_usd"])
+            + total_output * float(budget_preflight["output_per_million_usd"])
+        ) / 1_000_000
     return {
         "schema_version": 1,
         "evaluation_version": GENERATION_EVALUATION_VERSION,
         "run_id": run_manifest["run_id"],
         "dataset": run_manifest["dataset"],
         "provenance": run_manifest["provenance"],
-        "configuration": run_manifest["configuration"],
+        "configuration": configuration,
         "started_at": run_manifest["started_at"],
         "completed_at": _utc_now(),
         "limited_run": limited_run,
@@ -818,15 +1112,19 @@ def summarize_generation_run(
         "usage": {
             "candidate_requests": sum(bool(row.get("candidate_provider_called")) for row in rows),
             "judge_requests": len(semantic),
-            "candidate_input_tokens": _token_total(rows, "candidate_input_tokens"),
-            "candidate_output_tokens": _token_total(rows, "candidate_output_tokens"),
+            "candidate_input_tokens": candidate_input_tokens,
+            "candidate_output_tokens": candidate_output_tokens,
             "candidate_total_tokens": _token_total(rows, "candidate_total_tokens"),
-            "judge_input_tokens": _token_total(semantic, "input_tokens"),
-            "judge_output_tokens": _token_total(semantic, "output_tokens"),
+            "judge_input_tokens": judge_input_tokens,
+            "judge_output_tokens": judge_output_tokens,
             "judge_total_tokens": _token_total(semantic, "total_tokens"),
             "candidate_latency_ms": _latency(candidate_latencies),
             "judge_latency_ms": _latency(judge_latencies),
             "dollar_cost": None,
+            "estimated_standard_token_cost_usd": estimated_standard_token_cost_usd,
+            "cost_estimate_excludes_cached_input_discount": (
+                estimated_standard_token_cost_usd is not None
+            ),
         },
         "failure_case_ids": {
             "clean_task": [str(row["case_id"]) for row in clean if not row.get("task_pass")],
@@ -868,9 +1166,17 @@ def summarize_generation_run(
                 "No tools are exposed to the candidate model, so forbidden-action results do not "
                 "establish safety for tool-enabled agents."
             ),
-            (
-                "Dollar cost is not reported because prices are not hard-coded and billing data "
-                "is not returned by the Responses API call."
+            *(
+                [
+                    "Exact billed dollar cost is unavailable from the Responses API. The run "
+                    "reports a conservative estimate from versioned standard token prices and "
+                    "does not apply a cached-input discount."
+                ]
+                if estimated_standard_token_cost_usd is not None
+                else [
+                    "Dollar cost is not reported because this historical or injected-client run "
+                    "has no bound pricing contract."
+                ]
             ),
         ],
     }
@@ -893,6 +1199,12 @@ def run_project_generation_evaluation(
     rrf_rank_constant: int = 60,
     case_ids: Sequence[str] | None = None,
     max_workers: int = 1,
+    candidate_max_output_tokens: int = 3_072,
+    judge_max_output_tokens: int = 4_096,
+    preflight_path: Path | None = None,
+    pricing_contract_path: Path | None = None,
+    max_cost_usd: float | None = None,
+    input_safety_multiplier: float = 1.15,
     candidate_client: ResponsesClient | None = None,
     judge_client: ResponsesClient | None = None,
 ) -> Path:
@@ -906,21 +1218,41 @@ def run_project_generation_evaluation(
         raise ValueError("rrf_rank_constant must be positive")
     if not 1 <= max_workers <= 16:
         raise ValueError("max_workers must be between 1 and 16")
+    if candidate_max_output_tokens <= 0 or judge_max_output_tokens <= 0:
+        raise ValueError("generation output-token ceilings must be positive")
+    live_provider_requested = candidate_client is None or judge_client is None
+    preflight: dict[str, Any] | None = None
+    if live_provider_requested:
+        if preflight_path is None or pricing_contract_path is None or max_cost_usd is None:
+            raise ValueError(
+                "live generation requires a bound preflight, pricing contract, and max cost"
+            )
+        expected_preflight = build_project_generation_preflight(
+            evaluation_directory,
+            raw_chunks_path,
+            pricing_contract_path,
+            candidate_model=candidate_model,
+            judge_model=judge_model,
+            max_cost_usd=max_cost_usd,
+            candidate_max_output_tokens=candidate_max_output_tokens,
+            judge_max_output_tokens=judge_max_output_tokens,
+            input_safety_multiplier=input_safety_multiplier,
+            k=k,
+            bm25_k1=bm25_k1,
+            bm25_b=bm25_b,
+            retriever_name=retriever_name,
+            query_decomposition_path=query_decomposition_path,
+            source_plan_path=source_plan_path,
+            fetch_k=fetch_k,
+            rrf_rank_constant=rrf_rank_constant,
+            case_ids=case_ids,
+        )
+        preflight = _validated_preflight(preflight_path, expected_preflight)
     dataset = load_project_retrieval_benchmark(evaluation_directory, raw_chunks_path)
     cases = load_project_evaluation_cases(evaluation_directory / "cases.jsonl")
     fixtures = load_injection_fixtures(evaluation_directory / "injection-fixtures.jsonl")
-    case_by_id = {case.case_id: case for case in cases}
     fixture_by_id = {fixture.fixture_id: fixture for fixture in fixtures}
-    if case_ids is None:
-        selected_cases = cases
-    else:
-        requested = tuple(dict.fromkeys(case_ids))
-        unknown = set(requested) - set(case_by_id)
-        if unknown:
-            raise ValueError(f"unknown project case IDs: {sorted(unknown)}")
-        selected_cases = tuple(case for case in cases if case.case_id in set(requested))
-    if not selected_cases:
-        raise ValueError("at least one project case must be selected")
+    selected_cases = _select_generation_cases(cases, case_ids)
     decomposition_mapping: dict[str, tuple[str, ...]] | None = None
     decomposition_provenance: dict[str, object] | None = None
     if retriever_name == "bm25-decomposed-rrf":
@@ -978,6 +1310,16 @@ def run_project_generation_evaluation(
         "source_plan": source_plan_provenance,
         "selected_case_ids": [case.case_id for case in selected_cases],
         "max_workers": max_workers,
+        "candidate_max_output_tokens": candidate_max_output_tokens,
+        "judge_max_output_tokens": judge_max_output_tokens,
+        "budget_preflight": (
+            {
+                "preflight_id": preflight["preflight_id"],
+                **preflight["budget"],
+            }
+            if preflight is not None
+            else None
+        ),
         "candidate_prompt_sha256": hashlib.sha256(SYSTEM_INSTRUCTIONS.encode("utf-8")).hexdigest(),
         "judge_prompt_sha256": hashlib.sha256(JUDGE_INSTRUCTIONS.encode("utf-8")).hexdigest(),
         "judge_schema_sha256": _stable_hash(JUDGE_SCHEMA),
@@ -1060,6 +1402,8 @@ def run_project_generation_evaluation(
                 variant="clean",
                 candidate_model=candidate_model,
                 judge_model=judge_model,
+                candidate_max_output_tokens=candidate_max_output_tokens,
+                judge_max_output_tokens=judge_max_output_tokens,
                 candidate_client=shared_candidate_client,
                 judge_client=shared_judge_client,
             )
