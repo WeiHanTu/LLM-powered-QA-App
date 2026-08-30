@@ -26,6 +26,7 @@ from llmqa.evaluation import RetrievalEvaluation, RetrievalJudgment, evaluate_ra
 from llmqa.retrieval import (
     BM25Retriever,
     DecomposedQueryRetriever,
+    DocumentDiverseRetriever,
     FaissRetriever,
     HybridRetriever,
     SourceAwareBM25Retriever,
@@ -50,6 +51,7 @@ type ProjectRetrieverName = Literal[
     "dense-mmr",
     "hybrid",
     "bm25-decomposed-rrf",
+    "bm25-document-diverse",
     "bm25-source-aware",
 ]
 PROJECT_RETRIEVER_NAMES: tuple[ProjectRetrieverName, ...] = (
@@ -58,6 +60,7 @@ PROJECT_RETRIEVER_NAMES: tuple[ProjectRetrieverName, ...] = (
     "dense-mmr",
     "hybrid",
     "bm25-decomposed-rrf",
+    "bm25-document-diverse",
     "bm25-source-aware",
 )
 
@@ -487,7 +490,15 @@ def run_retrieval_benchmark(
         raise ValueError("mmr_lambda must be between 0 and 1")
     needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in requested)
     needs_sparse = any(
-        name in {"bm25", "hybrid", "bm25-decomposed-rrf", "bm25-source-aware"} for name in requested
+        name
+        in {
+            "bm25",
+            "hybrid",
+            "bm25-decomposed-rrf",
+            "bm25-document-diverse",
+            "bm25-source-aware",
+        }
+        for name in requested
     )
     if needs_dense and embedding_provider is None:
         raise ValueError("dense benchmark modes require an embedding provider")
@@ -553,6 +564,11 @@ def run_retrieval_benchmark(
         assert sparse is not None
         decomposed = DecomposedQueryRetriever(sparse, rank_constant=rrf_rank_constant)
 
+    document_diverse: DocumentDiverseRetriever | None = None
+    if "bm25-document-diverse" in requested:
+        assert sparse is not None
+        document_diverse = DocumentDiverseRetriever(sparse)
+
     source_aware: SourceAwareBM25Retriever | None = None
     if "bm25-source-aware" in requested:
         source_aware = SourceAwareBM25Retriever(
@@ -591,6 +607,13 @@ def run_retrieval_benchmark(
                 results = decomposed.search(
                     judgment.query,
                     subqueries=query_decompositions.get(judgment.query_id, ()),
+                    k=k,
+                    fetch_k=fetch_k,
+                )
+            elif retriever_name == "bm25-document-diverse":
+                assert document_diverse is not None
+                results = document_diverse.search(
+                    judgment.query,
                     k=k,
                     fetch_k=fetch_k,
                 )

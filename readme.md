@@ -173,6 +173,62 @@ confound the downstream comparison. BM25 remains the default, while source-aware
 to expanded validation. The frozen plans and full provenance are in the
 [machine-readable evidence record](docs/benchmarks/technical-papers-v1-multihop-source-aware-2026-08-29.json).
 
+### External MultiHop-RAG validation
+
+The project now includes an integrity-checked adapter for the public
+[MultiHop-RAG benchmark](https://github.com/yixuantt/MultiHop-RAG), pinned to one Hugging Face
+revision and its exact file hashes. Its 609 news documents are converted into 7,805
+sentence-aware chunks; each gold evidence fact resolves to a deterministic fact-bearing chunk.
+The offline BM25 baseline covers all 2,556 questions, including 2,255 answerable multi-hop cases
+and 301 null queries.
+
+![External MultiHop-RAG retrieval validation](docs/benchmarks/multihop-rag-external-validation-2026-08-29.svg)
+
+| External result at `k=10` | BM25 | Decomposed BM25 + RRF |
+|---|---:|---:|
+| Full-set Recall@10 | **0.6122** | Not run |
+| Full-set complete evidence coverage | **718 / 2,255 (31.8%)** | Not run |
+| Frozen-holdout Recall@10 | **0.5799** | 0.5527 |
+| Frozen-holdout MRR | **0.6497** | 0.4231 |
+| Frozen-holdout complete evidence coverage | **15 / 49** | 13 / 49 |
+
+The 49-case comparison was frozen before retrieval by taking the seven lowest SHA-256-ranked
+questions in every observed `(question type, evidence count)` stratum. `gpt-5-mini` received only
+question text; an audit found no gold answer added by the planner and no exact evidence-fact copy.
+The candidate produced two paired gains, four losses, and 43 ties (McNemar exact `p=0.6875`), while
+also reducing Recall@10, MRR, NDCG@10, and total evidence hits. It therefore failed the retrieval
+gate. No generation or cross-judge run was performed: paying to judge answers from a rejected
+retriever would add noise, not evidence.
+
+A second hypothesis was preregistered on a fresh, non-overlapping 49-case confirmation slice before
+its outcomes were computed: fetch 100 BM25 chunks, keep the best chunk from each document, and
+return 10 distinct documents.
+
+| Fresh confirmation at `k=10` | BM25 | One chunk per document |
+|---|---:|---:|
+| Recall@10 | **0.5986** | 0.4609 |
+| MRR | **0.6467** | 0.6172 |
+| NDCG@10 | **0.5065** | 0.4531 |
+| Complete evidence coverage | **14 / 49** | 9 / 49 |
+| Evidence-fact chunk hits | **76 / 133** | 60 / 133 |
+
+That candidate had zero paired gains and five losses (exact `p=0.0625`). It removed 20 relevant
+BM25 hits, every one replaced by a different chunk from the same document. The design was also too
+rigid: four confirmation questions require multiple distinct gold chunks from one document, making
+complete coverage impossible under a one-chunk cap. The candidate is rejected; no full-corpus or
+generation run followed. See the
+[preregistered confirmation record](docs/benchmarks/multihop-rag-document-diversity-2026-08-29.json).
+
+The full baseline exposes the actual remaining problem. Complete evidence coverage falls to
+`14/398` on four-hop inference and `10/265` on three-hop temporal questions. Static one-shot query
+decomposition and hard document caps are rejected; the next credible candidate needs iterative
+evidence-conditioned retrieval or a parent-document/graph mechanism that can return multiple
+fact-bearing children when necessary. These values use this project's chunker and exact
+fact locators, so they are not directly comparable with numbers from the
+[COLM 2024 paper](https://openreview.net/forum?id=t4eB3zYWBK). The dataset is ODC-BY; raw data and
+per-query runs stay in ignored artifacts. Full provenance and failure slices are in the
+[machine-readable evidence record](docs/benchmarks/multihop-rag-external-validation-2026-08-29.json).
+
 ### Required-claim generation and prompt-injection baseline
 
 The current run fixes retrieval to the evidence-backed BM25 top-10 baseline and evaluates
@@ -314,6 +370,20 @@ uv run llmqa evaluate-project-generation \
   --retriever bm25-source-aware \
   --case-ids tp-061 tp-062 tp-063 tp-064 tp-065 tp-066 tp-067 tp-068 \
     tp-069 tp-070 tp-071 tp-072 tp-073 tp-074 tp-075
+
+# External holdout: fetch exact public files, then freeze before retrieval.
+uv run llmqa fetch-multihop-rag
+uv run llmqa freeze-multihop-rag-holdout \
+  --frozen-at YYYY-MM-DDTHH:MM:SSZ
+
+# Requires OPENAI_API_KEY; sends question text only and checkpoints every response.
+uv run llmqa generate-multihop-rag-query-decompositions --model gpt-5-mini
+
+uv run llmqa benchmark-multihop-rag \
+  --retrievers bm25 bm25-decomposed-rrf -k 10 --fetch-k 40
+
+# Full offline BM25 baseline across all 2,556 public questions.
+uv run llmqa benchmark-multihop-rag --retrievers bm25 --full -k 10
 ```
 
 ## Quick start
@@ -406,6 +476,12 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 - One source-aware planning configuration increased distinct locator hits from 25/44 to 32/44 and
   automated task pass from 7/15 to 9/15, but full coverage moved only from 5/15 to 6/15 and paired
   tests were non-significant. It is an expanded-validation candidate, not the default.
+- On the external MultiHop-RAG adapter, BM25 retrieved every required fact for only 718/2,255
+  answerable queries. Question-only decomposition + RRF then regressed the frozen 49-case holdout
+  from 15 to 13 complete cases. This rejects that candidate; it does not prove all decomposition
+  or iterative retrieval methods are ineffective.
+- Source-aware planning is intentionally not applied to MultiHop-RAG: supplying all 609 article
+  titles would change the two-source planning contract and risk leaking retrieval metadata.
 - Unanswerable outputs are scored against one exact sentinel. This reproducible contract does not
   measure semantic refusal quality and marks `tp-080` wrong despite its correct evidence-based refusal.
 - The second-family audit is failure- and attack-enriched rather than representative. Its 68.6%

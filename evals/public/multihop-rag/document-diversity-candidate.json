@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "status": "preregistered_before_candidate_retrieval",
+  "preregistered_at": "2026-08-30T01:59:00Z",
+  "dataset": "yixuantt/MultiHopRAG",
+  "revision": "71ac0d0bd1f951d2d6b70311f7d2ae404e1ffa82",
+  "confirmation_manifest": "document-diversity-confirmation.json",
+  "confirmation_manifest_sha256": "da9b8c640cb0274cff39b77f002afca3ce558237bd2be1e170cc4dac47cd42bb",
+  "selection_sha256": "893594af5562dff5b5fcb9643658de3bc32694882d127bb8d0003f9fd786573d",
+  "candidate": {
+    "name": "bm25-document-diverse",
+    "description": "Fetch the top 100 BM25 chunks, retain only the highest-ranked chunk from each source document, and return the first 10 distinct documents.",
+    "k": 10,
+    "fetch_k": 100,
+    "maximum_chunks_per_document": 1,
+    "bm25_k1": 1.2,
+    "bm25_b": 0.75
+  },
+  "hypothesis": "Multi-hop coverage is limited partly by duplicate chunks from the same document consuming the top-10 window.",
+  "primary_endpoint": "full_evidence_coverage_at_10",
+  "guardrails": [
+    "mean_recall_at_10",
+    "mean_reciprocal_rank",
+    "mean_ndcg_at_10"
+  ],
+  "decision_rule": "Advance only if the candidate improves full-evidence coverage on the untouched confirmation slice and does not regress any guardrail metric; then report the fixed candidate on all answerable public queries without further tuning.",
+  "forbidden_after_preregistration": [
+    "changing k or fetch_k",
+    "allowing more than one chunk per document",
+    "changing BM25 parameters",
+    "dropping strata or cases",
+    "tuning on confirmation outcomes"
+  ]
+}

@@ -343,11 +343,31 @@ release claim.
   with four paired gains and two losses (McNemar exact `p=0.6875`). BM25 remains the default because
   the slice is small, the paired deltas are not statistically stable, chunk-level Recall@10 fell,
   and separate API generations plus same-model judging confound the downstream comparison.
+- **Implemented external holdout:** the public MultiHop-RAG adapter pins revision
+  `71ac0d0bd1f951d2d6b70311f7d2ae404e1ffa82`, verifies both source files by SHA-256, and maps 6,084
+  evidence facts to deterministic sentence-aware chunks. Full offline BM25 evaluation covers all
+  2,556 queries and reaches complete evidence coverage on 718/2,255 answerable cases. A 49-case
+  holdout was frozen before retrieval with seven SHA-256-ranked cases per observed question-type /
+  hop-count stratum.
+- **Implemented and rejected on external holdout:** question-only decomposition + RRF reduced
+  complete evidence coverage from 15/49 to 13/49, Recall@10 from 0.5799 to 0.5527, and MRR from
+  0.6497 to 0.4231. The paired endpoint had two gains, four losses, and 43 ties (`p=0.6875`). The
+  retrieval gate failed, so generation and cross-family judging were not run.
+- **Preregistered and rejected on a fresh confirmation slice:** document-diverse BM25 fetched 100
+  candidates but retained at most one chunk per document. Against 49 non-overlapping hash-ranked
+  cases, complete evidence coverage fell from 14/49 to 9/49, with zero gains and five losses
+  (`p=0.0625`); Recall@10 fell from 0.5986 to 0.4609. All 20 removed relevant hits were displaced by
+  another chunk from the same document, and four cases structurally require multiple gold chunks
+  from one document. No full-corpus, generation, or judge run followed the failed gate.
 - **Pending:** human review of the current required-claims run. Candidate and primary judge still
   use the same model alias, so the report remains an automated baseline rather than a final
   benchmark.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
+- **Next candidate:** evidence-conditioned iterative retrieval or graph/parent-document expansion
+  with evidence-aware child retention. Freeze another untouched confirmation cohort before
+  evaluation; do not tune against its gold answers or evidence locators, and do not run generation
+  unless retrieval clears the paired gate.
 - **Pending:** select chunk size/overlap from the evaluation, not intuition.
 
 Exit gate: select the evidence-backed default and document utility, latency, and cost. Replacing BM25
@@ -442,7 +462,28 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
 - README tables or figures are generated only from a committed full-run summary, with the CC BY-NC
   2.0 restriction and lack of project-specific validity visible nearby.
 
-## 12. Open decisions requiring domain input
+## 12. Public MultiHop-RAG acceptance criteria
+
+- The downloader pins an immutable Hugging Face revision and verifies SHA-256 for both JSON files.
+- The adapter rejects duplicate document URLs, unsupported query types, absent evidence facts,
+  duplicate query IDs, and source counts that differ from the pinned contract.
+- Chunking is deterministic, sentence-aware, and repeats title, publisher, date, and category
+  metadata in each chunk because public questions may explicitly depend on metadata.
+- Every answerable evidence item maps to a fact-bearing chunk; null queries carry no positive qrel.
+- The candidate holdout is frozen before retrieval by a deterministic hash rank within every
+  observed `(question_type, evidence_count)` stratum.
+- Planner calls receive question text only, use strict Structured Outputs with API storage disabled,
+  record resolved models and tokens, and persist a checkpoint after every completed response.
+- Public reporting separates the full BM25 baseline from the 49-case candidate comparison and never
+  extrapolates the candidate delta to all 2,556 questions.
+- Follow-up candidates require a versioned preregistration and a non-overlapping hash-ranked
+  confirmation slice. Failed gates remain publishable negative results and do not advance to
+  full-corpus or generation evaluation.
+- Generation and cross-family judging run only after a candidate improves the paired complete-
+  evidence endpoint without material regression in Recall@10, MRR, or NDCG@10.
+- CI uses local schema fixtures and never downloads MultiHop-RAG or calls OpenAI.
+
+## 13. Open decisions requiring domain input
 
 - Intended users and decision stakes.
 - Which corpus attributes are legitimate to label and audit.

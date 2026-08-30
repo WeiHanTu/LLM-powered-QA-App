@@ -1,0 +1,295 @@
+{
+  "artifact_sha256": {
+    "decompositions": "dcb066a851b9cfe0755694cd627b72e5ef29ae0c178d752455c2967593324ae4",
+    "full_bm25_run": "9c8211127cf4e73e496fb572bbdf9ad3ff7a55eb8508e6da628e0ffad75df64e",
+    "full_summary": "e9be2f1e59142c61be7aa0f7923bad8d058934ffa84a060d15ca38d575d5cfc6",
+    "holdout_bm25_run": "4f58b78f4e7837431e4ce03de7a20260b49422e31c9921c14976298e55c2481d",
+    "holdout_candidate_run": "8e7838d18ebd8a6a0bbafdfa14ea8b66731b7c7db20c062d93ef5561e0fdef0c",
+    "holdout_manifest": "70d0ba118afa6c948f86146572c2560de1af574333c23a3392216925e02d3481",
+    "holdout_summary": "9e6b24c306a6404203da21c247adec5fd52eae8131fb1da3009e2fdf21811528"
+  },
+  "dataset": {
+    "answerable_query_count": 2255,
+    "chunking": {
+      "body_chunk_size_tokens": 220,
+      "canonical_evidence_chunk": "first deterministic chunk containing each normalized evidence fact",
+      "encoding": "cl100k_base",
+      "metadata_prefix_repeated": true,
+      "method": "paragraph-and-sentence-pack-v1"
+    },
+    "citation": "Tang and Yang (2024), MultiHop-RAG: Benchmarking Retrieval-Augmented Generation for Multi-Hop Queries, https://openreview.net/forum?id=t4eB3zYWBK",
+    "corpus_chunk_count": 7805,
+    "license": "ODC-BY 1.0",
+    "name": "yixuantt/MultiHopRAG",
+    "public_query_count": 2556,
+    "revision": "71ac0d0bd1f951d2d6b70311f7d2ae404e1ffa82",
+    "unanswerable_query_count": 301
+  },
+  "decision": {
+    "action": "reject candidate and retain BM25",
+    "candidate": "bm25-decomposed-rrf",
+    "cross_judge_run": "not_run",
+    "generation_run": "not_run",
+    "reason": "The candidate changed full evidence coverage from 15/49 to 13/49, with 2 paired gains and 4 losses; Recall@10 changed from 0.5799 to 0.5527 and MRR changed from 0.6497 to 0.4231.",
+    "retrieval_gate": "failed"
+  },
+  "full_bm25_baseline": {
+    "coverage": {
+      "answerable_queries": 2255,
+      "by_stratum": {
+        "comparison_query/2": {
+          "evidence_hits": 1026,
+          "evidence_total": 1316,
+          "full_coverage_passes": 391,
+          "query_count": 658
+        },
+        "comparison_query/3": {
+          "evidence_hits": 298,
+          "evidence_total": 594,
+          "full_coverage_passes": 28,
+          "query_count": 198
+        },
+        "inference_query/2": {
+          "evidence_hits": 147,
+          "evidence_total": 206,
+          "full_coverage_passes": 49,
+          "query_count": 103
+        },
+        "inference_query/3": {
+          "evidence_hits": 551,
+          "evidence_total": 945,
+          "full_coverage_passes": 61,
+          "query_count": 315
+        },
+        "inference_query/4": {
+          "evidence_hits": 668,
+          "evidence_total": 1592,
+          "full_coverage_passes": 14,
+          "query_count": 398
+        },
+        "temporal_query/2": {
+          "evidence_hits": 447,
+          "evidence_total": 636,
+          "full_coverage_passes": 165,
+          "query_count": 318
+        },
+        "temporal_query/3": {
+          "evidence_hits": 362,
+          "evidence_total": 795,
+          "full_coverage_passes": 10,
+          "query_count": 265
+        }
+      },
+      "evidence_fact_chunk_hits": {
+        "hits": 3499,
+        "rate": 0.5751150558842867,
+        "total": 6084
+      },
+      "full_evidence_coverage": {
+        "passes": 718,
+        "rate": 0.31840354767184037,
+        "total": 2255
+      },
+      "unanswerable_queries": 301
+    },
+    "retrieval_metrics": {
+      "mean_ndcg_at_10": 0.5126150526535813,
+      "mean_recall_at_10": 0.6121951219512195,
+      "mean_reciprocal_rank": 0.6317676767676768
+    }
+  },
+  "holdout": {
+    "frozen_at": "2026-08-30T01:38:15Z",
+    "planner_leakage_audit": {
+      "answer_added_by_planner_count": 0,
+      "exact_evidence_fact_overlap_count": 0,
+      "question_only_input": true
+    },
+    "query_count": 49,
+    "question_contract_sha256": "034104d422901a41e4810118069e46300659ad1e75f2cb54b6115334f4a8dc79",
+    "selection_method": "sha256-min-per-question-type-hop-count-v1",
+    "selection_sha256": "d68d1322f959b6da35a668c8d1e018e076009dee7ea16c537c95e3ebfe864bc8",
+    "selection_status": "frozen_before_retrieval",
+    "strata": {
+      "comparison_query/2": 7,
+      "comparison_query/3": 7,
+      "inference_query/2": 7,
+      "inference_query/3": 7,
+      "inference_query/4": 7,
+      "temporal_query/2": 7,
+      "temporal_query/3": 7
+    }
+  },
+  "holdout_comparison": {
+    "bm25": {
+      "coverage": {
+        "answerable_queries": 49,
+        "by_stratum": {
+          "comparison_query/2": {
+            "evidence_hits": 11,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "comparison_query/3": {
+            "evidence_hits": 13,
+            "evidence_total": 21,
+            "full_coverage_passes": 2,
+            "query_count": 7
+          },
+          "inference_query/2": {
+            "evidence_hits": 11,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "inference_query/3": {
+            "evidence_hits": 12,
+            "evidence_total": 21,
+            "full_coverage_passes": 1,
+            "query_count": 7
+          },
+          "inference_query/4": {
+            "evidence_hits": 9,
+            "evidence_total": 28,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          },
+          "temporal_query/2": {
+            "evidence_hits": 9,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "temporal_query/3": {
+            "evidence_hits": 7,
+            "evidence_total": 21,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          }
+        },
+        "evidence_fact_chunk_hits": {
+          "hits": 72,
+          "rate": 0.5413533834586466,
+          "total": 133
+        },
+        "full_evidence_coverage": {
+          "passes": 15,
+          "rate": 0.30612244897959184,
+          "total": 49
+        },
+        "unanswerable_queries": 0
+      },
+      "retrieval_metrics": {
+        "mean_ndcg_at_10": 0.4982940632317782,
+        "mean_recall_at_10": 0.5799319727891157,
+        "mean_reciprocal_rank": 0.6496598639455782
+      }
+    },
+    "bm25-decomposed-rrf": {
+      "coverage": {
+        "answerable_queries": 49,
+        "by_stratum": {
+          "comparison_query/2": {
+            "evidence_hits": 9,
+            "evidence_total": 14,
+            "full_coverage_passes": 2,
+            "query_count": 7
+          },
+          "comparison_query/3": {
+            "evidence_hits": 12,
+            "evidence_total": 21,
+            "full_coverage_passes": 2,
+            "query_count": 7
+          },
+          "inference_query/2": {
+            "evidence_hits": 11,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "inference_query/3": {
+            "evidence_hits": 12,
+            "evidence_total": 21,
+            "full_coverage_passes": 2,
+            "query_count": 7
+          },
+          "inference_query/4": {
+            "evidence_hits": 11,
+            "evidence_total": 28,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          },
+          "temporal_query/2": {
+            "evidence_hits": 8,
+            "evidence_total": 14,
+            "full_coverage_passes": 3,
+            "query_count": 7
+          },
+          "temporal_query/3": {
+            "evidence_hits": 7,
+            "evidence_total": 21,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          }
+        },
+        "evidence_fact_chunk_hits": {
+          "hits": 70,
+          "rate": 0.5263157894736842,
+          "total": 133
+        },
+        "full_evidence_coverage": {
+          "passes": 13,
+          "rate": 0.2653061224489796,
+          "total": 49
+        },
+        "unanswerable_queries": 0
+      },
+      "retrieval_metrics": {
+        "mean_ndcg_at_10": 0.38460854581971937,
+        "mean_recall_at_10": 0.5527210884353742,
+        "mean_reciprocal_rank": 0.4230968577907353
+      }
+    },
+    "paired_full_coverage": {
+      "candidate_gains": 2,
+      "candidate_losses": 4,
+      "gain_query_ids": [
+        "mhr-q-42d8e8ba963af35a",
+        "mhr-q-a17b53074897994b"
+      ],
+      "loss_query_ids": [
+        "mhr-q-325f99830534201f",
+        "mhr-q-668603c09dfc09c5",
+        "mhr-q-86ce751dbfcf6227",
+        "mhr-q-ae1dea5f5727d813"
+      ],
+      "mcnemar_exact_p": 0.6875,
+      "ties": 43
+    }
+  },
+  "limitations": [
+    "The 49-case candidate comparison is a hash-ranked, stratified holdout rather than a population estimate over all 2,556 public questions.",
+    "The project uses its own sentence-aware 220-token chunker and exact evidence-fact locators, so these values are not directly comparable with the paper's reported retrieval implementation.",
+    "MultiHop-RAG questions were generated and quality-controlled by the dataset authors; this project did not independently human-review all gold answers.",
+    "Source-aware planning was not tested because exposing a 609-document title catalog would change the planner contract and risk metadata leakage.",
+    "Generation and cross-family judging were deliberately not run after the candidate failed the preregistered retrieval gate."
+  ],
+  "planner": {
+    "method": "question-only-openai-v1",
+    "prompt_sha256": "a697401bd0bf8581a9e62c6bb15cfff33987da108a7d38da2601e55f5ea267e6",
+    "prompt_version": "atomic-search-subqueries-v1",
+    "requested_model": "gpt-5-mini",
+    "resolved_models": {
+      "gpt-5-mini-2025-08-07": 49
+    },
+    "usage": {
+      "input_tokens": 10457,
+      "output_tokens": 35544,
+      "total_tokens": 46001
+    }
+  },
+  "run_date": "2026-08-29",
+  "schema_version": 1,
+  "status": "verified_external_holdout_negative_result"
+}

@@ -264,6 +264,37 @@ class BM25Retriever:
         ]
 
 
+class DocumentDiverseRetriever:
+    """Select the highest-ranked chunk from each distinct source document."""
+
+    def __init__(self, delegate: BM25Retriever) -> None:
+        self._delegate = delegate
+
+    def search(self, query: str, *, k: int = 4, fetch_k: int = 40) -> list[SearchResult]:
+        if k <= 0:
+            raise ValueError("k must be positive")
+        if fetch_k < k:
+            raise ValueError("fetch_k must be at least k")
+
+        selected: list[SearchResult] = []
+        seen_sources: set[str] = set()
+        for result in self._delegate.search(query, k=fetch_k):
+            source_id = result.chunk.source
+            if source_id in seen_sources:
+                continue
+            seen_sources.add(source_id)
+            selected.append(
+                replace(
+                    result,
+                    rank=len(selected) + 1,
+                    original_rank=result.rank,
+                )
+            )
+            if len(selected) == k:
+                break
+        return selected
+
+
 def reciprocal_rank_fusion(
     rankings: Mapping[str, Sequence[SearchResult]],
     *,

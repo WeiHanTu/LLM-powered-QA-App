@@ -1,0 +1,333 @@
+{
+  "dataset": "yixuantt/MultiHopRAG",
+  "frozen_at": "2026-08-30T01:38:15Z",
+  "leakage_controls": {
+    "excluded_from_planner": [
+      "answer",
+      "evidence facts",
+      "evidence URLs",
+      "corpus passages",
+      "retrieval judgments"
+    ],
+    "planner_inputs": "query text only",
+    "selection_inputs": "question type, evidence count, and SHA-256 rank only"
+  },
+  "limitations": [
+    "The public questions were generated and quality-controlled by the dataset authors; this project did not independently human-review all 49 answers.",
+    "The slice is a reproducible external holdout, not a random population sample."
+  ],
+  "question_contract_sha256": "034104d422901a41e4810118069e46300659ad1e75f2cb54b6115334f4a8dc79",
+  "records": [
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-0431b85aa974cd8d",
+      "question_sha256": "0431b85aa974cd8d9667aca4a2f58ffe1a4e04c5186d1e621b7b7795cb79e4f0",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-058521536216c066",
+      "question_sha256": "058521536216c066051a686921a19fa091870bc15a73e44c3d95d165572c6daf",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-0d1919b11047d65e",
+      "question_sha256": "0d1919b11047d65e3e9c83bc6cf7125022f4b2dd6fdbccb9cdb2b382808d00b5",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-0f6a4137b71f1b61",
+      "question_sha256": "0f6a4137b71f1b618d0fe88a5ac99daeaeae9efbb1a492c75c72130e1a1498a7",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-10a673817f1ba71c",
+      "question_sha256": "10a673817f1ba71cc30b0c795e69ac61c7fd8d421a51a357303193a1aff8492b",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-2784933f5197c460",
+      "question_sha256": "2784933f5197c46010573689885a2f60f34c830277fd87bb1aa700907df03953",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-325f99830534201f",
+      "question_sha256": "325f99830534201f99f15f8f9f62869ccaa2c08d0f75375cfff7eec0ed99a37c",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-358a4fe494b976ab",
+      "question_sha256": "358a4fe494b976ab7883cb92cc580a1d9b277ea232cc6a7bb33c8e6715229f1a",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-3ffebaab9846661a",
+      "question_sha256": "3ffebaab9846661aa4de572fde52ecdef938d90f912ec133fc06e2ab24f0a59b",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-42d8e8ba963af35a",
+      "question_sha256": "42d8e8ba963af35a42c0568ee247381b094ec19f1d21c99ada931cd735f093c0",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-49e828394806dd8c",
+      "question_sha256": "49e828394806dd8c82e3fae2e0ba75bf408b42789916738c2d37e992d82b7470",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-4c7ca08381ba0b6e",
+      "question_sha256": "4c7ca08381ba0b6e1a706e527d6c501ca2aacc30548c1f87d863339ede4effb3",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-4fa4d5dd18eed36e",
+      "question_sha256": "4fa4d5dd18eed36e83295365d1ca01a22c4ac7b66f1bcab5c5f8e444487da9f7",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-508682838bba731d",
+      "question_sha256": "508682838bba731d675096490ac5910e5b53116e6659e60c3fc6b047911b2c66",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-54a88d9a188f9f10",
+      "question_sha256": "54a88d9a188f9f10112b28a012b7e4f985a072c4a4b8504887c7b6b2f3664636",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-595a561a5063954b",
+      "question_sha256": "595a561a5063954b85d13a8a0655e33b3ed763e8252f645367292561ce13664d",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-5f556865c9bab589",
+      "question_sha256": "5f556865c9bab58986810a7a293892c0642732bc922862474ec414a68fb55f79",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-668603c09dfc09c5",
+      "question_sha256": "668603c09dfc09c5f8c5a20faf5c9b39c7bb397a5e3b06920ce023e77ddbb662",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-710ff48740f80a16",
+      "question_sha256": "710ff48740f80a16bad5dc21effdd954788e56b25b0530b5471ccc9e996edb27",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-7964d4da1cc735e7",
+      "question_sha256": "7964d4da1cc735e7f76d98bacbf184b8ae6fe6d47e81296008b95f2ad687bae1",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-7c9b9937ffe6d993",
+      "question_sha256": "7c9b9937ffe6d99389dfbc93a9aaacfcca2879c3dd98e6261afee184672d5e90",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-7d981fc4ee00b137",
+      "question_sha256": "7d981fc4ee00b137c4a35a11e861c8fdaeedf483d703da2fdfbe485102c8796e",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-83faf853a27642d7",
+      "question_sha256": "83faf853a27642d7a46b70da0dd8b7fe38e5fa1cc7fccc59572de88644dc57db",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-86ce751dbfcf6227",
+      "question_sha256": "86ce751dbfcf6227144f2e0574900e21cace091c077d08c0a0a34ceaaeafe971",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-8c090febc96a33b8",
+      "question_sha256": "8c090febc96a33b8219a25bdf4235487b9dbf2db97ab325f605c6a9b668a24bf",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-95a193b0e14a7ecf",
+      "question_sha256": "95a193b0e14a7ecfd223b98fc2f25151aca372417c1d527966f9a61408c4c34d",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-9f7197590d148f50",
+      "question_sha256": "9f7197590d148f50306b5a8914b67a32787fe9a3233b84e37ac40a25cea1ac9c",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-a17b53074897994b",
+      "question_sha256": "a17b53074897994b6ce026170ad62355c0e12e9bd49c1079d0dbf51c2429309f",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-a6de408dda44fa07",
+      "question_sha256": "a6de408dda44fa07d54a7f43ccfefb09762882add038393c0a90ab7a0b73406b",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-ad4eee299dc7c00b",
+      "question_sha256": "ad4eee299dc7c00bdb71bcca3faa7a8a526692b79371f6e9c093075a11858dff",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-ae1dea5f5727d813",
+      "question_sha256": "ae1dea5f5727d81360e16d48b07ed49996c219d03d3e65fdac2d1e4ebe99d1a5",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-b2d346aa65830fd9",
+      "question_sha256": "b2d346aa65830fd9f0cd612991d743759c67108f88c46f40c9a078a9baf7ac5c",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-b61d9259b40204cf",
+      "question_sha256": "b61d9259b40204cf0f30bf24e44d805d161e8ee0d9afd88815d595f41c2c96eb",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-bcb2b5602173d503",
+      "question_sha256": "bcb2b5602173d5039e7376e5db900007a3a345cd5bc117eda7807198c2a77527",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-c07cc2c99d8947de",
+      "question_sha256": "c07cc2c99d8947de8d7b3187154e04ce9575ab5cfeb91be3d19ebbde06640e8f",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-c12676b950751896",
+      "question_sha256": "c12676b95075189601503248ee79eecf55b3bd8a12b677057a1993530895cee3",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-c7a1670ee07cbe12",
+      "question_sha256": "c7a1670ee07cbe129587c45ba799413a8841e9cfb5885629ab0f0324cdc899a6",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-dce57f5e33fa542f",
+      "question_sha256": "dce57f5e33fa542f1b4e239fb96fcd9bbca36622f18702c62e91635d84a6dc81",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-e1bf50ff3e66b157",
+      "question_sha256": "e1bf50ff3e66b157d28cb14e604385f18ee0c7541e467933aa10801e9eadd5db",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-e2a277b48c790110",
+      "question_sha256": "e2a277b48c790110bc3e5e12bfca06c306c60b4ed8fcf2698ed0c6b977854dba",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 4,
+      "query_id": "mhr-q-e3fca6c7dd053a40",
+      "question_sha256": "e3fca6c7dd053a405c775fff3569d901281f0bfa4d7db8ce3d502478d2f045af",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-e7444d6e29762f69",
+      "question_sha256": "e7444d6e29762f69e7a58d08ed44d50a7dea0f8f6e1e1ba7bc4ba40db7f92298",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-ed1057656f80d739",
+      "question_sha256": "ed1057656f80d739c7dc00bb1df0f3b35c6ee9f7fe7eefca3249fa00e6e7f9d7",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-ee4c1ab59e88b259",
+      "question_sha256": "ee4c1ab59e88b25994ce2c45eb20f979883011be07fcef488fb27a74543246a1",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-f21b7fbecbb97407",
+      "question_sha256": "f21b7fbecbb97407a8f7a5c96d4e13b4ca75b621ab40484d036314db1117cd0d",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-f5c00ae0308f94ca",
+      "question_sha256": "f5c00ae0308f94caef5e338cd5c4e8d2acd1f451f42c712def6973acc32b445e",
+      "question_type": "temporal_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-f78ef31f064d4f46",
+      "question_sha256": "f78ef31f064d4f468da4047a10239b3644238bbf4ade23fd1797fa773ac930f6",
+      "question_type": "comparison_query"
+    },
+    {
+      "evidence_count": 3,
+      "query_id": "mhr-q-f9bff0f30303e389",
+      "question_sha256": "f9bff0f30303e389fbb013574ae0be512c7fa088e08aae786f343cb8abe006a9",
+      "question_type": "inference_query"
+    },
+    {
+      "evidence_count": 2,
+      "query_id": "mhr-q-faa3262f51222e0c",
+      "question_sha256": "faa3262f51222e0c889227913e81bc8de159060d80eab0943454cfaee2dd4cd6",
+      "question_type": "inference_query"
+    }
+  ],
+  "revision": "71ac0d0bd1f951d2d6b70311f7d2ae404e1ffa82",
+  "sample_per_stratum": 7,
+  "schema_version": 1,
+  "selected_query_count": 49,
+  "selection_method": "sha256-min-per-question-type-hop-count-v1",
+  "selection_sha256": "d68d1322f959b6da35a668c8d1e018e076009dee7ea16c537c95e3ebfe864bc8",
+  "split": "heldout-7-per-stratum",
+  "status": "frozen_before_retrieval",
+  "strata": {
+    "comparison_query/2": 7,
+    "comparison_query/3": 7,
+    "inference_query/2": 7,
+    "inference_query/3": 7,
+    "inference_query/4": 7,
+    "temporal_query/2": 7,
+    "temporal_query/3": 7
+  }
+}

@@ -1,0 +1,682 @@
+{
+  "artifact_version": "multihop-rag-question-only-openai-v1",
+  "completed_at": "2026-08-30T01:43:44.055044+00:00",
+  "dataset": "yixuantt/MultiHopRAG",
+  "method": "question-only-openai-v1",
+  "prompt_sha256": "a697401bd0bf8581a9e62c6bb15cfff33987da108a7d38da2601e55f5ea267e6",
+  "prompt_version": "atomic-search-subqueries-v1",
+  "query_count": 49,
+  "question_contract_sha256": "034104d422901a41e4810118069e46300659ad1e75f2cb54b6115334f4a8dc79",
+  "question_only_input": true,
+  "records": [
+    {
+      "case_id": "mhr-q-0431b85aa974cd8d",
+      "input_tokens": 226,
+      "output_tokens": 829,
+      "question_sha256": "0431b85aa974cd8d9667aca4a2f58ffe1a4e04c5186d1e621b7b7795cb79e4f0",
+      "response_id": "resp_0e059c77a10cf079016a93899f9a8487d0bff4448ae3865603",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Wired \"invite-only deals\" \"Prime Day\" which company did Wired report introduced invite-only deals during Prime Day",
+        "Polygon \"two-pack of USB-C-to-USB-C cables\" \"$15.99\" which platform or company did Polygon say sells a two-pack of USB-C-to-USB-C cables for $15.99",
+        "Cnbc | World Business News Leader sellers \"life-changing opportunity\" selling products which platform do sellers featured in the Cnbc | World Business News Leader article say offers a \"life-changing opportunity\" for selling products"
+      ],
+      "total_tokens": 1055
+    },
+    {
+      "case_id": "mhr-q-058521536216c066",
+      "input_tokens": 207,
+      "output_tokens": 736,
+      "question_sha256": "058521536216c066051a686921a19fa091870bc15a73e44c3d95d165572c6daf",
+      "response_id": "resp_05688e9fb79b6b77016a9389a68fb887d0b1a8ba8b099eea7b",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch \"Sam Bankman-Fried\" report before October 2, 2023 alleged criminal activities portrayal",
+        "TechCrunch \"Sam Bankman-Fried\" report before October 7, 2023 alleged criminal activities portrayal"
+      ],
+      "total_tokens": 943
+    },
+    {
+      "case_id": "mhr-q-0d1919b11047d65e",
+      "input_tokens": 189,
+      "output_tokens": 751,
+      "question_sha256": "0d1919b11047d65e3e9c83bc6cf7125022f4b2dd6fdbccb9cdb2b382808d00b5",
+      "response_id": "resp_0c46b5a52b905915016a9389abff4487d088fcc3a0822cae8e",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch December 15, 2023 article \"class action\" antitrust suit Google news publisher",
+        "TechCrunch December 15, 2023 correction update edit or retraction related to its reporting on the class action antitrust suit against Google by a news publisher",
+        "TechCrunch tweets or social posts on December 15, 2023 about the class action antitrust suit against Google by a news publisher (to check for conflicting statements)"
+      ],
+      "total_tokens": 940
+    },
+    {
+      "case_id": "mhr-q-0f6a4137b71f1b61",
+      "input_tokens": 199,
+      "output_tokens": 700,
+      "question_sha256": "0f6a4137b71f1b618d0fe88a5ac99daeaeae9efbb1a492c75c72130e1a1498a7",
+      "response_id": "resp_017dd043e0f12514016a9389b29a5487d09b466b40805d9793",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News report on Caesars Sportsbook expected offer for new sign-ups Vermont September 26, 2023",
+        "Sporting News coverage of Caesars Sportsbook betting options consistency or discrepancies"
+      ],
+      "total_tokens": 899
+    },
+    {
+      "case_id": "mhr-q-10a673817f1ba71c",
+      "input_tokens": 220,
+      "output_tokens": 669,
+      "question_sha256": "10a673817f1ba71cc30b0c795e69ac61c7fd8d421a51a357303193a1aff8492b",
+      "response_id": "resp_007431dfafac5f6a016a9389b82fdc87d090662a6438da558a",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge report published November 1, 2023 about Google's impact on the internet's appearance — full text/excerpts showing how it portrays Google’s influence on the internet and on stakeholders (tone, key quotes, characterizations).",
+        "TechCrunch article published December 15, 2023 about the class action antitrust suit against Google — full text/excerpts showing how it portrays Google’s influence on the internet and on stakeholders (tone, key quotes, characterizations)."
+      ],
+      "total_tokens": 889
+    },
+    {
+      "case_id": "mhr-q-2784933f5197c460",
+      "input_tokens": 213,
+      "output_tokens": 849,
+      "question_sha256": "2784933f5197c46010573689885a2f60f34c830277fd87bb1aa700907df03953",
+      "response_id": "resp_00b0e90664750bd2016a9389be4fdc87d0b7cd3ccd1aeabb96",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Fortune report \"instructed the misuse of billions in customer funds\" who does Fortune identify as the individual?",
+        "CNBC report \"told a jury\" presenting contrasting narratives of his role who does CNBC name?",
+        "TechCrunch report alleging someone \"planned governance structures\" for a company while \"committing fraud for personal gain\" who is named by TechCrunch?"
+      ],
+      "total_tokens": 1062
+    },
+    {
+      "case_id": "mhr-q-325f99830534201f",
+      "input_tokens": 227,
+      "output_tokens": 759,
+      "question_sha256": "325f99830534201f99f15f8f9f62869ccaa2c08d0f75375cfff7eec0ed99a37c",
+      "response_id": "resp_0b9490b9bfe54fb9016a9389c3d9f087d0ab18751fde1ffdaa",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Yahoo News \"Inflammation in dogs\" \"highly responsive to antibiotics\" article publication date",
+        "Live Science \"The Most Interesting Articles\" \"Antibiotics in development\" susceptible to resistance publication date",
+        "Live Science \"The Most Interesting Articles\" text containing \"Antibiotics in development\" and \"resistance\""
+      ],
+      "total_tokens": 986
+    },
+    {
+      "case_id": "mhr-q-358a4fe494b976ab",
+      "input_tokens": 210,
+      "output_tokens": 831,
+      "question_sha256": "358a4fe494b976ab7883cb92cc580a1d9b277ea232cc6a7bb33c8e6715229f1a",
+      "response_id": "resp_0ae567718410012f016a9389ca242087d096277e33fd3ad10a",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Independent - Life and Style 'Arrowhead Stadium' 'box seats' 'spotted cheering' dating speculation",
+        "The Age 'seen leaving a stadium together' 'seen leaving' stadium dating speculations"
+      ],
+      "total_tokens": 1041
+    },
+    {
+      "case_id": "mhr-q-3ffebaab9846661a",
+      "input_tokens": 203,
+      "output_tokens": 461,
+      "question_sha256": "3ffebaab9846661aa4de572fde52ecdef938d90f912ec133fc06e2ab24f0a59b",
+      "response_id": "resp_07aca861eee6c95c016a9389d1c60c87d0a95094d98d2d0f42",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "World Business News Leader \"informed Paradigm\" \"expert board\" \"FTX\" who informed Paradigm about intending to establish an expert board for FTX",
+        "TechCrunch \"prosecution\" \"committing fraud for personal gain\" accused who did prosecution accuse of committing fraud for personal gain (TechCrunch)"
+      ],
+      "total_tokens": 664
+    },
+    {
+      "case_id": "mhr-q-42d8e8ba963af35a",
+      "input_tokens": 194,
+      "output_tokens": 380,
+      "question_sha256": "42d8e8ba963af35a42c0568ee247381b094ec19f1d21c99ada931cd735f093c0",
+      "response_id": "resp_03d937e504a977ad016a9389d7a84c87d0b2fd68815cc795ab",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Polygon article discussing gadgets, movies, TV shows, and streaming services mentions annual events related to entertainment options",
+        "TechCrunch article mentioning Google refers to annual events related to hardware developments"
+      ],
+      "total_tokens": 574
+    },
+    {
+      "case_id": "mhr-q-49e828394806dd8c",
+      "input_tokens": 224,
+      "output_tokens": 541,
+      "question_sha256": "49e828394806dd8c82e3fae2e0ba75bf408b42789916738c2d37e992d82b7470",
+      "response_id": "resp_006ead0867f6f28b016a9389db66c887d099a4c3fe70e46c8e",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Fortune article alleging use of a 'front person' for secret access to customer funds, search for the individual named in that report",
+        "The Verge article claiming someone was 'unable to manage two major crypto entities' due to their growth, search for the individual identified",
+        "TechCrunch article alleging instructions to 'take billions from customers to repay debts' and accusing someone of committing fraud for personal gain, search for the individual named"
+      ],
+      "total_tokens": 765
+    },
+    {
+      "case_id": "mhr-q-4c7ca08381ba0b6e",
+      "input_tokens": 208,
+      "output_tokens": 408,
+      "question_sha256": "4c7ca08381ba0b6e1a706e527d6c501ca2aacc30548c1f87d863339ede4effb3",
+      "response_id": "resp_0c0d166cc90f946d016a9389df8c2087d0be7a5012483e2c97",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch article suggests Google\\'s behavior toward news publishers is anticompetitive site:techcrunch.com \"news publishers\" anticompetitive",
+        "The Age article accuses Google of manipulating Search for ad revenue site:theage.com \"manipulating Search\" ad revenue Google",
+        "TechCrunch article reports on Google\\'s hardware event showcase site:techcrunch.com \"hardware event\" Google showcase"
+      ],
+      "total_tokens": 616
+    },
+    {
+      "case_id": "mhr-q-4fa4d5dd18eed36e",
+      "input_tokens": 235,
+      "output_tokens": 586,
+      "question_sha256": "4fa4d5dd18eed36e83295365d1ca01a22c4ac7b66f1bcab5c5f8e444487da9f7",
+      "response_id": "resp_08a7319c548acf06016a9389e224dc87d08122d529f0dd73ef",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge \"permissible withdrawals\" trading platform revenue report",
+        "Fortune convinced a colleague from Jane Street to join his ventures article",
+        "CNBC World Business News Leader laid out plans for a specialized board to Paradigm report",
+        "TechCrunch prosecution alleges he committed fraud for personal gain"
+      ],
+      "total_tokens": 821
+    },
+    {
+      "case_id": "mhr-q-508682838bba731d",
+      "input_tokens": 201,
+      "output_tokens": 742,
+      "question_sha256": "508682838bba731d675096490ac5910e5b53116e6659e60c3fc6b047911b2c66",
+      "response_id": "resp_09b6174024d81319016a9389e65f8c87d096a041c07ebd6d77",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News \"top wide receiver\" \"Week 14\"",
+        "Sporting News \"2,000-plus receiving yards\" \"remaining opponents\" \"pass defenses\""
+      ],
+      "total_tokens": 943
+    },
+    {
+      "case_id": "mhr-q-54a88d9a188f9f10",
+      "input_tokens": 214,
+      "output_tokens": 595,
+      "question_sha256": "54a88d9a188f9f10112b28a012b7e4f985a072c4a4b8504887c7b6b2f3664636",
+      "response_id": "resp_01ace504ec95b410016a9389ec2a4887d08f3c3bf2e33f19ec",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch report on \"Sam Bankman-Fried\" published October 2, 2023 — full article text and specific statements describing his involvement in fraudulent activities or allegations of fraud",
+        "Fortune report on \"Sam Bankman-Fried\" published October 4, 2023 — full article text and specific statements describing his involvement in fraudulent activities or allegations of fraud"
+      ],
+      "total_tokens": 809
+    },
+    {
+      "case_id": "mhr-q-595a561a5063954b",
+      "input_tokens": 199,
+      "output_tokens": 859,
+      "question_sha256": "595a561a5063954b85d13a8a0655e33b3ed763e8252f645367292561ce13664d",
+      "response_id": "resp_05bba869cc9bd574016a9389f053c087d0a807c41b0366c851",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch Sam Bankman-Fried description of handling customer funds",
+        "TechCrunch Sam Bankman-Fried handling customer funds language that implies misconduct",
+        "TechCrunch Sam Bankman-Fried portrayal of his pursuit of wealth, power, and influence",
+        "TechCrunch language about Sam Bankman-Fried’s pursuit of wealth, power, and influence that implies misconduct"
+      ],
+      "total_tokens": 1058
+    },
+    {
+      "case_id": "mhr-q-5f556865c9bab589",
+      "input_tokens": 202,
+      "output_tokens": 414,
+      "question_sha256": "5f556865c9bab58986810a7a293892c0642732bc922862474ec414a68fb55f79",
+      "response_id": "resp_09520bb1f1caa7e2016a9389f7737087d084ddd467f2bcee12",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News article Jordan Love upcoming home game anticipate disappointing performance preview \"Jordan Love\" \"home\" \"Sporting News\"",
+        "CBSSports.com article Derrick Henry two touchdowns 76 rushing yards recent game report \"Derrick Henry\" \"two touchdowns\" \"76 rushing yards\" \"CBSSports.com\""
+      ],
+      "total_tokens": 616
+    },
+    {
+      "case_id": "mhr-q-668603c09dfc09c5",
+      "input_tokens": 218,
+      "output_tokens": 415,
+      "question_sha256": "668603c09dfc09c5f8c5a20faf5c9b39c7bb397a5e3b06920ce023e77ddbb662",
+      "response_id": "resp_01a7726e82b8fdd2016a9389fae40087d09f987d5ca07210b6",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News article about Tyreek Hill and his quest for 2,000-plus receiving yards: search for wording that attributes the difficulty to the strong pass defenses he will face (phrases like \"strong pass defenses\", \"will face\", \"challenge\", \"2,000-plus\")",
+        "The New York Times article on Tyreek Hill reporting 812 receiving yards in the first six games: search for the article text and check whether it states the 812 yards over six games and whether it mentions (or omits) the strength of his upcoming opponents' defenses"
+      ],
+      "total_tokens": 633
+    },
+    {
+      "case_id": "mhr-q-710ff48740f80a16",
+      "input_tokens": 211,
+      "output_tokens": 581,
+      "question_sha256": "710ff48740f80a16bad5dc21effdd954788e56b25b0530b5471ccc9e996edb27",
+      "response_id": "resp_04e8a5886de4aa01016a9389ff619887d095bce82856e5453f",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge article suggests Google has the capability to address Android app distribution and payment systems",
+        "The Age article accuses Google of engaging in practices that harm competitors in search",
+        "TechCrunch article accuses Google of engaging in practices that harm partners in news publishing"
+      ],
+      "total_tokens": 792
+    },
+    {
+      "case_id": "mhr-q-7964d4da1cc735e7",
+      "input_tokens": 220,
+      "output_tokens": 806,
+      "question_sha256": "7964d4da1cc735e7f76d98bacbf184b8ae6fe6d47e81296008b95f2ad687bae1",
+      "response_id": "resp_04da277b078896df016a938a03cf8887d0baa67d2043d51d09",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch article mentioning an \"app store for AI\" as a key platform for AI \"tools and toys\" and naming the company described as the creator behind ChatGPT",
+        "TechCrunch report that the creator behind ChatGPT is planning to release \"GPT-4 with vision\" alongside a \"GPT-4 Turbo API\""
+      ],
+      "total_tokens": 1026
+    },
+    {
+      "case_id": "mhr-q-7c9b9937ffe6d993",
+      "input_tokens": 203,
+      "output_tokens": 508,
+      "question_sha256": "7c9b9937ffe6d99389dfbc93a9aaacfcca2879c3dd98e6261afee184672d5e90",
+      "response_id": "resp_01229227fabdcd2b016a938a0c086c87d08f10722620ac00fc",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News article John \"The Best\" Mugabi \"perfect boxing record\"",
+        "Essentially Sports article Dillon Danis \"first-ever boxing debut\""
+      ],
+      "total_tokens": 711
+    },
+    {
+      "case_id": "mhr-q-7d981fc4ee00b137",
+      "input_tokens": 239,
+      "output_tokens": 841,
+      "question_sha256": "7d981fc4ee00b137c4a35a11e861c8fdaeedf483d703da2fdfbe485102c8796e",
+      "response_id": "resp_00fc3262088fa87f016a938a10395887d0adaec62b5a958d84",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge Apple defended \"default search engine\" \"Samsung\" \"Mozilla\"",
+        "TechCrunch \"Gemini\" \"meet or exceed GPT-4\" \"creator\" \"performance\"",
+        "TechCrunch \"class action\" \"antitrust\" \"siphoning off\" \"content\" \"readers\" \"ad revenue\" \"news publishers\""
+      ],
+      "total_tokens": 1080
+    },
+    {
+      "case_id": "mhr-q-83faf853a27642d7",
+      "input_tokens": 211,
+      "output_tokens": 510,
+      "question_sha256": "83faf853a27642d7a46b70da0dd8b7fe38e5fa1cc7fccc59572de88644dc57db",
+      "response_id": "resp_072dd17880cea639016a938a16693087d08007ea4a5f6ac011",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Polygon article \"Video games in 2023\" innovation vibrancy \"remained largely the same\" compared to previous years",
+        "BBC News - Technology article Sophie perspective change in accessibility of \"video games\" for everyone"
+      ],
+      "total_tokens": 721
+    },
+    {
+      "case_id": "mhr-q-86ce751dbfcf6227",
+      "input_tokens": 187,
+      "output_tokens": 527,
+      "question_sha256": "86ce751dbfcf6227144f2e0574900e21cace091c077d08c0a0a34ceaaeafe971",
+      "response_id": "resp_0376cad16d1b4df7016a938a1acd5487d0973a29dcb1f5deec",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News article Jung Hoo Lee 2022 batting average",
+        "Yardbarker article Juan Soto batting average (the year referenced)"
+      ],
+      "total_tokens": 714
+    },
+    {
+      "case_id": "mhr-q-8c090febc96a33b8",
+      "input_tokens": 220,
+      "output_tokens": 1637,
+      "question_sha256": "8c090febc96a33b8219a25bdf4235487b9dbf2db97ab325f605c6a9b668a24bf",
+      "response_id": "resp_06c2d737647536a1016a938a1f14e887d0ae64870e394e46d8",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "\"Fortune\" \"Globes English | Israel Business Arena\" \"Business Today | Latest Stock Market And Economy News India\" \"controls vital supplies\" \"blockaded\"",
+        "\"Fortune\" \"Globes English | Israel Business Arena\" \"Business Today | Latest Stock Market And Economy News India\" \"ceasefire\" \"militant\" OR \"militant organizations\"",
+        "\"Fortune\" \"Globes English | Israel Business Arena\" \"Business Today | Latest Stock Market And Economy News India\" \"intelligence support\" \"prevent major attacks\""
+      ],
+      "total_tokens": 1857
+    },
+    {
+      "case_id": "mhr-q-95a193b0e14a7ecf",
+      "input_tokens": 221,
+      "output_tokens": 932,
+      "question_sha256": "95a193b0e14a7ecfd223b98fc2f25151aca372417c1d527966f9a61408c4c34d",
+      "response_id": "resp_07290f5eb2ee698e016a938a3071c487d095ba000bce171b8a",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch Sept 28, 2023 report 'launch of GPT-4 with vision' OpenAI",
+        "TechCrunch Dec 19, 2023 report 'push for an \"app store for AI\" as the primary platform for AI tools' OpenAI"
+      ],
+      "total_tokens": 1153
+    },
+    {
+      "case_id": "mhr-q-9f7197590d148f50",
+      "input_tokens": 206,
+      "output_tokens": 774,
+      "question_sha256": "9f7197590d148f50306b5a8914b67a32787fe9a3233b84e37ac40a25cea1ac9c",
+      "response_id": "resp_0c17842e6e367638016a938a39008c87d08a3814afc1781815",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TalkSport Sporting News \"conceded 14 goals\" \"Champions League group stages\" \"unwanted record\" club",
+        "TalkSport Sporting News \"eliminated from European\" \"defeat at Old Trafford\" club"
+      ],
+      "total_tokens": 980
+    },
+    {
+      "case_id": "mhr-q-a17b53074897994b",
+      "input_tokens": 211,
+      "output_tokens": 633,
+      "question_sha256": "a17b53074897994b6ce026170ad62355c0e12e9bd49c1079d0dbf51c2429309f",
+      "response_id": "resp_0253fe22cd666205016a938a3f373087d0b1c25d4852522d0f",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge 'Kindle lineup' 'significant presence in the e-reader space' which company",
+        "Cnbc | World Business News Leader 'life-changing selling opportunities' 'offers life-changing selling opportunities' which company",
+        "Mashable 'Cyber Monday sale' 'deals' 'focus of a Cyber Monday sale' which company"
+      ],
+      "total_tokens": 844
+    },
+    {
+      "case_id": "mhr-q-a6de408dda44fa07",
+      "input_tokens": 224,
+      "output_tokens": 671,
+      "question_sha256": "a6de408dda44fa07d54a7f43ccfefb09762882add038393c0a90ab7a0b73406b",
+      "response_id": "resp_031de8c0723553bd016a938a4736e887d08d9d23939b915888",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch October 19, 2023 report \"moderation bias problem\" \"suppressing Palestinian voices\" Meta",
+        "TechCrunch November 27, 2023 report \"perfect compliance\" \"Children’s Online Privacy Protection Act\" Meta"
+      ],
+      "total_tokens": 895
+    },
+    {
+      "case_id": "mhr-q-ad4eee299dc7c00b",
+      "input_tokens": 207,
+      "output_tokens": 481,
+      "question_sha256": "ad4eee299dc7c00bdb71bcca3faa7a8a526692b79371f6e9c093075a11858dff",
+      "response_id": "resp_0704598cbdde64d4016a938a4bf65487d09c627f62019e0a9e",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News \"alters betting lines in response to events such as injuries or roster changes\" \"balances liability\" \"where significant amounts of money are placed\"",
+        "Sporting News \"refines NBA Rookie of the Year odds\" \"according to the information collected\""
+      ],
+      "total_tokens": 688
+    },
+    {
+      "case_id": "mhr-q-ae1dea5f5727d813",
+      "input_tokens": 214,
+      "output_tokens": 581,
+      "question_sha256": "ae1dea5f5727d81360e16d48b07ed49996c219d03d3e65fdac2d1e4ebe99d1a5",
+      "response_id": "resp_0d9ce0ae2243e9aa016a938a501de087d08935f96a545ca62d",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Essentially Sports article on Canelo Alvarez net worth 2023: search for an 'Essentially Sports' piece that states a specific net worth figure for Canelo Alvarez in 2023 (look for phrases like 'net worth', '2023', and a dollar amount).",
+        "CBSSports.com article about David Benavidez as successor to Canelo Alvarez: find the CBSSports.com article that discusses fans viewing Benavidez as Canelo’s successor and confirm whether the article focuses on fan perception and contains or omits any financial figures."
+      ],
+      "total_tokens": 795
+    },
+    {
+      "case_id": "mhr-q-b2d346aa65830fd9",
+      "input_tokens": 196,
+      "output_tokens": 420,
+      "question_sha256": "b2d346aa65830fd9f0cd612991d743759c67108f88c46f40c9a078a9baf7ac5c",
+      "response_id": "resp_0545603f1db18575016a938a55261c87d098845e10bed18100",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Sydney Morning Herald October 1, 2023 report on the Federal Reserve's actions on interest rates",
+        "Fortune October 6, 2023 report on the Federal Reserve's actions on interest rates"
+      ],
+      "total_tokens": 616
+    },
+    {
+      "case_id": "mhr-q-b61d9259b40204cf",
+      "input_tokens": 222,
+      "output_tokens": 1115,
+      "question_sha256": "b61d9259b40204cf0f30bf24e44d805d161e8ee0d9afd88815d595f41c2c96eb",
+      "response_id": "resp_0bad8ca16e0ce9f9016a938a581ad087d0bb5f77f6943bde49",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch November 6, 2023 report on Epic Games' antitrust battle with Google (full article text or excerpt)",
+        "TechCrunch December 15, 2023 report on a news publisher filing a class action antitrust suit against Google (full article text or excerpt)",
+        "Compare the language used in those two TechCrunch articles (Nov 6, 2023 Epic Games; Dec 15, 2023 news publisher) to describe Google's conduct — search each article for terms: \"anticompetitive\", \"antitrust\", \"alleged\", \"accused\", \"sued\", \"claim\""
+      ],
+      "total_tokens": 1337
+    },
+    {
+      "case_id": "mhr-q-bcb2b5602173d503",
+      "input_tokens": 221,
+      "output_tokens": 943,
+      "question_sha256": "bcb2b5602173d5039e7376e5db900007a3a345cd5bc117eda7807198c2a77527",
+      "response_id": "resp_05e92eec3a017566016a938a60657087d0a0736b9878f8d30d",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "FTX \"form a board with experts\" CNBC \"World Business News Leader\" who said this",
+        "FTX Alameda Research \"acknowledged challenges\" \"managing the significant growth\" The Verge TechCrunch who made this statement",
+        "prosecution alleges committed fraud for personal gain FTX individual alleged by prosecution The Verge TechCrunch CNBC"
+      ],
+      "total_tokens": 1164
+    },
+    {
+      "case_id": "mhr-q-c07cc2c99d8947de",
+      "input_tokens": 223,
+      "output_tokens": 1081,
+      "question_sha256": "c07cc2c99d8947de8d7b3187154e04ce9575ab5cfeb91be3d19ebbde06640e8f",
+      "response_id": "resp_0c690d3393504882016a938a675dc487d08d562e15965adb2c",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Fortune article mentioning \"Adam Yedidia\" and the person who persuaded him to join financial ventures, including that this person admitted struggling to manage two major financial entities because they grew too quickly",
+        "The Verge piece reporting that after a judge's intervention someone was informed about a financial discrepancy — search for The Verge article linking that event to the person who persuaded Adam Yedidia to join him",
+        "TechCrunch article reporting the prosecution's allegation that the same person committed fraud for personal gain — search for TechCrunch coverage naming the individual accused of fraud for personal gain and linked to Adam Yedidia"
+      ],
+      "total_tokens": 1304
+    },
+    {
+      "case_id": "mhr-q-c12676b950751896",
+      "input_tokens": 244,
+      "output_tokens": 549,
+      "question_sha256": "c12676b95075189601503248ee79eecf55b3bd8a12b677057a1993530895cee3",
+      "response_id": "resp_0f0a2b46947f11d1016a938a718d4487d0928c9881dc02f818",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Science News For Students 2023-10-04T21:11:57+00:00 report mentioning \"quantum dots\" and \"solar panels\"",
+        "Fortune 2023-10-04T21:15:43+00:00 article about Moungi Bawendi stating his focus on \"basic science\" versus potential applications like \"solar panels\""
+      ],
+      "total_tokens": 793
+    },
+    {
+      "case_id": "mhr-q-c7a1670ee07cbe12",
+      "input_tokens": 222,
+      "output_tokens": 726,
+      "question_sha256": "c7a1670ee07cbe129587c45ba799413a8841e9cfb5885629ab0f0324cdc899a6",
+      "response_id": "resp_01c5671d1dd813ed016a938a75800087d098c17c6fa71a17fd",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "FOX News - Lifestyle October 8, 2023 report increase in solar activity sunspots",
+        "Live Science: The Most Interesting Articles December 24, 2023 discoveries about the sun",
+        "Do the discoveries reported by Live Science: The Most Interesting Articles on December 24, 2023 agree or disagree with the sunspot/solar activity observations in FOX News - Lifestyle on October 8, 2023?"
+      ],
+      "total_tokens": 948
+    },
+    {
+      "case_id": "mhr-q-dce57f5e33fa542f",
+      "input_tokens": 211,
+      "output_tokens": 920,
+      "question_sha256": "dce57f5e33fa542f1b4e239fb96fcd9bbca36622f18702c62e91635d84a6dc81",
+      "response_id": "resp_03464b65cffe88f8016a938a7cf5a887d0a6f2d4173b5ea61e",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch and The Verge coverage naming a company as having a 'superior architecture' for generative AI models",
+        "Articles describing a company that secures default search engine positions via deals with major tech firms (default search engine deals)",
+        "Reports on legal disputes involving a company that could affect phones, app stores, and news publishers' revenues"
+      ],
+      "total_tokens": 1131
+    },
+    {
+      "case_id": "mhr-q-e1bf50ff3e66b157",
+      "input_tokens": 220,
+      "output_tokens": 506,
+      "question_sha256": "e1bf50ff3e66b157d28cb14e604385f18ee0c7541e467933aa10801e9eadd5db",
+      "response_id": "resp_0bb2a9046297688a016a938a84c20c87d0bb76ef29b662664a",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "\"Sporting News\" Lionel Messi returned to play after an injury likely to be back for Inter Miami match \"Inter Miami\"",
+        "\"Sporting News\" youth movement Argentina forward line Messi Alvarez Garnacho"
+      ],
+      "total_tokens": 726
+    },
+    {
+      "case_id": "mhr-q-e2a277b48c790110",
+      "input_tokens": 196,
+      "output_tokens": 849,
+      "question_sha256": "e2a277b48c790110bc3e5e12bfca06c306c60b4ed8fcf2698ed0c6b977854dba",
+      "response_id": "resp_03c139cd77060040016a938a896d3c87d0963cee921b9a70f8",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch \"invested billions\" \"default search engine\" platforms",
+        "TechCrunch \"news publishers\" \"revenue streams\" \"anticompetitive\" accused"
+      ],
+      "total_tokens": 1045
+    },
+    {
+      "case_id": "mhr-q-e3fca6c7dd053a40",
+      "input_tokens": 212,
+      "output_tokens": 1611,
+      "question_sha256": "e3fca6c7dd053a405c775fff3569d901281f0bfa4d7db8ce3d502478d2f045af",
+      "response_id": "resp_0b65763112f4c8fb016a938a8eeecc87d0ba07a16f34e5ec36",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge article mentioning someone who 'used customer funds' for a buyout, 'allegedly committed fraud for personal gain', and 'told a trader' about 'permissible withdrawals'",
+        "TechCrunch piece discussing the same individual and reporting they decided to use customer funds for a buyout and alleged fraud for personal gain",
+        "News coverage that compares this individual to notable investors (identify outlet and wording of the comparison) while noting that TechCrunch did not make that comparison"
+      ],
+      "total_tokens": 1823
+    },
+    {
+      "case_id": "mhr-q-e7444d6e29762f69",
+      "input_tokens": 202,
+      "output_tokens": 702,
+      "question_sha256": "e7444d6e29762f69e7a58d08ed44d50a7dea0f8f6e1e1ba7bc4ba40db7f92298",
+      "response_id": "resp_03103e0679acc6f7016a938a9ae21887d0afdc0a8616b856cf",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge \"Sam Bankman-Fried\" \"Alameda Research\" established exchange \"dissatisfied with competitors\"",
+        "The Verge exchange \"liquidation\" \"customer bets\" \"handle the risks\""
+      ],
+      "total_tokens": 904
+    },
+    {
+      "case_id": "mhr-q-ed1057656f80d739",
+      "input_tokens": 235,
+      "output_tokens": 721,
+      "question_sha256": "ed1057656f80d739c7dc00bb1df0f3b35c6ee9f7fe7eefca3249fa00e6e7f9d7",
+      "response_id": "resp_0f3107b9e4c0fc1f016a938a9fbab087d09421433ca9bdda58",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch article published October 25, 2023 mentioning Ylva Johansson and stating the proposal does not include any derogation from the GDPR — full text or excerpts showing the article's stance on GDPR and regulatory compliance.",
+        "Article published November 9, 2023 reporting that European AI startups are considering regulation and compliance from the beginning of their operations — full text or excerpts showing how it emphasizes startups' approach to regulation and compliance."
+      ],
+      "total_tokens": 956
+    },
+    {
+      "case_id": "mhr-q-ee4c1ab59e88b259",
+      "input_tokens": 221,
+      "output_tokens": 466,
+      "question_sha256": "ee4c1ab59e88b25994ce2c45eb20f979883011be07fcef488fb27a74543246a1",
+      "response_id": "resp_07ac6b9837537db0016a938aa636fc87d0ba66b3d5f62bbf7c",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch article Gemini Pro vs Gemini Ultra claims 'Gemini Pro' is a limited version compared to the full 'Gemini Ultra'",
+        "The Verge article discusses Google's search engine deals with companies (search engine deals, companies, The Verge)",
+        "TechCrunch article alleges Google's anticompetitive behavior toward news publishers (TechCrunch, anticompetitive, news publishers)"
+      ],
+      "total_tokens": 687
+    },
+    {
+      "case_id": "mhr-q-f21b7fbecbb97407",
+      "input_tokens": 214,
+      "output_tokens": 613,
+      "question_sha256": "f21b7fbecbb97407a8f7a5c96d4e13b4ca75b621ab40484d036314db1117cd0d",
+      "response_id": "resp_0811194cab96caef016a938aaa063c87d0add6a1ebc89ea4dd",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Sporting News article \"Line Shopping in Sports Betting\" — locate passages that state whether Sportsbooks \"profit from odds and lines\" or otherwise adjust/shift/tighten lines based on conditions; extract the specific language describing sportsbooks' strategies and reasons.",
+        "Sporting News article \"NBA Rookie of the Year Odds\" — locate passages that state whether Sportsbooks \"tighten betting lines\" or otherwise change betting practices based on conditions; extract the specific language describing sportsbooks' strategies and reasons."
+      ],
+      "total_tokens": 827
+    },
+    {
+      "case_id": "mhr-q-f5c00ae0308f94ca",
+      "input_tokens": 220,
+      "output_tokens": 763,
+      "question_sha256": "f5c00ae0308f94caef5e338cd5c4e8d2acd1f451f42c712def6973acc32b445e",
+      "response_id": "resp_045cdad0f4fa33e1016a938aaff55487d0b384a2e4d523e8a8",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Business Today | Latest Stock Market And Economy News India \"October 7, 2023\" Israel report",
+        "Fortune \"October 13, 2023\" Gaza Israel reports",
+        "Changes in status of Israel's actions regarding Gaza between Business Today (Oct 7, 2023) and Fortune (Oct 13, 2023) reports timeline"
+      ],
+      "total_tokens": 983
+    },
+    {
+      "case_id": "mhr-q-f78ef31f064d4f46",
+      "input_tokens": 219,
+      "output_tokens": 826,
+      "question_sha256": "f78ef31f064d4f468da4047a10239b3644238bbf4ade23fd1797fa773ac930f6",
+      "response_id": "resp_0919c95f5f260b2f016a938abb209887d0bf101d559c7d13de",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "The Verge article suggesting Apple’s choice of Google as its search engine was due to an abundance of alternatives",
+        "TechCrunch article alleging Google’s practices in app distribution are not anticompetitive",
+        "TechCrunch article alleging Google’s practices in payment processing are not anticompetitive",
+        "TechCrunch article alleging Google’s practices in news publishing are not anticompetitive"
+      ],
+      "total_tokens": 1045
+    },
+    {
+      "case_id": "mhr-q-f9bff0f30303e389",
+      "input_tokens": 211,
+      "output_tokens": 1230,
+      "question_sha256": "f9bff0f30303e389fbb013574ae0be512c7fa088e08aae786f343cb8abe006a9",
+      "response_id": "resp_0b47944fbba2796e016a938ac214fc87d08ed9ea21a3eabc2e",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "Articles in The Verge and TechCrunch that cite the same company for making exclusive deals with major tech companies (search: \"The Verge\" \"TechCrunch\" \"exclusive deals\").",
+        "Reports of the company defending against accusations in an antitrust battle with a game maker (search: \"antitrust battle\" \"game maker\" \"defending against accusations\").",
+        "Reports that the company is facing a class action lawsuit alleging it reduced news publishers' revenues (search: \"class action lawsuit\" \"news publishers' revenues\")."
+      ],
+      "total_tokens": 1441
+    },
+    {
+      "case_id": "mhr-q-faa3262f51222e0c",
+      "input_tokens": 205,
+      "output_tokens": 496,
+      "question_sha256": "faa3262f51222e0c889227913e81bc8de159060d80eab0943454cfaee2dd4cd6",
+      "response_id": "resp_0e5a2cf02ce957bf016a938acc896087d0a55e9e44b53355de",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "subqueries": [
+        "TechCrunch \"class action\" suit \"center of antitrust concerns\" company",
+        "The Verge Apple \"only valid option\" \"search engine services\" negotiation time"
+      ],
+      "total_tokens": 701
+    }
+  ],
+  "requested_model": "gpt-5-mini",
+  "schema_version": 1,
+  "selection_method": "sha256-min-per-question-type-hop-count-v1",
+  "selection_sha256": "d68d1322f959b6da35a668c8d1e018e076009dee7ea16c537c95e3ebfe864bc8",
+  "split": "heldout-7-per-stratum",
+  "started_at": "2026-08-30T01:38:38.675031+00:00",
+  "status": "complete"
+}

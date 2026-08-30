@@ -1,0 +1,228 @@
+{
+  "artifact_sha256": {
+    "baseline_run": "f9efe11f191d18c68128df6f657b26ca20c1433beca00da846a322eaf56eb0d7",
+    "candidate_contract": "1265c906be7f2584ca140bc56c5ca60ca439844445621ffdc49cf1645701a87f",
+    "candidate_run": "7c661787fa859c40a84eefa7eb5da9ac585d04e0130604ea4325817b2bb6b17b",
+    "confirmation_manifest": "da9b8c640cb0274cff39b77f002afca3ce558237bd2be1e170cc4dac47cd42bb",
+    "summary": "5afc88424502c42b637f389b2add6d2aa28a1eaf601a5f1c0993532f8e385aa5"
+  },
+  "comparison": {
+    "bm25": {
+      "coverage": {
+        "answerable_queries": 49,
+        "by_stratum": {
+          "comparison_query/2": {
+            "evidence_hits": 10,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "comparison_query/3": {
+            "evidence_hits": 11,
+            "evidence_total": 21,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          },
+          "inference_query/2": {
+            "evidence_hits": 10,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "inference_query/3": {
+            "evidence_hits": 10,
+            "evidence_total": 21,
+            "full_coverage_passes": 1,
+            "query_count": 7
+          },
+          "inference_query/4": {
+            "evidence_hits": 14,
+            "evidence_total": 28,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          },
+          "temporal_query/2": {
+            "evidence_hits": 12,
+            "evidence_total": 14,
+            "full_coverage_passes": 5,
+            "query_count": 7
+          },
+          "temporal_query/3": {
+            "evidence_hits": 9,
+            "evidence_total": 21,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          }
+        },
+        "evidence_fact_chunk_hits": {
+          "hits": 76,
+          "rate": 0.5714285714285714,
+          "total": 133
+        },
+        "full_evidence_coverage": {
+          "passes": 14,
+          "rate": 0.2857142857142857,
+          "total": 49
+        },
+        "unanswerable_queries": 0
+      },
+      "retrieval_metrics": {
+        "mean_ndcg_at_10": 0.5064740261876305,
+        "mean_recall_at_10": 0.5986394557823129,
+        "mean_reciprocal_rank": 0.6467363135730483
+      }
+    },
+    "bm25-document-diverse": {
+      "coverage": {
+        "answerable_queries": 49,
+        "by_stratum": {
+          "comparison_query/2": {
+            "evidence_hits": 6,
+            "evidence_total": 14,
+            "full_coverage_passes": 2,
+            "query_count": 7
+          },
+          "comparison_query/3": {
+            "evidence_hits": 8,
+            "evidence_total": 21,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          },
+          "inference_query/2": {
+            "evidence_hits": 7,
+            "evidence_total": 14,
+            "full_coverage_passes": 2,
+            "query_count": 7
+          },
+          "inference_query/3": {
+            "evidence_hits": 11,
+            "evidence_total": 21,
+            "full_coverage_passes": 1,
+            "query_count": 7
+          },
+          "inference_query/4": {
+            "evidence_hits": 10,
+            "evidence_total": 28,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          },
+          "temporal_query/2": {
+            "evidence_hits": 9,
+            "evidence_total": 14,
+            "full_coverage_passes": 4,
+            "query_count": 7
+          },
+          "temporal_query/3": {
+            "evidence_hits": 9,
+            "evidence_total": 21,
+            "full_coverage_passes": 0,
+            "query_count": 7
+          }
+        },
+        "evidence_fact_chunk_hits": {
+          "hits": 60,
+          "rate": 0.45112781954887216,
+          "total": 133
+        },
+        "full_evidence_coverage": {
+          "passes": 9,
+          "rate": 0.1836734693877551,
+          "total": 49
+        },
+        "unanswerable_queries": 0
+      },
+      "retrieval_metrics": {
+        "mean_ndcg_at_10": 0.4531356259817859,
+        "mean_recall_at_10": 0.46088435374149656,
+        "mean_reciprocal_rank": 0.617233560090703
+      }
+    },
+    "mechanism_audit": {
+      "queries_with_multiple_gold_chunks_in_one_document": 4,
+      "relevant_baseline_hits_removed_by_candidate": 20,
+      "removed_hits_with_same_document_replacement": 20,
+      "structurally_ineligible_query_ids": [
+        "mhr-q-682ad1d92c24682f",
+        "mhr-q-92e63112b10a9ec3",
+        "mhr-q-a20ce0c005dee8a1",
+        "mhr-q-aa925dc451fb84c1"
+      ]
+    },
+    "paired_full_coverage": {
+      "candidate_gains": 0,
+      "candidate_losses": 5,
+      "gain_query_ids": [],
+      "loss_query_ids": [
+        "mhr-q-1acbad14990a3141",
+        "mhr-q-93d499b4a19574e9",
+        "mhr-q-bc87d53406c65d15",
+        "mhr-q-d4882be7135187a5",
+        "mhr-q-db0aa3a29a4a0240"
+      ],
+      "mcnemar_exact_p": 0.0625,
+      "ties": 44
+    }
+  },
+  "confirmation": {
+    "frozen_at": "2026-08-30T01:57:55Z",
+    "query_count": 49,
+    "question_contract_sha256": "78bbf89ceb457e6235b94f4dd84b0a99d94ab9ec00e08ddd0c3eee09548d03ed",
+    "sample_per_stratum": 7,
+    "selection_sha256": "893594af5562dff5b5fcb9643658de3bc32694882d127bb8d0003f9fd786573d",
+    "selection_status": "frozen_before_retrieval",
+    "strata": {
+      "comparison_query/2": 7,
+      "comparison_query/3": 7,
+      "inference_query/2": 7,
+      "inference_query/3": 7,
+      "inference_query/4": 7,
+      "temporal_query/2": 7,
+      "temporal_query/3": 7
+    },
+    "stratum_offset": 7
+  },
+  "dataset": {
+    "corpus_chunk_count": 7805,
+    "license": "ODC-BY 1.0",
+    "name": "yixuantt/MultiHopRAG",
+    "revision": "71ac0d0bd1f951d2d6b70311f7d2ae404e1ffa82"
+  },
+  "decision": {
+    "action": "reject candidate and retain BM25",
+    "cross_judge_run": "not_run",
+    "full_corpus_candidate_run": "not_run",
+    "generation_run": "not_run",
+    "reason": "Complete evidence coverage changed from 14/49 to 9/49, with 0 paired gains and 5 losses. The candidate removed 20 relevant baseline hits; 20 were displaced by another chunk from the same document.",
+    "retrieval_gate": "failed"
+  },
+  "limitations": [
+    "The 49-case confirmation slice is hash-ranked and stratified, not a random population sample.",
+    "Canonical qrels identify the first fact-bearing chunk; selecting a different chunk from the correct document does not receive partial credit unless it is itself a qrel.",
+    "Four confirmation queries require multiple distinct gold chunks from one document, so a one-chunk-per-document policy cannot achieve complete coverage on those rows.",
+    "The failed preregistered gate stopped full-corpus, generation, and judge runs."
+  ],
+  "preregistration": {
+    "candidate": {
+      "bm25_b": 0.75,
+      "bm25_k1": 1.2,
+      "description": "Fetch the top 100 BM25 chunks, retain only the highest-ranked chunk from each source document, and return the first 10 distinct documents.",
+      "fetch_k": 100,
+      "k": 10,
+      "maximum_chunks_per_document": 1,
+      "name": "bm25-document-diverse"
+    },
+    "decision_rule": "Advance only if the candidate improves full-evidence coverage on the untouched confirmation slice and does not regress any guardrail metric; then report the fixed candidate on all answerable public queries without further tuning.",
+    "guardrails": [
+      "mean_recall_at_10",
+      "mean_reciprocal_rank",
+      "mean_ndcg_at_10"
+    ],
+    "hypothesis": "Multi-hop coverage is limited partly by duplicate chunks from the same document consuming the top-10 window.",
+    "preregistered_at": "2026-08-30T01:59:00Z",
+    "primary_endpoint": "full_evidence_coverage_at_10",
+    "status": "preregistered_before_candidate_retrieval"
+  },
+  "run_date": "2026-08-29",
+  "schema_version": 1,
+  "status": "verified_external_confirmation_negative_result"
+}

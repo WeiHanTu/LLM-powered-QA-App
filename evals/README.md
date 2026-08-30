@@ -168,3 +168,47 @@ uv run llmqa benchmark-scifact \
 
 Outputs are written under ignored `artifacts/benchmark-results/scifact/`. SciFact is released under
 CC BY-NC 2.0; the raw archive and extracted data must not be committed to this repository.
+
+## Public MultiHop-RAG external holdout
+
+`public/multihop-rag/holdout.json` freezes 49 answerable queries from
+[MultiHop-RAG](https://github.com/yixuantt/MultiHop-RAG): seven SHA-256-ranked cases from every
+observed `(question_type, evidence_count)` stratum. The manifest was written before retrieval and
+contains query hashes and strata, not answers, facts, URLs, or passages. The companion
+`decompositions.json` contains the complete checkpointed question-only planner output and provider
+provenance.
+
+```bash
+uv run llmqa fetch-multihop-rag
+uv run llmqa freeze-multihop-rag-holdout \
+  --frozen-at YYYY-MM-DDTHH:MM:SSZ
+uv run llmqa generate-multihop-rag-query-decompositions --model gpt-5-mini
+uv run llmqa benchmark-multihop-rag \
+  --retrievers bm25 bm25-decomposed-rrf -k 10 --fetch-k 40
+uv run llmqa benchmark-multihop-rag --retrievers bm25 --full -k 10
+uv run llmqa freeze-multihop-rag-holdout \
+  --output evals/public/multihop-rag/document-diversity-confirmation.json \
+  --sample-per-stratum 7 --stratum-offset 7 \
+  --frozen-at YYYY-MM-DDTHH:MM:SSZ
+uv run llmqa benchmark-multihop-rag \
+  --retrievers bm25 bm25-document-diverse \
+  --sample-per-stratum 7 --stratum-offset 7 -k 10 --fetch-k 100
+```
+
+The pinned public corpus has 609 documents, 2,556 questions, and 6,084 evidence facts. This adapter
+produces 7,805 sentence-aware chunks and resolves each evidence fact to the first deterministic
+fact-bearing chunk. Full BM25 Recall@10 is 0.6122, but complete evidence coverage is only
+718/2,255 answerable questions. On the frozen holdout, decomposition + RRF regressed complete
+coverage from 15/49 to 13/49 and MRR from 0.6497 to 0.4231. The candidate failed the retrieval gate;
+generation and cross-family judging were deliberately not run.
+
+The next fixed candidate was preregistered in `document-diversity-candidate.json` and measured on
+the non-overlapping `document-diversity-confirmation.json` slice. Limiting the top 100 BM25 results
+to one chunk per document reduced complete evidence coverage from 14/49 to 9/49 and Recall@10 from
+0.5986 to 0.4609. It removed 20 relevant baseline hits, all displaced by another chunk from the
+same document; four rows also require multiple distinct gold chunks from one document. The failed
+gate stopped the full-corpus and generation stages.
+
+The project did not independently human-review all public gold answers. Its chunking and exact-fact
+qrels differ from the benchmark paper's implementation, so only within-adapter comparisons are
+valid. MultiHop-RAG is ODC-BY; fetched data and bulky run artifacts remain ignored.

@@ -29,6 +29,20 @@ from llmqa.fairness import (
     audit_exposure,
     fair_greedy_rerank,
 )
+from llmqa.multihop_rag import (
+    fetch_multihop_rag,
+    load_multihop_rag,
+    write_multihop_rag_holdout_manifest,
+)
+from llmqa.multihop_rag_planning import (
+    generate_multihop_rag_decompositions,
+    load_multihop_rag_decompositions,
+    multihop_rag_decomposition_sha256,
+)
+from llmqa.multihop_rag_reporting import (
+    write_document_diversity_report,
+    write_multihop_rag_report,
+)
 from llmqa.project_benchmark import load_project_retrieval_benchmark
 from llmqa.project_benchmark_reporting import write_project_benchmark_report
 from llmqa.project_evaluation import (
@@ -206,6 +220,125 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--embedding-model", default="text-embedding-3-small")
     benchmark.add_argument("--embedding-dimensions", type=int, default=1536)
     benchmark.add_argument("--embedding-batch-size", type=int, default=128)
+
+    fetch_multihop = subparsers.add_parser(
+        "fetch-multihop-rag",
+        help="download and SHA-256 verify the pinned public MultiHop-RAG benchmark",
+    )
+    fetch_multihop.add_argument("--cache-dir", type=Path, default=Path("artifacts/benchmarks"))
+
+    freeze_multihop = subparsers.add_parser(
+        "freeze-multihop-rag-holdout",
+        help="write the hash-ranked public holdout contract before retrieval",
+    )
+    freeze_multihop.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/benchmarks/multihop-rag"),
+    )
+    freeze_multihop.add_argument(
+        "--output",
+        type=Path,
+        default=Path("evals/public/multihop-rag/holdout.json"),
+    )
+    freeze_multihop.add_argument("--sample-per-stratum", type=int, default=7)
+    freeze_multihop.add_argument("--stratum-offset", type=int, default=0)
+    freeze_multihop.add_argument("--frozen-at", required=True)
+
+    multihop_decompose = subparsers.add_parser(
+        "generate-multihop-rag-query-decompositions",
+        help="generate resumable question-only plans for the frozen public holdout",
+    )
+    multihop_decompose.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/benchmarks/multihop-rag"),
+    )
+    multihop_decompose.add_argument(
+        "--output",
+        type=Path,
+        default=Path("evals/public/multihop-rag/decompositions.json"),
+    )
+    multihop_decompose.add_argument("--sample-per-stratum", type=int, default=7)
+    multihop_decompose.add_argument("--model", default="gpt-5-mini")
+
+    multihop_benchmark = subparsers.add_parser(
+        "benchmark-multihop-rag",
+        help="run retrieval on the frozen, stratified public MultiHop-RAG holdout",
+    )
+    multihop_benchmark.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/benchmarks/multihop-rag"),
+    )
+    multihop_benchmark.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/benchmark-results/multihop-rag-heldout"),
+    )
+    multihop_benchmark.add_argument(
+        "--retrievers",
+        nargs="+",
+        choices=("bm25", "bm25-decomposed-rrf", "bm25-document-diverse"),
+        default=["bm25"],
+    )
+    multihop_benchmark.add_argument(
+        "--query-decompositions",
+        type=Path,
+        default=Path("evals/public/multihop-rag/decompositions.json"),
+    )
+    multihop_benchmark.add_argument("--sample-per-stratum", type=int, default=7)
+    multihop_benchmark.add_argument("--stratum-offset", type=int, default=0)
+    multihop_benchmark.add_argument(
+        "--full",
+        action="store_true",
+        help="evaluate all 2,556 queries; only supported for offline BM25 retrievers",
+    )
+    multihop_benchmark.add_argument("-k", type=int, default=10)
+    multihop_benchmark.add_argument("--fetch-k", type=int, default=40)
+    multihop_benchmark.add_argument("--bm25-k1", type=float, default=1.2)
+    multihop_benchmark.add_argument("--bm25-b", type=float, default=0.75)
+    multihop_benchmark.add_argument("--rrf-rank-constant", type=int, default=60)
+
+    multihop_public_report = subparsers.add_parser(
+        "report-multihop-rag",
+        help="publish the full BM25 baseline and frozen public holdout comparison",
+    )
+    multihop_public_report.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/benchmarks/multihop-rag"),
+    )
+    multihop_public_report.add_argument("--holdout-manifest", type=Path, required=True)
+    multihop_public_report.add_argument("--query-decompositions", type=Path, required=True)
+    multihop_public_report.add_argument("--full-summary", type=Path, required=True)
+    multihop_public_report.add_argument("--full-run", type=Path, required=True)
+    multihop_public_report.add_argument("--holdout-summary", type=Path, required=True)
+    multihop_public_report.add_argument("--baseline-run", type=Path, required=True)
+    multihop_public_report.add_argument("--candidate-run", type=Path, required=True)
+    multihop_public_report.add_argument("--snapshot", type=Path, required=True)
+    multihop_public_report.add_argument("--figure", type=Path, required=True)
+    multihop_public_report.add_argument("--run-date", required=True)
+    multihop_public_report.add_argument("--sample-per-stratum", type=int, default=7)
+
+    diversity_report = subparsers.add_parser(
+        "report-multihop-rag-document-diversity",
+        help="publish the preregistered document-diversity confirmation result",
+    )
+    diversity_report.add_argument(
+        "--dataset-dir",
+        type=Path,
+        default=Path("artifacts/benchmarks/multihop-rag"),
+    )
+    diversity_report.add_argument("--candidate-contract", type=Path, required=True)
+    diversity_report.add_argument("--confirmation-manifest", type=Path, required=True)
+    diversity_report.add_argument("--summary", type=Path, required=True)
+    diversity_report.add_argument("--baseline-run", type=Path, required=True)
+    diversity_report.add_argument("--candidate-run", type=Path, required=True)
+    diversity_report.add_argument("--snapshot", type=Path, required=True)
+    diversity_report.add_argument("--run-date", required=True)
+    diversity_report.add_argument("--sample-per-stratum", type=int, default=7)
+    diversity_report.add_argument("--stratum-offset", type=int, default=7)
 
     project_benchmark = subparsers.add_parser(
         "benchmark-project-eval",
@@ -578,6 +711,195 @@ def main(argv: list[str] | None = None) -> int:
                         }
                         for run in outcome.report.runs
                     ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "fetch-multihop-rag":
+        dataset_directory = fetch_multihop_rag(args.cache_dir)
+        bundle = load_multihop_rag(dataset_directory, sample_per_stratum=7)
+        print(
+            json.dumps(
+                {
+                    "dataset": bundle.dataset.name,
+                    "dataset_directory": str(dataset_directory),
+                    "revision": bundle.dataset.provenance.details["revision"],
+                    "corpus_count": len(bundle.dataset.chunks),
+                    "holdout_query_count": len(bundle.cases),
+                    "selection_sha256": bundle.selection_sha256,
+                    "status": "verified",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "freeze-multihop-rag-holdout":
+        bundle = load_multihop_rag(
+            args.dataset_dir,
+            sample_per_stratum=args.sample_per_stratum,
+            stratum_offset=args.stratum_offset,
+        )
+        holdout_manifest = write_multihop_rag_holdout_manifest(
+            bundle,
+            args.output,
+            sample_per_stratum=args.sample_per_stratum,
+            stratum_offset=args.stratum_offset,
+            frozen_at=args.frozen_at,
+        )
+        print(
+            json.dumps(
+                {
+                    "output": str(args.output),
+                    "status": holdout_manifest["status"],
+                    "selected_query_count": holdout_manifest["selected_query_count"],
+                    "selection_sha256": holdout_manifest["selection_sha256"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "generate-multihop-rag-query-decompositions":
+        require_openai_api_key()
+        multihop_artifact = generate_multihop_rag_decompositions(
+            args.dataset_dir,
+            args.output,
+            model=args.model,
+            sample_per_stratum=args.sample_per_stratum,
+        )
+        print(
+            json.dumps(
+                {
+                    "output": str(args.output),
+                    "status": multihop_artifact["status"],
+                    "query_count": multihop_artifact["query_count"],
+                    "selection_sha256": multihop_artifact["selection_sha256"],
+                    "requested_model": multihop_artifact["requested_model"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "benchmark-multihop-rag":
+        multihop_retriever_names: list[ProjectRetrieverName] = args.retrievers
+        if args.full and not set(multihop_retriever_names) <= {
+            "bm25",
+            "bm25-document-diverse",
+        }:
+            raise ValueError("--full supports only offline BM25 retrievers")
+        selected_sample_per_stratum = None if args.full else args.sample_per_stratum
+        bundle = load_multihop_rag(
+            args.dataset_dir,
+            sample_per_stratum=selected_sample_per_stratum,
+            stratum_offset=0 if args.full else args.stratum_offset,
+        )
+        decomposition_mapping = None
+        decomposition_provenance = None
+        if "bm25-decomposed-rrf" in multihop_retriever_names:
+            multihop_artifact, decomposition_mapping = load_multihop_rag_decompositions(
+                args.query_decompositions,
+                args.dataset_dir,
+                sample_per_stratum=args.sample_per_stratum,
+            )
+            decomposition_provenance = {
+                "artifact_sha256": multihop_rag_decomposition_sha256(args.query_decompositions),
+                "artifact_version": multihop_artifact["artifact_version"],
+                "method": multihop_artifact["method"],
+                "prompt_version": multihop_artifact["prompt_version"],
+                "prompt_sha256": multihop_artifact["prompt_sha256"],
+                "selection_sha256": multihop_artifact["selection_sha256"],
+                "question_contract_sha256": multihop_artifact["question_contract_sha256"],
+                "requested_model": multihop_artifact["requested_model"],
+                "question_only_input": multihop_artifact["question_only_input"],
+                "query_count": multihop_artifact["query_count"],
+            }
+        outcome = run_retrieval_benchmark(
+            bundle.dataset,
+            multihop_retriever_names,
+            k=args.k,
+            fetch_k=args.fetch_k,
+            bm25_k1=args.bm25_k1,
+            bm25_b=args.bm25_b,
+            rrf_rank_constant=args.rrf_rank_constant,
+            query_decompositions=decomposition_mapping,
+            query_decomposition_provenance=decomposition_provenance,
+        )
+        summary_path = write_benchmark_artifacts(outcome, args.output_dir)
+        print(
+            json.dumps(
+                {
+                    "summary_path": str(summary_path),
+                    "dataset": outcome.report.dataset,
+                    "split": outcome.report.split,
+                    "corpus_count": outcome.report.corpus_count,
+                    "query_count": outcome.report.query_count,
+                    "selection_sha256": bundle.selection_sha256,
+                    "runs": [
+                        {
+                            "retriever": run.retriever,
+                            "mean_recall_at_k": run.evaluation.mean_recall_at_k,
+                            "mean_reciprocal_rank": run.evaluation.mean_reciprocal_rank,
+                            "mean_ndcg_at_k": run.evaluation.mean_ndcg_at_k,
+                        }
+                        for run in outcome.report.runs
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-multihop-rag":
+        multihop_snapshot = write_multihop_rag_report(
+            args.dataset_dir,
+            args.holdout_manifest,
+            args.query_decompositions,
+            args.full_summary,
+            args.full_run,
+            args.holdout_summary,
+            args.baseline_run,
+            args.candidate_run,
+            args.snapshot,
+            args.figure,
+            run_date=args.run_date,
+            sample_per_stratum=args.sample_per_stratum,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot": str(args.snapshot),
+                    "figure": str(args.figure),
+                    "status": multihop_snapshot["status"],
+                    "decision": multihop_snapshot["decision"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-multihop-rag-document-diversity":
+        diversity_snapshot = write_document_diversity_report(
+            args.dataset_dir,
+            args.candidate_contract,
+            args.confirmation_manifest,
+            args.summary,
+            args.baseline_run,
+            args.candidate_run,
+            args.snapshot,
+            run_date=args.run_date,
+            sample_per_stratum=args.sample_per_stratum,
+            stratum_offset=args.stratum_offset,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot": str(args.snapshot),
+                    "status": diversity_snapshot["status"],
+                    "decision": diversity_snapshot["decision"],
                 },
                 indent=2,
             )

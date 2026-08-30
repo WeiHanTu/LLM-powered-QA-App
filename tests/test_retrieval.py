@@ -4,12 +4,14 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
+import pytest
 from numpy.typing import NDArray
 
 from llmqa.domain import Chunk, SourceScopedQuery
 from llmqa.retrieval import (
     BM25Retriever,
     DecomposedQueryRetriever,
+    DocumentDiverseRetriever,
     FaissRetriever,
     SourceAwareBM25Retriever,
 )
@@ -82,6 +84,29 @@ def test_decomposed_query_retriever_fuses_inspectable_component_rankings() -> No
     assert any("subquery-1" in result.component_ranks for result in results)
     assert any("subquery-2" in result.component_ranks for result in results)
     assert [result.rank for result in results] == [1, 2, 3]
+
+
+def test_document_diverse_retriever_keeps_best_chunk_per_source() -> None:
+    corpus = [
+        Chunk("a1", "alpha alpha mechanism", "paper-a"),
+        Chunk("a2", "alpha secondary mechanism", "paper-a"),
+        Chunk("b1", "alpha evidence", "paper-b"),
+        Chunk("c1", "alpha note", "paper-c"),
+    ]
+    retriever = DocumentDiverseRetriever(BM25Retriever(corpus))
+
+    results = retriever.search("alpha mechanism", k=3, fetch_k=4)
+
+    assert [result.chunk.source for result in results] == ["paper-a", "paper-b", "paper-c"]
+    assert [result.rank for result in results] == [1, 2, 3]
+    assert [result.original_rank for result in results] == [1, 3, 4]
+
+
+def test_document_diverse_retriever_rejects_insufficient_fetch_depth() -> None:
+    retriever = DocumentDiverseRetriever(BM25Retriever(chunks()))
+
+    with pytest.raises(ValueError, match="fetch_k must be at least k"):
+        retriever.search("cat query", k=3, fetch_k=2)
 
 
 def test_source_aware_retriever_balances_planned_sources_with_diagnostics() -> None:

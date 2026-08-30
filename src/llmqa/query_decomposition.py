@@ -89,6 +89,12 @@ def _prompt_sha256() -> str:
     return _sha256_bytes(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8"))
 
 
+def query_decomposition_prompt_sha256() -> str:
+    """Expose the frozen prompt/schema digest for cross-dataset provenance."""
+
+    return _prompt_sha256()
+
+
 def _optional_integer(value: object, attribute: str) -> int | None:
     raw = getattr(value, attribute, None)
     return raw if isinstance(raw, int) and not isinstance(raw, bool) else None
@@ -115,11 +121,30 @@ def decompose_question(
 
     if case.answerability != "answerable" or "multi_hop" not in case.case_types:
         raise ValueError("query decomposition is restricted to answerable multi-hop cases")
+    return decompose_query_text(
+        case.case_id,
+        case.question,
+        model=model,
+        client=client,
+    )
+
+
+def decompose_query_text(
+    query_id: str,
+    question: str,
+    *,
+    model: str,
+    client: ResponsesClient | None = None,
+) -> QueryDecomposition:
+    """Generate subqueries from a bare ID and question, without gold-answer access."""
+
+    if not query_id.strip() or not question.strip():
+        raise ValueError("query ID and question must be non-empty")
     openai_client = client or OpenAI()
     response = openai_client.responses.create(
         model=model,
         instructions=QUERY_DECOMPOSITION_INSTRUCTIONS,
-        input=json.dumps({"question": case.question}, ensure_ascii=False),
+        input=json.dumps({"question": question}, ensure_ascii=False),
         text={
             "format": {
                 "type": "json_schema",
@@ -146,15 +171,15 @@ def decompose_question(
         raise ValueError("decomposition subqueries must not be empty")
     if len(set(subqueries)) != len(subqueries):
         raise ValueError("decomposition subqueries must be unique")
-    if case.question.strip() in subqueries:
+    if question.strip() in subqueries:
         raise ValueError("decomposition must not repeat the original question")
 
     response_id = getattr(response, "id", None)
     response_model = getattr(response, "model", None)
     usage = getattr(response, "usage", None)
     return QueryDecomposition(
-        case_id=case.case_id,
-        question_sha256=_question_sha256(case.question),
+        case_id=query_id,
+        question_sha256=_question_sha256(question),
         subqueries=subqueries,
         response_id=response_id if isinstance(response_id, str) else None,
         response_model=response_model if isinstance(response_model, str) else None,
