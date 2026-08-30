@@ -20,10 +20,16 @@ from typing import Literal
 import numpy as np
 from certifi import where as certifi_ca_bundle
 
-from llmqa.domain import Chunk
+from llmqa.domain import Chunk, SourceScopedQuery
 from llmqa.embeddings import EmbeddingProvider, FloatMatrix
 from llmqa.evaluation import RetrievalEvaluation, RetrievalJudgment, evaluate_rankings
-from llmqa.retrieval import BM25Retriever, DecomposedQueryRetriever, FaissRetriever, HybridRetriever
+from llmqa.retrieval import (
+    BM25Retriever,
+    DecomposedQueryRetriever,
+    FaissRetriever,
+    HybridRetriever,
+    SourceAwareBM25Retriever,
+)
 
 SCIFACT_NAME = "beir/scifact"
 SCIFACT_URL = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip"
@@ -38,13 +44,21 @@ SCIFACT_MANIFEST = "benchmark-manifest.json"
 
 type RetrieverName = Literal["bm25", "dense", "dense-mmr", "hybrid"]
 RETRIEVER_NAMES: tuple[RetrieverName, ...] = ("bm25", "dense", "dense-mmr", "hybrid")
-type ProjectRetrieverName = Literal["bm25", "dense", "dense-mmr", "hybrid", "bm25-decomposed-rrf"]
+type ProjectRetrieverName = Literal[
+    "bm25",
+    "dense",
+    "dense-mmr",
+    "hybrid",
+    "bm25-decomposed-rrf",
+    "bm25-source-aware",
+]
 PROJECT_RETRIEVER_NAMES: tuple[ProjectRetrieverName, ...] = (
     "bm25",
     "dense",
     "dense-mmr",
     "hybrid",
     "bm25-decomposed-rrf",
+    "bm25-source-aware",
 )
 
 
@@ -114,6 +128,7 @@ class RetrievalBenchmarkReport:
     dense_weight: float
     sparse_weight: float
     query_decomposition: dict[str, object] | None
+    source_plan: dict[str, object] | None
     embedding_model: str | None
     embedding_dimensions: int | None
     embedding_batch_size: int | None
@@ -453,6 +468,8 @@ def run_retrieval_benchmark(
     embedding_provider: EmbeddingProvider | None = None,
     query_decompositions: Mapping[str, Sequence[str]] | None = None,
     query_decomposition_provenance: Mapping[str, object] | None = None,
+    source_plans: Mapping[str, Sequence[SourceScopedQuery]] | None = None,
+    source_plan_provenance: Mapping[str, object] | None = None,
 ) -> RetrievalBenchmarkOutcome:
     """Run requested retrievers over one immutable corpus/query/qrels view."""
 
@@ -469,11 +486,15 @@ def run_retrieval_benchmark(
     if not 0 <= mmr_lambda <= 1:
         raise ValueError("mmr_lambda must be between 0 and 1")
     needs_dense = any(name in {"dense", "dense-mmr", "hybrid"} for name in requested)
-    needs_sparse = any(name in {"bm25", "hybrid", "bm25-decomposed-rrf"} for name in requested)
+    needs_sparse = any(
+        name in {"bm25", "hybrid", "bm25-decomposed-rrf", "bm25-source-aware"} for name in requested
+    )
     if needs_dense and embedding_provider is None:
         raise ValueError("dense benchmark modes require an embedding provider")
     if "bm25-decomposed-rrf" in requested and query_decompositions is None:
         raise ValueError("decomposed-query benchmark mode requires query decompositions")
+    if "bm25-source-aware" in requested and source_plans is None:
+        raise ValueError("source-aware benchmark mode requires source plans")
     if query_decompositions is not None:
         judgment_ids = {judgment.query_id for judgment in dataset.judgments}
         unknown_query_ids = set(query_decompositions) - judgment_ids
@@ -484,6 +505,19 @@ def run_retrieval_benchmark(
         for query_id, subqueries in query_decompositions.items():
             if not subqueries or any(not subquery.strip() for subquery in subqueries):
                 raise ValueError(f"query decomposition {query_id!r} must contain non-empty queries")
+    if source_plans is not None:
+        judgment_ids = {judgment.query_id for judgment in dataset.judgments}
+        unknown_query_ids = set(source_plans) - judgment_ids
+        if unknown_query_ids:
+            raise ValueError(f"source plans contain unknown query IDs: {sorted(unknown_query_ids)}")
+        corpus_source_ids = {chunk.source for chunk in dataset.chunks}
+        for query_id, steps in source_plans.items():
+            if not steps or any(
+                step.source_id not in corpus_source_ids or not step.query.strip() for step in steps
+            ):
+                raise ValueError(
+                    f"source plan {query_id!r} must contain valid source-scoped queries"
+                )
 
     build_seconds: dict[str, float] = {}
     sparse: BM25Retriever | None = None
@@ -519,6 +553,15 @@ def run_retrieval_benchmark(
         assert sparse is not None
         decomposed = DecomposedQueryRetriever(sparse, rank_constant=rrf_rank_constant)
 
+    source_aware: SourceAwareBM25Retriever | None = None
+    if "bm25-source-aware" in requested:
+        source_aware = SourceAwareBM25Retriever(
+            dataset.chunks,
+            k1=bm25_k1,
+            b=bm25_b,
+            rank_constant=rrf_rank_constant,
+        )
+
     all_rankings: dict[str, dict[str, tuple[str, ...]]] = {}
     summaries: list[BenchmarkRunSummary] = []
     for retriever_name in requested:
@@ -543,7 +586,7 @@ def run_retrieval_benchmark(
             elif retriever_name == "hybrid":
                 assert hybrid is not None
                 results = hybrid.search(judgment.query, k=k, fetch_k=fetch_k)
-            else:
+            elif retriever_name == "bm25-decomposed-rrf":
                 assert decomposed is not None and query_decompositions is not None
                 results = decomposed.search(
                     judgment.query,
@@ -551,6 +594,19 @@ def run_retrieval_benchmark(
                     k=k,
                     fetch_k=fetch_k,
                 )
+            else:
+                assert source_aware is not None and source_plans is not None
+                plan = source_plans.get(judgment.query_id)
+                if plan is None:
+                    assert sparse is not None
+                    results = sparse.search(judgment.query, k=k)
+                else:
+                    results = source_aware.search(
+                        judgment.query,
+                        steps=plan,
+                        k=k,
+                        fetch_k=fetch_k,
+                    )
             latencies_ms.append((time.perf_counter() - started) * 1000)
             rankings[judgment.query_id] = tuple(result.chunk.id for result in results)
 
@@ -593,6 +649,7 @@ def run_retrieval_benchmark(
             if query_decomposition_provenance is not None
             else None
         ),
+        source_plan=(dict(source_plan_provenance) if source_plan_provenance is not None else None),
         embedding_model=embedding_provider.model if embedding_provider is not None else None,
         embedding_dimensions=_provider_integer(embedding_provider, "dimensions"),
         embedding_batch_size=_provider_integer(embedding_provider, "batch_size"),

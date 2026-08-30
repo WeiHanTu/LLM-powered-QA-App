@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from llmqa.benchmark import BenchmarkProvenance, RetrievalBenchmarkDataset
-from llmqa.domain import Chunk, SearchResult
+from llmqa.domain import Chunk, SearchResult, SourceScopedQuery
 from llmqa.project_evaluation import (
     load_injection_fixtures,
     load_project_evaluation_cases,
@@ -21,7 +21,7 @@ from llmqa.project_generation_evaluation import (
     summarize_generation_run,
 )
 from llmqa.query_decomposition import load_query_decomposition_artifact
-from llmqa.retrieval import BM25Retriever
+from llmqa.retrieval import BM25Retriever, SourceAwareBM25Retriever
 
 ROOT = Path(__file__).parents[1]
 EVAL_DIR = ROOT / "evals" / "project" / "technical-papers-v1"
@@ -213,9 +213,13 @@ def test_generation_context_supports_pinned_decomposed_retrieval() -> None:
         EVAL_DIR,
     )
     corpus = [
-        Chunk("transformer", "Transformer base model has 8 attention heads.", "paper-a"),
-        Chunk("kimi", "Kimi K3 has 96 attention heads.", "paper-b"),
-        Chunk("distractor", "A recurrent baseline uses gated layers.", "paper-c"),
+        Chunk(
+            "transformer",
+            "Transformer base model has 8 attention heads.",
+            "attention-is-all-you-need",
+        ),
+        Chunk("kimi", "Kimi K3 has 96 attention heads.", "kimi-k3"),
+        Chunk("distractor", "A recurrent baseline uses gated layers.", "kimi-k3"),
     ]
 
     results = retrieve_generation_context(
@@ -242,6 +246,21 @@ def test_generation_context_supports_pinned_decomposed_retrieval() -> None:
             BM25Retriever(corpus),
             retriever_name="bm25-decomposed-rrf",
         )
+    source_results = retrieve_generation_context(
+        case,
+        BM25Retriever(corpus),
+        retriever_name="bm25-source-aware",
+        source_aware_retriever=SourceAwareBM25Retriever(corpus),
+        source_plan_mapping={
+            case.case_id: (
+                SourceScopedQuery("attention-is-all-you-need", "Transformer attention heads"),
+                SourceScopedQuery("kimi-k3", "Kimi K3 attention heads"),
+            )
+        },
+        k=2,
+        fetch_k=3,
+    )
+    assert {result.chunk.id for result in source_results} == {"transformer", "kimi"}
 
 
 def test_generation_run_supports_pinned_decomposed_retrieval_without_local_artifacts(
@@ -254,9 +273,13 @@ def test_generation_run_supports_pinned_decomposed_retrieval_without_local_artif
         if case.case_id == "tp-066"
     )
     corpus = (
-        Chunk("transformer", "Transformer base model has 8 attention heads.", "paper-a"),
-        Chunk("kimi", "Kimi K3 has 96 attention heads.", "paper-b"),
-        Chunk("distractor", "A recurrent baseline uses gated layers.", "paper-c"),
+        Chunk(
+            "transformer",
+            "Transformer base model has 8 attention heads.",
+            "attention-is-all-you-need",
+        ),
+        Chunk("kimi", "Kimi K3 has 96 attention heads.", "kimi-k3"),
+        Chunk("distractor", "A recurrent baseline uses gated layers.", "kimi-k3"),
     )
     dataset = RetrievalBenchmarkDataset(
         name="synthetic-project-evaluation",

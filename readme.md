@@ -14,6 +14,7 @@ chain.
 - Exact cosine retrieval with a local FAISS `IndexFlatIP`
 - In-memory Okapi BM25 lexical retrieval and reciprocal-rank fusion (RRF)
 - Opt-in, question-only OpenAI decomposition with per-subquery BM25 and RRF
+- Opt-in source-catalog planning with per-source BM25, page diversity, and balanced allocation
 - Maximal marginal relevance (MMR) to reduce redundant context
 - Per-result dense/BM25 ranks and scores instead of an opaque hybrid score
 - Source-labelled answers through the OpenAI Responses API
@@ -36,9 +37,13 @@ flowchart LR
     C --> E["OpenAI embeddings"]
     E --> F["FAISS cosine search"]
     C --> B["BM25 lexical search"]
+    C --> S["Source-scoped BM25"]
+    U["Question + public source catalog"] --> O["Optional OpenAI retrieval plan"]
+    O --> S
     F --> M["Dense + MMR baseline"]
     F --> R["Reciprocal-rank fusion"]
     B --> R
+    S --> P
     M --> P["Candidate evidence"]
     R --> P
     P --> Q{"Research fairness mode?"}
@@ -140,6 +145,33 @@ papers" subqueries also reproduce the lost-entity failure described by
 [ChainRAG](https://aclanthology.org/2025.acl-long.1089/). Only one fixed configuration and 15 cases
 were tested, and the generation runs were separate API calls scored by an automated same-model
 judge. See the [machine-readable experiment record](docs/benchmarks/technical-papers-v1-multihop-retrieval-2026-08-29.json).
+
+### Source-aware multi-hop follow-up
+
+The next candidate fixes the decomposition experiment's lost-entity failure. `gpt-5-mini` receives
+only the question plus the public source IDs and titles, then emits one to six schema-constrained
+`(source_id, query)` steps with API storage disabled. It never receives passages, answers, required
+claims, pages, or qrels. Local retrieval fuses BM25 rankings within each planned source, prioritizes
+distinct pages, and allocates the final top 10 round-robin across sources.
+
+![BM25 versus source-aware multi-hop retrieval and generation](docs/benchmarks/technical-papers-v1-multihop-source-aware-2026-08-29.svg)
+
+| 15-case multi-hop slice | BM25 | Source-aware BM25 |
+|---|---:|---:|
+| Full cited-locator coverage@10 | 5 / 15 | **6 / 15** |
+| Cited locators retrieved | 25 / 44 | **32 / 44** |
+| Page-qrel Recall@10 | **0.3148** | 0.2714 |
+| Required-claim task pass | 7 / 15 | **9 / 15** |
+| Citation syntax valid | 15 / 15 | 15 / 15 |
+
+The endpoints disagree, which is exactly why one metric is not enough. Page diversity increases
+distinct cited-locator hits but lowers chunk-level qrel recall because the qrels label every chunk
+on a cited page. Full coverage has two gains, one loss, and twelve ties (McNemar exact `p=1.0`).
+Automated task pass has four gains, two losses, and nine ties (`p=0.6875`). Both deltas are too small
+and unstable to justify a default switch; separate API generations and a same-model judge also
+confound the downstream comparison. BM25 remains the default, while source-aware retrieval advances
+to expanded validation. The frozen plans and full provenance are in the
+[machine-readable evidence record](docs/benchmarks/technical-papers-v1-multihop-source-aware-2026-08-29.json).
 
 ### Required-claim generation and prompt-injection baseline
 
@@ -270,6 +302,18 @@ uv run llmqa evaluate-project-generation \
   --retriever bm25-decomposed-rrf \
   --case-ids tp-061 tp-062 tp-063 tp-064 tp-065 tp-066 tp-067 tp-068 \
     tp-069 tp-070 tp-071 tp-072 tp-073 tp-074 tp-075
+
+# Sends only each question plus the public source IDs and titles.
+uv run llmqa generate-project-source-plans --model gpt-5-mini
+
+uv run llmqa benchmark-project-eval \
+  --retrievers bm25 bm25-source-aware -k 10 --fetch-k 40
+
+# Limited source-aware generation experiment; still not the application default.
+uv run llmqa evaluate-project-generation \
+  --retriever bm25-source-aware \
+  --case-ids tp-061 tp-062 tp-063 tp-064 tp-065 tp-066 tp-067 tp-068 \
+    tp-069 tp-070 tp-071 tp-072 tp-073 tp-074 tp-075
 ```
 
 ## Quick start
@@ -359,6 +403,9 @@ Core code lives in `src/llmqa/`; `app.py` is only the Streamlit adapter. The old
 - One question-only decomposition + RRF configuration increased full multi-hop locator coverage
   from 5/15 to 6/15 but reduced automated task pass from 7/15 to 6/15. It remains an opt-in
   experiment, not an evidence-backed default or a general claim about query decomposition.
+- One source-aware planning configuration increased distinct locator hits from 25/44 to 32/44 and
+  automated task pass from 7/15 to 9/15, but full coverage moved only from 5/15 to 6/15 and paired
+  tests were non-significant. It is an expanded-validation candidate, not the default.
 - Unanswerable outputs are scored against one exact sentinel. This reproducible contract does not
   measure semantic refusal quality and marks `tp-080` wrong despite its correct evidence-based refusal.
 - The second-family audit is failure- and attack-enriched rather than representative. Its 68.6%

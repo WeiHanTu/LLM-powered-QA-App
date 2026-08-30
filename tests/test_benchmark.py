@@ -20,6 +20,7 @@ from llmqa.benchmark import (
 )
 from llmqa.benchmark_reporting import write_public_benchmark_report
 from llmqa.cli import main
+from llmqa.domain import SourceScopedQuery
 from llmqa.project_benchmark_reporting import (
     build_project_benchmark_snapshot,
     write_project_benchmark_report,
@@ -216,6 +217,32 @@ def test_decomposed_benchmark_requires_queries_and_records_provenance(tmp_path: 
         "bm25-decomposed-rrf",
     ]
     assert outcome.report.query_decomposition == {"artifact_sha256": "a" * 64}
+    assert all(run.evaluation.mean_recall_at_k == 1 for run in outcome.report.runs)
+
+
+def test_source_aware_benchmark_requires_plans_and_records_provenance(tmp_path: Path) -> None:
+    dataset = load_scifact(_fetch_fixture(tmp_path))
+
+    with pytest.raises(ValueError, match="requires source plans"):
+        run_retrieval_benchmark(dataset, ["bm25-source-aware"], k=2, fetch_k=3)
+
+    outcome = run_retrieval_benchmark(
+        dataset,
+        ["bm25", "bm25-source-aware"],
+        k=2,
+        fetch_k=3,
+        source_plans={
+            "q1": (SourceScopedQuery("beir/scifact/a", "alpha apple evidence"),),
+            "q2": (SourceScopedQuery("beir/scifact/b", "beta banana evidence"),),
+        },
+        source_plan_provenance={"artifact_sha256": "b" * 64},
+    )
+
+    assert [run.retriever for run in outcome.report.runs] == [
+        "bm25",
+        "bm25-source-aware",
+    ]
+    assert outcome.report.source_plan == {"artifact_sha256": "b" * 64}
     assert all(run.evaluation.mean_recall_at_k == 1 for run in outcome.report.runs)
 
 
@@ -508,6 +535,7 @@ def test_multihop_report_selects_candidate_only_on_paired_locator_gain() -> None
         "configuration": {
             **generation_summary["configuration"],
             "retriever": "bm25-decomposed-rrf",
+            "query_decomposition": {"artifact_sha256": "a" * 64},
         },
     }
     add_generation_experiment(
@@ -541,4 +569,117 @@ def test_multihop_report_selects_candidate_only_on_paired_locator_gain() -> None
         candidate_summary_sha256="d" * 64,
         candidate_results_sha256="e" * 64,
     )
-    assert snapshot["selection"]["adopt_as_default"] is True
+    assert snapshot["selection"]["adopt_as_default"] is False
+    assert snapshot["selection"]["candidate_status"] == "advance to expanded validation"
+
+
+def test_multihop_report_advances_source_aware_candidate_without_changing_default() -> None:
+    cases = load_project_evaluation_cases(
+        Path(__file__).parents[1] / "evals" / "project" / "technical-papers-v1" / "cases.jsonl"
+    )
+    answerable = [case for case in cases if case.answerability == "answerable"]
+    multi_hop = [case for case in answerable if "multi_hop" in case.case_types]
+
+    def run(retriever: str, full_multi_hop: int) -> dict[str, object]:
+        rows = []
+        for case in answerable:
+            is_full = "multi_hop" not in case.case_types or case in multi_hop[:full_multi_hop]
+            locators = case.evidence if is_full else case.evidence[:1]
+            rows.append(
+                {
+                    "query_id": case.case_id,
+                    "recall_at_k": 1.0 if is_full else 0.5,
+                    "reciprocal_rank": 1.0,
+                    "ndcg_at_k": 1.0 if is_full else 0.5,
+                    "retrieved_ids": [locator.chunk_ids[0] for locator in locators],
+                }
+            )
+        return {
+            "retriever": retriever,
+            "evaluation": {
+                "mean_recall_at_k": 0.9,
+                "mean_reciprocal_rank": 1.0,
+                "mean_ndcg_at_k": 0.9,
+                "per_query": rows,
+            },
+            "retrieval_latency_ms_p50": 1.0,
+            "retrieval_latency_ms_p95": 2.0,
+        }
+
+    summary = {
+        "dataset": "technical-papers-v1",
+        "split": "reviewed-v1",
+        "corpus_count": 188,
+        "query_count": 100,
+        "limited_run": False,
+        "k": 10,
+        "fetch_k": 40,
+        "rrf_rank_constant": 60,
+        "source_plan": {
+            "artifact_sha256": "s" * 64,
+            "cases_sha256": "c" * 64,
+            "method": "source-catalog-openai-v1",
+            "question_and_source_catalog_only": True,
+            "plan_count": 15,
+        },
+        "runs": [run("bm25", 5), run("bm25-source-aware", 7)],
+    }
+    snapshot = build_multihop_retrieval_snapshot(
+        summary,
+        cases,
+        run_date="2026-08-29",
+        source_plan_sha256="s" * 64,
+        candidate_retriever="bm25-source-aware",
+    )
+    baseline_rows = [
+        {
+            "case_id": case.case_id,
+            "variant": "clean",
+            "task_pass": index < 7,
+            "citations_valid": True,
+        }
+        for index, case in enumerate(multi_hop)
+    ]
+    candidate_rows = [
+        {
+            "case_id": case.case_id,
+            "variant": "clean",
+            "task_pass": index < 9,
+            "citations_valid": True,
+        }
+        for index, case in enumerate(multi_hop)
+    ]
+    baseline_summary = {
+        "dataset": "technical-papers-v1",
+        "configuration": {
+            "retriever": "bm25",
+            "claim_contract_version": "required-claims-v1",
+        },
+        "provenance": {"cases_sha256": "c" * 64},
+    }
+    candidate_summary = {
+        **baseline_summary,
+        "configuration": {
+            **baseline_summary["configuration"],
+            "retriever": "bm25-source-aware",
+            "source_plan": {"artifact_sha256": "s" * 64},
+        },
+    }
+
+    add_generation_experiment(
+        snapshot,
+        baseline_summary,
+        baseline_rows,
+        candidate_summary,
+        candidate_rows,
+        baseline_summary_sha256="b" * 64,
+        baseline_results_sha256="c" * 64,
+        candidate_summary_sha256="d" * 64,
+        candidate_results_sha256="e" * 64,
+    )
+
+    assert snapshot["source_plan"]["artifact_sha256"] == "s" * 64
+    assert snapshot["selection"]["meets_numeric_generation_gate"] is True
+    assert snapshot["selection"]["adopt_as_default"] is False
+    assert snapshot["selection"]["candidate_status"] == "advance to expanded validation"
+    ET.fromstring(render_multihop_retrieval_svg(snapshot))

@@ -1,4 +1,4 @@
-"""Paired multi-hop locator-coverage evidence for decomposed-query retrieval."""
+"""Paired multi-hop locator-coverage evidence for planned retrieval candidates."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from llmqa.project_evaluation import ProjectEvaluationCase, load_project_evaluat
 
 BASELINE = "bm25"
 CANDIDATE = "bm25-decomposed-rrf"
+SOURCE_AWARE_CANDIDATE = "bm25-source-aware"
 
 
 def _mapping(value: object, *, label: str) -> Mapping[str, Any]:
@@ -75,7 +76,9 @@ def build_multihop_retrieval_snapshot(
     cases: Sequence[ProjectEvaluationCase],
     *,
     run_date: str,
-    decomposition_sha256: str,
+    decomposition_sha256: str | None = None,
+    source_plan_sha256: str | None = None,
+    candidate_retriever: str = CANDIDATE,
 ) -> dict[str, Any]:
     """Build the compact, paired selection record for one frozen configuration."""
 
@@ -98,16 +101,32 @@ def build_multihop_retrieval_snapshot(
         str(_mapping(run, label="run").get("retriever")): _mapping(run, label="run")
         for run in raw_runs
     }
-    if set(runs) != {BASELINE, CANDIDATE} or len(raw_runs) != 2:
-        raise ValueError("multi-hop comparison requires exactly BM25 and decomposed BM25 RRF")
-    decomposition = _mapping(summary.get("query_decomposition"), label="query_decomposition")
-    if (
-        decomposition.get("artifact_sha256") != decomposition_sha256
-        or decomposition.get("method") != "question-only-openai-v1"
-        or decomposition.get("question_only_input") is not True
-        or int(decomposition.get("query_count", 0)) != 15
-    ):
-        raise ValueError("query decomposition provenance does not match the report input")
+    if candidate_retriever not in {CANDIDATE, SOURCE_AWARE_CANDIDATE}:
+        raise ValueError("unsupported multi-hop candidate retriever")
+    if set(runs) != {BASELINE, candidate_retriever} or len(raw_runs) != 2:
+        raise ValueError("multi-hop comparison requires exactly BM25 and one planned candidate")
+    if candidate_retriever == CANDIDATE:
+        planning_key = "decomposition"
+        planning = _mapping(summary.get("query_decomposition"), label="query_decomposition")
+        if (
+            decomposition_sha256 is None
+            or planning.get("artifact_sha256") != decomposition_sha256
+            or planning.get("method") != "question-only-openai-v1"
+            or planning.get("question_only_input") is not True
+            or int(planning.get("query_count", 0)) != 15
+        ):
+            raise ValueError("query decomposition provenance does not match the report input")
+    else:
+        planning_key = "source_plan"
+        planning = _mapping(summary.get("source_plan"), label="source_plan")
+        if (
+            source_plan_sha256 is None
+            or planning.get("artifact_sha256") != source_plan_sha256
+            or planning.get("method") != "source-catalog-openai-v1"
+            or planning.get("question_and_source_catalog_only") is not True
+            or int(planning.get("plan_count", 0)) != 15
+        ):
+            raise ValueError("source-plan provenance does not match the report input")
 
     answerable_cases = tuple(case for case in cases if case.answerability == "answerable")
     multi_hop_cases = tuple(case for case in answerable_cases if "multi_hop" in case.case_types)
@@ -121,7 +140,7 @@ def build_multihop_retrieval_snapshot(
     case_outcomes: list[dict[str, Any]] = []
     for case in multi_hop_cases:
         baseline_hits = _locator_hits(case, rows_by_run[BASELINE][case.case_id])
-        candidate_hits = _locator_hits(case, rows_by_run[CANDIDATE][case.case_id])
+        candidate_hits = _locator_hits(case, rows_by_run[candidate_retriever][case.case_id])
         case_outcomes.append(
             {
                 "case_id": case.case_id,
@@ -134,7 +153,7 @@ def build_multihop_retrieval_snapshot(
         )
 
     public_runs: list[dict[str, Any]] = []
-    for name in (BASELINE, CANDIDATE):
+    for name in (BASELINE, candidate_retriever):
         run = runs[name]
         evaluation = _mapping(run.get("evaluation"), label="run evaluation")
         multi_rows = [rows_by_run[name][case.case_id] for case in multi_hop_cases]
@@ -180,7 +199,7 @@ def build_multihop_retrieval_snapshot(
                 "retrieval_latency_ms": {
                     "p50": float(run["retrieval_latency_ms_p50"]),
                     "p95": float(run["retrieval_latency_ms_p95"]),
-                    "scope": "local BM25 search; decomposition was precomputed",
+                    "scope": "local retrieval only; the OpenAI planning artifact was precomputed",
                 },
             }
         )
@@ -196,7 +215,7 @@ def build_multihop_retrieval_snapshot(
     baseline_full = int(public_runs[0]["multi_hop"]["full_locator_coverage"]["successes"])
     candidate_full = int(public_runs[1]["multi_hop"]["full_locator_coverage"]["successes"])
     selected = candidate_full > baseline_full and gains > losses
-    return {
+    snapshot = {
         "schema_version": 1,
         "evidence_status": "verified_offline_multihop_retrieval_comparison",
         "run_date": run_date,
@@ -211,14 +230,18 @@ def build_multihop_retrieval_snapshot(
         "configuration": {
             "k": 10,
             "candidate_fetch_k_per_query": int(summary["fetch_k"]),
-            "fusion": "weighted reciprocal-rank fusion",
+            "fusion": (
+                "weighted reciprocal-rank fusion"
+                if candidate_retriever == CANDIDATE
+                else "per-source RRF, page diversity, and round-robin source allocation"
+            ),
             "rrf_rank_constant": int(summary["rrf_rank_constant"]),
             "original_query_weight": 1.0,
             "subquery_weight": 1.0,
             "configuration_count_evaluated": 1,
             "primary_endpoint": "multi-hop full evidence-locator coverage at 10",
         },
-        "decomposition": dict(decomposition),
+        "candidate_retriever": candidate_retriever,
         "runs": public_runs,
         "paired_primary_endpoint": {
             "candidate_gains": gains,
@@ -232,7 +255,7 @@ def build_multihop_retrieval_snapshot(
                 "candidate full-locator count must increase and paired gains must exceed losses"
             ),
             "decision": (
-                "advance decomposed BM25 RRF to a generation experiment"
+                f"advance {candidate_retriever} to a generation experiment"
                 if selected
                 else "do not replace BM25; the candidate did not improve the paired endpoint"
             ),
@@ -258,14 +281,24 @@ def build_multihop_retrieval_snapshot(
             "The multi-hop slice has only 15 reviewed questions; McNemar power is low.",
             "The same fixed slice motivated and evaluates this one configuration, so the result "
             "is an internal paired benchmark rather than an external generalization claim.",
-            "Subqueries were generated once by an OpenAI model alias; the exact outputs and "
+            "Retrieval plans were generated once by an OpenAI model alias; the exact outputs and "
             "resolved model are pinned, but fresh generation may differ.",
-            "The question-only constraint prevents answer and evidence leakage, but questions "
-            "that say 'the two papers' can produce underspecified subqueries.",
-            "This run measures retrieval only; downstream answer quality and API decomposition "
+            "The planner input excludes answers, claims, passages, pages, and qrels; source-aware "
+            "plans additionally receive only the public source IDs and titles.",
+            "This run measures retrieval only; downstream answer quality and API planning "
             "latency are not included.",
         ],
     }
+    snapshot[planning_key] = dict(planning)
+    if candidate_retriever == SOURCE_AWARE_CANDIDATE:
+        limitations = list(_sequence(snapshot["limitations"], label="limitations"))
+        limitations.insert(
+            4,
+            "The frozen tp-069 and tp-070 plans add lexical hints not stated literally in their "
+            "questions; they remain unedited so the experiment includes planner overreach.",
+        )
+        snapshot["limitations"] = limitations
+    return snapshot
 
 
 def add_generation_experiment(
@@ -288,6 +321,11 @@ def add_generation_experiment(
     }
     if len(multi_hop_ids) != 15:
         raise ValueError("generation comparison requires the 15-case multi-hop slice")
+    candidate_retriever = str(snapshot.get("candidate_retriever", CANDIDATE))
+    planning = _mapping(
+        snapshot.get("source_plan", snapshot.get("decomposition")),
+        label="planning provenance",
+    )
 
     def validated_rows(
         summary: Mapping[str, Any],
@@ -302,10 +340,21 @@ def add_generation_experiment(
             configuration.get("retriever") != expected_retriever
             or configuration.get("claim_contract_version") != "required-claims-v1"
             or summary.get("dataset") != dataset.get("name")
-            or provenance.get("cases_sha256")
-            != _mapping(snapshot.get("decomposition"), label="decomposition").get("cases_sha256")
+            or provenance.get("cases_sha256") != planning.get("cases_sha256")
         ):
             raise ValueError("generation run does not match the retrieval comparison contract")
+        if expected_retriever == candidate_retriever:
+            planning_config = configuration.get(
+                "source_plan"
+                if candidate_retriever == SOURCE_AWARE_CANDIDATE
+                else "query_decomposition"
+            )
+            if not isinstance(planning_config, dict) or planning_config.get(
+                "artifact_sha256"
+            ) != planning.get("artifact_sha256"):
+                raise ValueError(
+                    "generation run does not use the retrieval report's planning artifact"
+                )
         clean_by_id: dict[str, Mapping[str, Any]] = {}
         for raw_row in rows:
             row = _mapping(raw_row, label="generation row")
@@ -320,7 +369,11 @@ def add_generation_experiment(
         return clean_by_id
 
     baseline = validated_rows(baseline_summary, baseline_rows, expected_retriever=BASELINE)
-    candidate = validated_rows(candidate_summary, candidate_rows, expected_retriever=CANDIDATE)
+    candidate = validated_rows(
+        candidate_summary,
+        candidate_rows,
+        expected_retriever=candidate_retriever,
+    )
     baseline_passes = sum(bool(row.get("task_pass")) for row in baseline.values())
     candidate_passes = sum(bool(row.get("task_pass")) for row in candidate.values())
     gains = sum(
@@ -331,7 +384,12 @@ def add_generation_experiment(
         bool(baseline[case_id].get("task_pass")) and not bool(candidate[case_id].get("task_pass"))
         for case_id in sorted(multi_hop_ids)
     )
-    adopt_as_default = candidate_passes > baseline_passes and gains > losses
+    task_pass_p = _exact_mcnemar_p(gains, losses)
+    meets_numeric_gate = candidate_passes > baseline_passes and gains > losses
+    adopt_as_default = meets_numeric_gate and task_pass_p <= 0.05
+    validation_label = (
+        "source-aware" if candidate_retriever == SOURCE_AWARE_CANDIDATE else candidate_retriever
+    )
     per_case = [
         {
             "case_id": case_id,
@@ -358,7 +416,7 @@ def add_generation_experiment(
             "results_sha256": baseline_results_sha256,
         },
         "candidate": {
-            "retriever": CANDIDATE,
+            "retriever": candidate_retriever,
             "task_pass": {
                 "successes": candidate_passes,
                 "total": 15,
@@ -375,7 +433,7 @@ def add_generation_experiment(
             "candidate_gains": gains,
             "candidate_losses": losses,
             "ties": 15 - gains - losses,
-            "mcnemar_exact_two_sided_p": _exact_mcnemar_p(gains, losses),
+            "mcnemar_exact_two_sided_p": task_pass_p,
         },
         "per_case": per_case,
         "limitations": [
@@ -389,20 +447,38 @@ def add_generation_experiment(
     selection.update(
         {
             "generation_experiment_completed": True,
+            "meets_numeric_generation_gate": meets_numeric_gate,
             "adopt_as_default": adopt_as_default,
+            "candidate_status": (
+                "advance to expanded validation"
+                if meets_numeric_gate and not adopt_as_default
+                else "completed"
+            ),
             "final_decision": (
-                "adopt decomposed BM25 RRF as the default retriever"
+                f"adopt {candidate_retriever} as the default retriever"
                 if adopt_as_default
-                else "retain BM25 as the default retriever"
+                else (
+                    f"retain BM25 as default; expand {validation_label} validation"
+                    if meets_numeric_gate
+                    else "retain BM25 as the default retriever"
+                )
             ),
             "final_reason": (
-                "decomposed retrieval changed automated multi-hop task pass from "
+                f"{candidate_retriever} changed automated multi-hop task pass from "
                 f"{baseline_passes}/15 to {candidate_passes}/15 with {gains} paired gains and "
-                f"{losses} paired losses"
+                f"{losses} paired losses (McNemar exact p={task_pass_p:.4f})"
             ),
         }
     )
     snapshot["selection"] = selection
+    snapshot["limitations"] = [
+        limitation
+        for limitation in _sequence(snapshot.get("limitations"), label="limitations")
+        if not str(limitation).startswith("This run measures retrieval only")
+    ] + [
+        "The downstream comparison uses separate API calls and automated same-model judgments; "
+        "the observed task-pass delta is not statistically stable or human adjudicated."
+    ]
     return snapshot
 
 
@@ -434,13 +510,14 @@ def render_multihop_retrieval_svg(snapshot: Mapping[str, Any]) -> str:
         str(_mapping(run, label="run")["retriever"]): _mapping(run, label="run")
         for run in _sequence(snapshot.get("runs"), label="runs")
     }
+    candidate_retriever = str(snapshot.get("candidate_retriever", CANDIDATE))
     baseline = _mapping(runs[BASELINE]["multi_hop"], label="baseline multi-hop")
-    candidate = _mapping(runs[CANDIDATE]["multi_hop"], label="candidate multi-hop")
+    candidate = _mapping(runs[candidate_retriever]["multi_hop"], label="candidate multi-hop")
     paired = _mapping(snapshot.get("paired_primary_endpoint"), label="paired endpoint")
     selection = _mapping(snapshot.get("selection"), label="selection")
     generation = snapshot.get("generation_experiment")
     footer = (
-        "Retrieval-only internal benchmark; decomposition latency and downstream answer quality "
+        "Retrieval-only internal benchmark; planning latency and downstream answer quality "
         "are not measured."
     )
     third_metric = ("Recall@10", float(baseline["Recall@10"]), float(candidate["Recall@10"]))
@@ -477,14 +554,14 @@ def render_multihop_retrieval_svg(snapshot: Mapping[str, Any]) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         'viewBox="0 0 1120 610" role="img" aria-labelledby="title desc">',
         '<title id="title">Multi-hop retrieval comparison</title>',
-        '<desc id="desc">BM25 compared with question decomposition and reciprocal-rank fusion '
+        '<desc id="desc">BM25 compared with a planned multi-hop retrieval candidate '
         "on fifteen reviewed multi-hop questions.</desc>",
         '<rect width="1120" height="610" rx="20" fill="#f8fafc"/>',
         _text(54, 56, "Multi-hop retrieval experiment", size=28, fill="#0f172a", weight=700),
         _text(
             54,
             86,
-            "15 reviewed cases · top 10 · one frozen decomposition + RRF configuration",
+            "15 reviewed cases · top 10 · one frozen planning configuration",
             size=15,
             fill="#475569",
         ),
@@ -498,7 +575,13 @@ def render_multihop_retrieval_svg(snapshot: Mapping[str, Any]) -> str:
                 f'<rect x="190" y="{y + 18}" width="{baseline_value * 760:.1f}" height="22" '
                 'rx="5" fill="#64748b"/>',
                 _text(970, y + 36, f"{baseline_value:.1%}", size=14, fill="#0f172a", weight=650),
-                _text(54, y + 70, "Decomposed + RRF", size=13, fill="#475569"),
+                _text(
+                    54,
+                    y + 70,
+                    ("Decomposed + RRF" if candidate_retriever == CANDIDATE else "Source-aware"),
+                    size=13,
+                    fill="#475569",
+                ),
                 f'<rect x="190" y="{y + 52}" width="{candidate_value * 760:.1f}" height="22" '
                 'rx="5" fill="#2563eb"/>',
                 _text(970, y + 70, f"{candidate_value:.1%}", size=14, fill="#0f172a", weight=650),
@@ -541,7 +624,7 @@ def render_multihop_retrieval_svg(snapshot: Mapping[str, Any]) -> str:
 def write_multihop_retrieval_report(
     summary_path: Path,
     evaluation_directory: Path,
-    decomposition_path: Path,
+    planning_path: Path,
     snapshot_path: Path,
     figure_path: Path,
     *,
@@ -550,6 +633,7 @@ def write_multihop_retrieval_report(
     baseline_generation_results_path: Path | None = None,
     candidate_generation_summary_path: Path | None = None,
     candidate_generation_results_path: Path | None = None,
+    candidate_retriever: str = CANDIDATE,
 ) -> dict[str, Any]:
     """Validate inputs and write compact public JSON/SVG evidence."""
 
@@ -560,7 +644,11 @@ def write_multihop_retrieval_report(
         summary,
         cases,
         run_date=run_date,
-        decomposition_sha256=_sha256(decomposition_path),
+        decomposition_sha256=(_sha256(planning_path) if candidate_retriever == CANDIDATE else None),
+        source_plan_sha256=(
+            _sha256(planning_path) if candidate_retriever == SOURCE_AWARE_CANDIDATE else None
+        ),
+        candidate_retriever=candidate_retriever,
     )
     generation_paths = (
         baseline_generation_summary_path,

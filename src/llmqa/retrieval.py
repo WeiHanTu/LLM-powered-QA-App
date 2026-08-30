@@ -7,14 +7,14 @@ import math
 import re
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import faiss
 import numpy as np
 from numpy.typing import NDArray
 
-from llmqa.domain import Chunk, SearchResult
+from llmqa.domain import Chunk, SearchResult, SourceScopedQuery
 from llmqa.embeddings import EmbeddingProvider, FloatMatrix
 
 TOKEN_PATTERN = re.compile(r"(?u)\b\w\w+\b")
@@ -443,3 +443,134 @@ class DecomposedQueryRetriever:
             rank_constant=self._rank_constant,
             weights=weights,
         )
+
+
+class SourceAwareBM25Retriever:
+    """Fuse queries within each planned source, then allocate results round-robin by source."""
+
+    def __init__(
+        self,
+        chunks: Sequence[Chunk],
+        *,
+        k1: float = 1.2,
+        b: float = 0.75,
+        rank_constant: int = 60,
+    ) -> None:
+        if rank_constant <= 0:
+            raise ValueError("rank_constant must be positive")
+        chunks_by_source: dict[str, list[Chunk]] = {}
+        for chunk in chunks:
+            chunks_by_source.setdefault(chunk.source, []).append(chunk)
+        if not chunks_by_source:
+            raise ValueError("cannot build a source-aware index without chunks")
+        self._global = BM25Retriever(chunks, k1=k1, b=b)
+        self._by_source = {
+            source_id: BM25Retriever(source_chunks, k1=k1, b=b)
+            for source_id, source_chunks in chunks_by_source.items()
+        }
+        self._rank_constant = rank_constant
+
+    @property
+    def size(self) -> int:
+        return self._global.size
+
+    @property
+    def source_ids(self) -> tuple[str, ...]:
+        return tuple(self._by_source)
+
+    @staticmethod
+    def _diversify_pages(results: Sequence[SearchResult]) -> list[SearchResult]:
+        unique_pages: list[SearchResult] = []
+        duplicate_pages: list[SearchResult] = []
+        seen: set[tuple[str, int | str]] = set()
+        for result in results:
+            locator: tuple[str, int | str] = (
+                result.chunk.source,
+                result.chunk.page if result.chunk.page is not None else result.chunk.id,
+            )
+            if locator in seen:
+                duplicate_pages.append(result)
+            else:
+                seen.add(locator)
+                unique_pages.append(result)
+        return unique_pages + duplicate_pages
+
+    def search(
+        self,
+        query: str,
+        *,
+        steps: Sequence[SourceScopedQuery],
+        k: int = 4,
+        fetch_k: int | None = None,
+    ) -> list[SearchResult]:
+        if not query.strip():
+            raise ValueError("query must not be empty")
+        if k <= 0:
+            raise ValueError("k must be positive")
+        if not steps:
+            raise ValueError("source-aware retrieval requires at least one plan step")
+        if len(set(steps)) != len(steps):
+            raise ValueError("source-aware plan steps must be unique")
+        if any(not step.query.strip() for step in steps):
+            raise ValueError("source-aware plan queries must not be empty")
+        unknown_sources = {step.source_id for step in steps} - set(self._by_source)
+        if unknown_sources:
+            raise ValueError(
+                f"source-aware plan references unknown sources: {sorted(unknown_sources)}"
+            )
+
+        source_order = tuple(dict.fromkeys(step.source_id for step in steps))
+        pool_size = min(max(fetch_k or max(k * 4, 20), k), self.size)
+        source_rankings: dict[str, list[SearchResult]] = {}
+        for source_id in source_order:
+            retriever = self._by_source[source_id]
+            source_pool_size = min(pool_size, retriever.size)
+            rankings = {
+                f"source:{source_id}:original": retriever.search(
+                    query,
+                    k=source_pool_size,
+                )
+            }
+            for index, step in enumerate(steps, start=1):
+                if step.source_id != source_id:
+                    continue
+                rankings[f"source:{source_id}:step-{index}"] = retriever.search(
+                    step.query,
+                    k=source_pool_size,
+                )
+            source_rankings[source_id] = self._diversify_pages(
+                reciprocal_rank_fusion(
+                    rankings,
+                    k=source_pool_size,
+                    rank_constant=self._rank_constant,
+                )
+            )
+
+        selected: list[SearchResult] = []
+        depth = 0
+        while len(selected) < min(k, self.size):
+            added = False
+            for source_id in source_order:
+                ranking = source_rankings[source_id]
+                if depth < len(ranking):
+                    selected.append(ranking[depth])
+                    added = True
+                    if len(selected) == min(k, self.size):
+                        break
+            if not added:
+                break
+            depth += 1
+
+        selected_ids = {result.chunk.id for result in selected}
+        if len(selected) < min(k, self.size):
+            for result in self._global.search(query, k=min(pool_size, self.size)):
+                if result.chunk.id in selected_ids:
+                    continue
+                selected.append(result)
+                selected_ids.add(result.chunk.id)
+                if len(selected) == min(k, self.size):
+                    break
+        return [
+            replace(result, rank=rank, original_rank=result.rank)
+            for rank, result in enumerate(selected, start=1)
+        ]

@@ -53,6 +53,11 @@ from llmqa.query_decomposition import (
     load_query_decomposition_artifact,
     query_decomposition_sha256,
 )
+from llmqa.source_planning import (
+    generate_source_plan_artifact,
+    load_source_plan_artifact,
+    source_plan_sha256,
+)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -229,6 +234,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
     )
+    project_benchmark.add_argument(
+        "--source-plans",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/source-plans.json"),
+    )
     project_benchmark.add_argument("-k", type=int, default=10)
     project_benchmark.add_argument("--fetch-k", type=int, default=40)
     project_benchmark.add_argument("--mmr-lambda", type=float, default=0.75)
@@ -257,9 +267,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     decompose_queries.add_argument("--model", default="gpt-5-mini")
 
+    source_plans = subparsers.add_parser(
+        "generate-project-source-plans",
+        help="generate question-and-source-catalog OpenAI plans for reviewed multi-hop cases",
+    )
+    source_plans.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    source_plans.add_argument(
+        "--output",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/source-plans.json"),
+    )
+    source_plans.add_argument("--model", default="gpt-5-mini")
+
     multihop_report = subparsers.add_parser(
         "report-project-multihop-retrieval",
-        help="publish paired locator-coverage evidence for decomposed BM25 RRF",
+        help="publish paired locator-coverage evidence for a planned multi-hop retriever",
     )
     multihop_report.add_argument("summary", type=Path)
     multihop_report.add_argument(
@@ -271,6 +297,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--query-decompositions",
         type=Path,
         default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
+    )
+    multihop_report.add_argument(
+        "--source-plans",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/source-plans.json"),
+    )
+    multihop_report.add_argument(
+        "--candidate-retriever",
+        choices=("bm25-decomposed-rrf", "bm25-source-aware"),
+        default="bm25-decomposed-rrf",
     )
     multihop_report.add_argument("--snapshot", type=Path, required=True)
     multihop_report.add_argument("--figure", type=Path, required=True)
@@ -333,13 +369,18 @@ def build_parser() -> argparse.ArgumentParser:
     generation_eval.add_argument("--bm25-b", type=float, default=0.75)
     generation_eval.add_argument(
         "--retriever",
-        choices=("bm25", "bm25-decomposed-rrf"),
+        choices=("bm25", "bm25-decomposed-rrf", "bm25-source-aware"),
         default="bm25",
     )
     generation_eval.add_argument(
         "--query-decompositions",
         type=Path,
         default=Path("evals/project/technical-papers-v1/query-decompositions.json"),
+    )
+    generation_eval.add_argument(
+        "--source-plans",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1/source-plans.json"),
     )
     generation_eval.add_argument("--fetch-k", type=int, default=40)
     generation_eval.add_argument("--rrf-rank-constant", type=int, default=60)
@@ -578,6 +619,27 @@ def main(argv: list[str] | None = None) -> int:
                 "question_only_input": artifact.question_only_input,
                 "query_count": artifact.query_count,
             }
+        source_plan_mapping = None
+        source_plan_provenance = None
+        if "bm25-source-aware" in project_retriever_names:
+            source_artifact, source_plan_mapping = load_source_plan_artifact(
+                args.source_plans,
+                args.eval_dir,
+            )
+            source_plan_provenance = {
+                "artifact_sha256": source_plan_sha256(args.source_plans),
+                "method": source_artifact.method,
+                "prompt_version": source_artifact.prompt_version,
+                "prompt_sha256": source_artifact.prompt_sha256,
+                "cases_sha256": source_artifact.cases_sha256,
+                "source_catalog_sha256": source_artifact.source_catalog_sha256,
+                "requested_model": source_artifact.requested_model,
+                "generated_at": source_artifact.generated_at,
+                "question_and_source_catalog_only": (
+                    source_artifact.question_and_source_catalog_only
+                ),
+                "plan_count": source_artifact.plan_count,
+            }
         outcome = run_retrieval_benchmark(
             dataset,
             project_retriever_names,
@@ -592,6 +654,8 @@ def main(argv: list[str] | None = None) -> int:
             embedding_provider=provider,
             query_decompositions=decomposition_mapping,
             query_decomposition_provenance=decomposition_provenance,
+            source_plans=source_plan_mapping,
+            source_plan_provenance=source_plan_provenance,
         )
         summary_path = write_benchmark_artifacts(outcome, args.output_dir)
         print(
@@ -643,11 +707,39 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "generate-project-source-plans":
+        require_openai_api_key()
+        source_plan_artifact = generate_source_plan_artifact(
+            args.eval_dir,
+            args.output,
+            model=args.model,
+        )
+        print(
+            json.dumps(
+                {
+                    "output": str(args.output),
+                    "method": source_plan_artifact.method,
+                    "requested_model": source_plan_artifact.requested_model,
+                    "plan_count": source_plan_artifact.plan_count,
+                    "question_and_source_catalog_only": (
+                        source_plan_artifact.question_and_source_catalog_only
+                    ),
+                },
+                indent=2,
+            )
+        )
+        return 0
+
     if args.command == "report-project-multihop-retrieval":
+        planning_path = (
+            args.source_plans
+            if args.candidate_retriever == "bm25-source-aware"
+            else args.query_decompositions
+        )
         snapshot = write_multihop_retrieval_report(
             args.summary,
             args.eval_dir,
-            args.query_decompositions,
+            planning_path,
             args.snapshot,
             args.figure,
             run_date=args.run_date,
@@ -655,6 +747,7 @@ def main(argv: list[str] | None = None) -> int:
             baseline_generation_results_path=args.baseline_generation_results,
             candidate_generation_summary_path=args.candidate_generation_summary,
             candidate_generation_results_path=args.candidate_generation_results,
+            candidate_retriever=args.candidate_retriever,
         )
         print(
             json.dumps(
@@ -726,6 +819,7 @@ def main(argv: list[str] | None = None) -> int:
             query_decomposition_path=(
                 args.query_decompositions if args.retriever == "bm25-decomposed-rrf" else None
             ),
+            source_plan_path=(args.source_plans if args.retriever == "bm25-source-aware" else None),
             fetch_k=args.fetch_k,
             rrf_rank_constant=args.rrf_rank_constant,
             case_ids=args.case_ids,

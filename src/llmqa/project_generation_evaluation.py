@@ -17,7 +17,7 @@ from typing import Any, Literal, cast
 import numpy as np
 from openai import OpenAI
 
-from llmqa.domain import Chunk, MetadataValue, SearchResult
+from llmqa.domain import Chunk, MetadataValue, SearchResult, SourceScopedQuery
 from llmqa.generation import (
     ABSTENTION,
     SYSTEM_INSTRUCTIONS,
@@ -40,13 +40,18 @@ from llmqa.query_decomposition import (
     load_query_decomposition_artifact,
     query_decomposition_sha256,
 )
-from llmqa.retrieval import BM25Retriever, DecomposedQueryRetriever
+from llmqa.retrieval import BM25Retriever, DecomposedQueryRetriever, SourceAwareBM25Retriever
+from llmqa.source_planning import load_source_plan_artifact, source_plan_sha256
 
 GENERATION_EVALUATION_VERSION = "project-generation-v4"
 JUDGE_PROMPT_VERSION = "generation-judge-required-claims-v2"
 INJECTION_PLACEMENT_VERSION = "post-retrieval-fixture-placement-v1"
 type GenerationVariant = Literal["clean", "injected"]
-type GenerationRetrieverName = Literal["bm25", "bm25-decomposed-rrf"]
+type GenerationRetrieverName = Literal[
+    "bm25",
+    "bm25-decomposed-rrf",
+    "bm25-source-aware",
+]
 
 JUDGE_INSTRUCTIONS = """
 You are auditing a RAG answer. Treat every quoted question, candidate response, passage, expected
@@ -244,6 +249,8 @@ def retrieve_generation_context(
     *,
     retriever_name: GenerationRetrieverName,
     decomposition_mapping: Mapping[str, Sequence[str]] | None = None,
+    source_aware_retriever: SourceAwareBM25Retriever | None = None,
+    source_plan_mapping: Mapping[str, Sequence[SourceScopedQuery]] | None = None,
     k: int = 10,
     fetch_k: int = 40,
     rrf_rank_constant: int = 60,
@@ -252,15 +259,27 @@ def retrieve_generation_context(
 
     if retriever_name == "bm25":
         return bm25_retriever.search(case.question, k=k)
-    if decomposition_mapping is None:
-        raise ValueError("decomposed retrieval requires a decomposition mapping")
-    decomposed_retriever = DecomposedQueryRetriever(
-        bm25_retriever,
-        rank_constant=rrf_rank_constant,
-    )
-    return decomposed_retriever.search(
+    if retriever_name == "bm25-decomposed-rrf":
+        if decomposition_mapping is None:
+            raise ValueError("decomposed retrieval requires a decomposition mapping")
+        decomposed_retriever = DecomposedQueryRetriever(
+            bm25_retriever,
+            rank_constant=rrf_rank_constant,
+        )
+        return decomposed_retriever.search(
+            case.question,
+            subqueries=decomposition_mapping.get(case.case_id, ()),
+            k=k,
+            fetch_k=fetch_k,
+        )
+    if source_aware_retriever is None or source_plan_mapping is None:
+        raise ValueError("source-aware retrieval requires a retriever and source-plan mapping")
+    plan = source_plan_mapping.get(case.case_id)
+    if plan is None:
+        return bm25_retriever.search(case.question, k=k)
+    return source_aware_retriever.search(
         case.question,
-        subqueries=decomposition_mapping.get(case.case_id, ()),
+        steps=plan,
         k=k,
         fetch_k=fetch_k,
     )
@@ -869,6 +888,7 @@ def run_project_generation_evaluation(
     bm25_b: float = 0.75,
     retriever_name: GenerationRetrieverName = "bm25",
     query_decomposition_path: Path | None = None,
+    source_plan_path: Path | None = None,
     fetch_k: int = 40,
     rrf_rank_constant: int = 60,
     case_ids: Sequence[str] | None = None,
@@ -921,6 +941,27 @@ def run_project_generation_evaluation(
             "question_only_input": artifact.question_only_input,
             "query_count": artifact.query_count,
         }
+    source_plan_mapping: dict[str, tuple[SourceScopedQuery, ...]] | None = None
+    source_plan_provenance: dict[str, object] | None = None
+    if retriever_name == "bm25-source-aware":
+        if source_plan_path is None:
+            raise ValueError("source-aware retrieval requires a source-plan artifact")
+        source_artifact, source_plan_mapping = load_source_plan_artifact(
+            source_plan_path,
+            evaluation_directory,
+        )
+        source_plan_provenance = {
+            "artifact_sha256": source_plan_sha256(source_plan_path),
+            "method": source_artifact.method,
+            "prompt_version": source_artifact.prompt_version,
+            "prompt_sha256": source_artifact.prompt_sha256,
+            "cases_sha256": source_artifact.cases_sha256,
+            "source_catalog_sha256": source_artifact.source_catalog_sha256,
+            "requested_model": source_artifact.requested_model,
+            "generated_at": source_artifact.generated_at,
+            "question_and_source_catalog_only": (source_artifact.question_and_source_catalog_only),
+            "plan_count": source_artifact.plan_count,
+        }
     selected_injection_cases = tuple(
         case for case in selected_cases if case.injection_fixture_id is not None
     )
@@ -931,11 +972,10 @@ def run_project_generation_evaluation(
         "k": k,
         "bm25_k1": bm25_k1,
         "bm25_b": bm25_b,
-        "fetch_k": fetch_k if retriever_name == "bm25-decomposed-rrf" else None,
-        "rrf_rank_constant": (
-            rrf_rank_constant if retriever_name == "bm25-decomposed-rrf" else None
-        ),
+        "fetch_k": fetch_k if retriever_name != "bm25" else None,
+        "rrf_rank_constant": (rrf_rank_constant if retriever_name != "bm25" else None),
         "query_decomposition": decomposition_provenance,
+        "source_plan": source_plan_provenance,
         "selected_case_ids": [case.case_id for case in selected_cases],
         "max_workers": max_workers,
         "candidate_prompt_sha256": hashlib.sha256(SYSTEM_INSTRUCTIONS.encode("utf-8")).hexdigest(),
@@ -985,6 +1025,16 @@ def run_project_generation_evaluation(
         raise ValueError(f"result artifact contains unexpected cases: {sorted(unexpected)}")
 
     bm25_retriever = BM25Retriever(dataset.chunks, k1=bm25_k1, b=bm25_b)
+    source_aware_retriever = (
+        SourceAwareBM25Retriever(
+            dataset.chunks,
+            k1=bm25_k1,
+            b=bm25_b,
+            rank_constant=rrf_rank_constant,
+        )
+        if retriever_name == "bm25-source-aware"
+        else None
+    )
     existing_keys = set(rows)
     shared_candidate_client = candidate_client or cast(ResponsesClient, OpenAI())
     shared_judge_client = judge_client or cast(ResponsesClient, OpenAI())
@@ -996,6 +1046,8 @@ def run_project_generation_evaluation(
             bm25_retriever,
             retriever_name=retriever_name,
             decomposition_mapping=decomposition_mapping,
+            source_aware_retriever=source_aware_retriever,
+            source_plan_mapping=source_plan_mapping,
             k=k,
             fetch_k=fetch_k,
             rrf_rank_constant=rrf_rank_constant,

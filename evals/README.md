@@ -87,6 +87,9 @@ uv run llmqa report-project-generation \
   --snapshot docs/benchmarks/technical-papers-v1-generation.json \
   --figure docs/benchmarks/technical-papers-v1-generation.svg \
   --run-date YYYY-MM-DD
+uv run llmqa generate-project-source-plans --model gpt-5-mini
+uv run llmqa benchmark-project-eval \
+  --retrievers bm25 bm25-source-aware -k 10 --fetch-k 40
 ```
 
 The manifest pins source revisions, SHA-256 checksums, licenses, design influences, coverage gates,
@@ -128,6 +131,12 @@ answerable cases—all multi-hop—lacked at least one cited locator in top-10 c
 full locator coverage, answerable task pass was 68/70; only five multi-hop cases had full coverage,
 so multi-hop generation quality remains unmeasured. Candidate answers were regenerated, so the
 change from the historical 63/80 run is not an isolated judge-contract effect.
+
+The source-aware follow-up freezes 15 OpenAI plans whose only inputs are each multi-hop question
+and the manifest's public source IDs/titles. Per-source RRF, page diversity, and round-robin source
+allocation moved distinct cited-locator hits from 25/44 to 32/44 and automated task pass from 7/15
+to 9/15, while chunk-level Recall@10 fell. The exact paired tests remain non-significant and the
+same-model judge is not human adjudication, so BM25 remains the default pending expanded validation.
 
 A pinned `gpt-4.1-2025-04-14` cross-judge then re-scored 35 existing variants across 30 selected
 case IDs without regenerating answers. Overall task-pass agreement with the primary `gpt-5-mini`

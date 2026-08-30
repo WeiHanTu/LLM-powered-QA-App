@@ -112,6 +112,8 @@ PDF/DOCX/TXT
     +-> Okapi BM25 lexical index
            -> dense + lexical reciprocal-rank fusion (optional)
 question -> optional question-only decomposition -> per-query BM25 -> reciprocal-rank fusion
+question + public source catalog -> optional source-scoped plan -> per-source BM25
+    -> page diversity -> round-robin source allocation
     -> candidate pool T
        -> direct top K
        -> optional research path: Fair Greedy reranking to K + NDKL before/after
@@ -226,6 +228,11 @@ Dataset governance requirements:
 - Support BM25 and weighted RRF without comparing uncalibrated raw score magnitudes.
 - Support opt-in, question-only decomposition with strict structured output, disabled response
   storage, pinned subqueries, and no gold answers, required claims, or evidence locators in input.
+- Support opt-in source-catalog planning whose strict output binds every lexical query to a declared
+  source ID. Planner input may contain only the question and public source IDs/titles; passages,
+  answers, claims, pages, and qrels are forbidden.
+- For source-aware retrieval, fuse queries within each source, prefer distinct source/page
+  locators, and allocate the final slate round-robin across planned sources before global fallback.
 - Preserve component ranks and scores for every fused result.
 - Persist index metadata as JSON and NumPy, never pickle.
 
@@ -329,6 +336,13 @@ release claim.
   configuration raised full multi-hop locator coverage from 5/15 to 6/15 but left total locator
   hits unchanged at 25/44. Its limited generation experiment reduced automated required-claim task
   pass from 7/15 to 6/15. BM25 remains the default; decomposition stays opt-in for further research.
+- **Implemented and advanced to expanded validation:** one frozen source-catalog planning
+  configuration resolved every cross-paper plan to explicit source IDs. Per-source RRF, page
+  diversity, and round-robin allocation raised cited-locator hits from 25/44 to 32/44 and full
+  locator coverage from 5/15 to 6/15. Automated required-claim task pass moved from 7/15 to 9/15,
+  with four paired gains and two losses (McNemar exact `p=0.6875`). BM25 remains the default because
+  the slice is small, the paired deltas are not statistically stable, chunk-level Recall@10 fell,
+  and separate API generations plus same-model judging confound the downstream comparison.
 - **Pending:** human review of the current required-claims run. Candidate and primary judge still
   use the same model alias, so the report remains an automated baseline rather than a final
   benchmark.
@@ -403,9 +417,14 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
 - Query decomposition artifacts must cover all 15 multi-hop cases, hash-match the reviewed
   questions and prompt contract, record the resolved provider model, and contain only non-empty,
   unique subqueries.
-- A decomposition candidate advances only after paired full-locator coverage improves; it replaces
-  the default only after downstream generation also improves. The current candidate failed the
-  second gate.
+- A decomposition candidate advances only after paired full-locator coverage improves. Replacing
+  the default additionally requires downstream improvement and a paired release threshold rather
+  than a raw count increase on 15 cases. The current decomposition candidate failed the generation
+  gate.
+- Source-plan artifacts must cover the same 15 cases, hash-match both reviewed questions and the
+  public source catalog, record the resolved provider model, and contain only unique, valid
+  source-scoped queries. The current source-aware candidate clears the numeric retrieval and
+  generation gates but requires expanded, independently judged validation before any default switch.
 
 ## 11. Public SciFact benchmark acceptance criteria
 

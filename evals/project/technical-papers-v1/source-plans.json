@@ -1,0 +1,315 @@
+{
+  "cases_sha256": "38993e0ef0b35a3abb7dd4a5f6e4546290c200d28a4b645cadb1e04ac5a48711",
+  "dataset": "technical-papers-v1",
+  "generated_at": "2026-08-30T00:34:26.541128+00:00",
+  "method": "source-catalog-openai-v1",
+  "plan_count": 15,
+  "prompt_sha256": "77d99c6de40be108abb3ff47fcd2188b653aff59c5febf576b3a3c702f31918d",
+  "prompt_version": "source-scoped-search-plan-v1",
+  "question_and_source_catalog_only": true,
+  "records": [
+    {
+      "case_id": "tp-061",
+      "input_tokens": 319,
+      "output_tokens": 1353,
+      "question_sha256": "4adcef37d33a0aa33ef48358f0a2fbc26b0b3ec839ef0b1d4b81aad2fda56f57",
+      "response_id": "resp_0758fc10068f37c0016a937a0d7f5087d09ca587f466093206",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "positional encoding sine and cosine functions of different frequencies",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "extrapolate to longer sequences generalization to longer sequence lengths",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "positional encoding positional embeddings rotary RoPE ALiBi",
+          "source_id": "kimi-k3"
+        },
+        {
+          "query": "extrapolation extrapolate longer context generalization to longer sequences",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1672
+    },
+    {
+      "case_id": "tp-062",
+      "input_tokens": 319,
+      "output_tokens": 895,
+      "question_sha256": "d1e643e16c38c9c1b128b39fa58c4f913e7abe81500fdba7274017ed1558d935",
+      "response_id": "resp_0ad8a19dbf28b4c9016a937a1f037c87d08b1eb2d4ff7883f1",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "Describe the Transformer's attention mechanism: scaled dot-product attention, multi-head attention, self-attention and encoder-decoder attention, and whether attention is applied densely across all input positions (the original attention layout).",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Describe Kimi K3's attention layout and architecture: any sparse/local/global attention patterns, tiling/chunking, global tokens or routing, changes to multi-head attention, and explicit statements of how it differs from the original Transformer's attention.",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1214
+    },
+    {
+      "case_id": "tp-063",
+      "input_tokens": 325,
+      "output_tokens": 813,
+      "question_sha256": "2bcb046416288d78fcf9c7cddaee4f20d8185376f93a919a3f707f139fe21578",
+      "response_id": "resp_0f339efd7e3f8a2f016a937a2a4bc487d0a56761bd2f8ea7ad",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "position-wise feed-forward networks two linear transformations ReLU d_ff 'position-wise' 'feed-forward' 'ReLU' 'd_ff'",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Kimi K3 'activation branches' cap capped 'activation cap' rationale 'feed-forward' 'activation' 'branch'",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1138
+    },
+    {
+      "case_id": "tp-064",
+      "input_tokens": 321,
+      "output_tokens": 418,
+      "question_sha256": "dcfeea7728c9c89a00984b06019781228ee62430eeae0aef86a811c61fc5bae1",
+      "response_id": "resp_0fccdb58c7be1120016a937a33ae3887d0a534935b6ce66fde",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "optimizer and learning-rate schedule used in Attention Is All You Need training details (optimizer name, hyperparameters, learning-rate warmup, decay or formula, number of warmup steps)",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "optimizer and learning-rate schedule used to train Kimi K3 (optimizer type, hyperparameters, initial learning rate, warmup strategy, decay schedule or milestones)",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 739
+    },
+    {
+      "case_id": "tp-065",
+      "input_tokens": 326,
+      "output_tokens": 643,
+      "question_sha256": "b9c0bb69fe14f9acd32134602f49b5ba21819530a95608d5596cca7cf05a56e3",
+      "response_id": "resp_04c352ace981ee51016a937a390cb887d09ef1daa5fb7831af",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "description of the long-sequence tradeoff for full self-attention, including its time and memory scaling (e.g., quadratic O(n^2)) and implications for maximum usable sequence length",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "how Kimi K3 changes or addresses the long-sequence tradeoff from full self-attention: attention mechanism modifications, effects on context length, computational and memory complexity, and any introduced tradeoffs",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 969
+    },
+    {
+      "case_id": "tp-066",
+      "input_tokens": 318,
+      "output_tokens": 348,
+      "question_sha256": "7fc449623f05a24ef5cdff08192611117df3907d0323834bac8c2b5d98bd73de",
+      "response_id": "resp_0d32154c90e621c7016a937a407af087d09e826c3bdf8a7ab0",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "Transformer base model number of attention heads (base configuration) \"Attention Is All You Need\"",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Kimi K3 number of attention heads",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 666
+    },
+    {
+      "case_id": "tp-067",
+      "input_tokens": 320,
+      "output_tokens": 489,
+      "question_sha256": "145b7ded8d713dd28170ddc8a553aa3177961ac2739368e6a2123bfb3e0922aa",
+      "response_id": "resp_0b6a210dad1a1144016a937a45019c87d08eca9f68ec6ab364",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "Reported number of parameters for the Transformer 'base' and 'big' models (parameter scales) as stated in Attention Is All You Need.",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Reported parameter scale or number of parameters for Kimi K3 as stated in Kimi K3: Open Frontier Intelligence.",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 809
+    },
+    {
+      "case_id": "tp-068",
+      "input_tokens": 320,
+      "output_tokens": 616,
+      "question_sha256": "94a8e12001e278c5657782330cdd8db288641f5819400da968f4eba0181eedb6",
+      "response_id": "resp_0652ffebfa5c9ed3016a937a4b0cc087d09585fa6cb0246b33",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "Transformer stack number of layers; how many layers in the original Transformer encoder and decoder; 'layers' 'encoder' 'decoder' 'stack'",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Kimi K3 backbone layer count; 'Kimi K3' 'backbone' 'layers' 'depth' 'stack'",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 936
+    },
+    {
+      "case_id": "tp-069",
+      "input_tokens": 319,
+      "output_tokens": 1125,
+      "question_sha256": "7c6ae80d91871f6de1babbebcf9bce462df22a7c730007bed293672c5f50055f",
+      "response_id": "resp_0c00e04810e13ef7016a937a536b6c87d0ae461a6a795712ba",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "modalities \"future work\" \"left for future work\" Transformer multimodal",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Kimi K3 modality multimodal \"unified\" \"modality\" \"adapter\" \"modality embedding\"",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1444
+    },
+    {
+      "case_id": "tp-070",
+      "input_tokens": 324,
+      "output_tokens": 676,
+      "question_sha256": "d9d414c3dfd18c09819308e79d6ac0b28c9c90409f80a0a7ab4f6378151ec923",
+      "response_id": "resp_0cd353a0556bfc87016a937a65599487d0915459bea00ad69f",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "future work handling longer sequences long-range dependencies proposed mechanism for long inputs 'Attention Is All You Need' 'future work' 'longer' 'memory' 'relative position'",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Kimi K3 long-input mechanism deployed 'long input' 'long-context' 'retriever' 'memory' 'attention' 'Kimi K3'",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1000
+    },
+    {
+      "case_id": "tp-071",
+      "input_tokens": 317,
+      "output_tokens": 620,
+      "question_sha256": "99dc7cfc133222d2b669412e4ada629a5734f818b29b5a0fa622aaad10a89479",
+      "response_id": "resp_096b39fb3ac1df45016a937a6da32487d0905f645ec5a7d002",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "description and equation of the residual connections ('Add & Norm') used between sublayers in 'Attention Is All You Need', including how residual addition and layer normalization are applied",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "description and equations for 'Attention Residuals' in 'Kimi K3: Open Frontier Intelligence', including how attention residuals are computed, whether they use additive, gated, or scaled residuals, and their stated purpose",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 937
+    },
+    {
+      "case_id": "tp-072",
+      "input_tokens": 323,
+      "output_tokens": 281,
+      "question_sha256": "122ebd51fe26a0f261af46d29b21494db673fb5f7e5b8cd295de788f77b0b718",
+      "response_id": "resp_06ddb8d43f48a852016a937a7516a887d0afdbae6ebcf7682c",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "What constrains the block size of Kimi K3's prefix cache, and what range is it forced into?",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 604
+    },
+    {
+      "case_id": "tp-073",
+      "input_tokens": 318,
+      "output_tokens": 867,
+      "question_sha256": "4280bcc99ac170d27c05b23fa2add39aae558e135dab9cbee62145b3372e33c9",
+      "response_id": "resp_00788332381c7486016a937a78df6c87d0b3c8c9fc1f5aeb96",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "What efficiency evidence does 'Attention Is All You Need' present? Include statements about parallelizability, training speed or wall-clock time, comparisons to recurrent models (LSTM/GRU), computational cost (FLOPs/operations), number of parameters or model size, inference speed/throughput, and experimental conditions (datasets, hardware, batch size, implementation) that would affect comparability.",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "What efficiency evidence does 'Kimi K3: Open Frontier Intelligence' present? Include any reported compute requirements, throughput or latency figures, model size, training or inference cost estimates, benchmarks or measured speedups, and the experimental conditions or metric definitions (hardware, datasets, measurement methodology) that would affect comparability with other papers.",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1185
+    },
+    {
+      "case_id": "tp-074",
+      "input_tokens": 321,
+      "output_tokens": 700,
+      "question_sha256": "e4c3023083e398bf7acd0c95fe68477adc07e73bfafac7505a87caa760fa6aef",
+      "response_id": "resp_0be6808461b2dfa1016a937a82772087d0b3ca4bec0673654f",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "decoder self-attention causality enforcement; causal/look-ahead mask preventing attention to future positions in the Transformer decoder",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "Kimi K3 chunkwise KDA causality enforcement; description of chunkwise KDA mechanism and how it prevents attending to future tokens",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 1021
+    },
+    {
+      "case_id": "tp-075",
+      "input_tokens": 315,
+      "output_tokens": 682,
+      "question_sha256": "883e8907107caf939d634fd81270011adee1adcb5b5a51a594e5ac4f9a224ffa",
+      "response_id": "resp_0798a7a891944f8f016a937a8a435487d0b89ff57d8de943a4",
+      "response_model": "gpt-5-mini-2025-08-07",
+      "steps": [
+        {
+          "query": "decoder output representation logits softmax linear layer how Transformer produces model outputs 'Attention Is All You Need' decoder outputs output probabilities",
+          "source_id": "attention-is-all-you-need"
+        },
+        {
+          "query": "description of model outputs at the architecture or interface level 'outputs' 'interface' 'API' 'responses' in Kimi K3: Open Frontier Intelligence",
+          "source_id": "kimi-k3"
+        }
+      ],
+      "total_tokens": 997
+    }
+  ],
+  "requested_model": "gpt-5-mini",
+  "schema_version": 1,
+  "source_catalog": [
+    {
+      "source_id": "attention-is-all-you-need",
+      "title": "Attention Is All You Need"
+    },
+    {
+      "source_id": "kimi-k3",
+      "title": "Kimi K3: Open Frontier Intelligence"
+    }
+  ],
+  "source_catalog_sha256": "07904b32c949ebdfbcf3512303839f6c0feae37fe98764129f4640d1db93d94c",
+  "split": "reviewed-v1"
+}

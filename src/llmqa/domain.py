@@ -34,3 +34,11 @@ class SearchResult:
     original_rank: int
     component_scores: dict[str, float] = field(default_factory=dict)
     component_ranks: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class SourceScopedQuery:
+    """One lexical evidence need constrained to a declared corpus source."""
+
+    source_id: str
+    query: str

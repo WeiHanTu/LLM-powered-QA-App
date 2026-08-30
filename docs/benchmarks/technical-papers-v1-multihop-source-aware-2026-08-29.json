@@ -1,0 +1,385 @@
+{
+  "candidate_retriever": "bm25-source-aware",
+  "configuration": {
+    "candidate_fetch_k_per_query": 40,
+    "configuration_count_evaluated": 1,
+    "fusion": "per-source RRF, page diversity, and round-robin source allocation",
+    "k": 10,
+    "original_query_weight": 1.0,
+    "primary_endpoint": "multi-hop full evidence-locator coverage at 10",
+    "rrf_rank_constant": 60,
+    "subquery_weight": 1.0
+  },
+  "dataset": {
+    "answerable_query_count": 80,
+    "corpus_count": 188,
+    "multi_hop_query_count": 15,
+    "name": "technical-papers-v1",
+    "query_count": 100,
+    "split": "reviewed-v1"
+  },
+  "evidence_status": "verified_offline_multihop_retrieval_comparison",
+  "generation_experiment": {
+    "baseline": {
+      "citation_validity": {
+        "successes": 15,
+        "total": 15
+      },
+      "results_sha256": "dbbaa5a98d9939258f684289beb56721141d749e57e383468121e745c833a63a",
+      "retriever": "bm25",
+      "summary_sha256": "c3bd14f4b84e23c463f69672aa438e2523e9b2f43d68343023678e9646a3da3e",
+      "task_pass": {
+        "rate": 0.4666666666666667,
+        "successes": 7,
+        "total": 15
+      }
+    },
+    "candidate": {
+      "citation_validity": {
+        "successes": 15,
+        "total": 15
+      },
+      "results_sha256": "a6e4773fea8df2ba169bad2686cb33335c02434b5b2e08919f8b8800c0273d3f",
+      "retriever": "bm25-source-aware",
+      "summary_sha256": "30c53b8bf98d9f4916589310115f626cfa969290a62b25074d090ceac3635107",
+      "task_pass": {
+        "rate": 0.6,
+        "successes": 9,
+        "total": 15
+      }
+    },
+    "limitations": [
+      "Both runs use automated gpt-5-mini judgments rather than human adjudication.",
+      "Candidate answers were generated in separate API runs, so model nondeterminism is confounded with the retrieval change.",
+      "The 15-case slice is too small to establish a statistically stable task-pass delta."
+    ],
+    "paired_task_pass": {
+      "candidate_gains": 4,
+      "candidate_losses": 2,
+      "mcnemar_exact_two_sided_p": 0.6875,
+      "ties": 9
+    },
+    "per_case": [
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": true,
+        "case_id": "tp-061"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-062"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": false,
+        "case_id": "tp-063"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": true,
+        "case_id": "tp-064"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": true,
+        "case_id": "tp-065"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-066"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": false,
+        "case_id": "tp-067"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-068"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-069"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": true,
+        "case_id": "tp-070"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-071"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-072"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-073"
+      },
+      {
+        "baseline_task_pass": true,
+        "candidate_task_pass": true,
+        "case_id": "tp-074"
+      },
+      {
+        "baseline_task_pass": false,
+        "candidate_task_pass": false,
+        "case_id": "tp-075"
+      }
+    ],
+    "scope": "15 clean multi-hop cases under required-claims-v1",
+    "status": "automated_model_judgment_not_human_adjudicated"
+  },
+  "limitations": [
+    "The multi-hop slice has only 15 reviewed questions; McNemar power is low.",
+    "The same fixed slice motivated and evaluates this one configuration, so the result is an internal paired benchmark rather than an external generalization claim.",
+    "Retrieval plans were generated once by an OpenAI model alias; the exact outputs and resolved model are pinned, but fresh generation may differ.",
+    "The planner input excludes answers, claims, passages, pages, and qrels; source-aware plans additionally receive only the public source IDs and titles.",
+    "The frozen tp-069 and tp-070 plans add lexical hints not stated literally in their questions; they remain unedited so the experiment includes planner overreach.",
+    "The downstream comparison uses separate API calls and automated same-model judgments; the observed task-pass delta is not statistically stable or human adjudicated."
+  ],
+  "paired_primary_endpoint": {
+    "candidate_gains": 2,
+    "candidate_losses": 1,
+    "mcnemar_exact_two_sided_p": 1.0,
+    "ties": 12
+  },
+  "per_case": [
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-061",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-062",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 3,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-063",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-064",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-065",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-066",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-067",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-068",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 3,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-069",
+      "evidence_locator_count": 3
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 3,
+      "case_id": "tp-070",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-071",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 1,
+      "case_id": "tp-072",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 0,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-073",
+      "evidence_locator_count": 4
+    },
+    {
+      "baseline_full_locator_coverage": true,
+      "baseline_locator_hits": 2,
+      "candidate_full_locator_coverage": true,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-074",
+      "evidence_locator_count": 2
+    },
+    {
+      "baseline_full_locator_coverage": false,
+      "baseline_locator_hits": 1,
+      "candidate_full_locator_coverage": false,
+      "candidate_locator_hits": 2,
+      "case_id": "tp-075",
+      "evidence_locator_count": 3
+    }
+  ],
+  "research_basis": [
+    {
+      "title": "Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions",
+      "url": "https://aclanthology.org/2023.acl-long.557/"
+    },
+    {
+      "title": "Question Decomposition for Retrieval-Augmented Generation",
+      "url": "https://arxiv.org/abs/2507.00355"
+    },
+    {
+      "title": "Mitigating Lost-in-Retrieval Problems in Retrieval Augmented Multi-Hop Question Answering",
+      "url": "https://aclanthology.org/2025.acl-long.1089/"
+    }
+  ],
+  "run_date": "2026-08-29",
+  "runs": [
+    {
+      "all_answerable": {
+        "MRR@10": 0.8160416666666667,
+        "NDCG@10": 0.5551494598469049,
+        "Recall@10": 0.5548595848595849,
+        "full_locator_coverage": {
+          "rate": 0.875,
+          "successes": 70,
+          "total": 80
+        }
+      },
+      "multi_hop": {
+        "MRR@10": 0.58,
+        "NDCG@10": 0.3290533027240952,
+        "Recall@10": 0.3148066748066748,
+        "full_locator_coverage": {
+          "rate": 0.3333333333333333,
+          "successes": 5,
+          "total": 15
+        },
+        "locator_hit_rate": {
+          "rate": 0.5681818181818182,
+          "successes": 25,
+          "total": 44
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.16025046352297068,
+        "p95": 0.26518155355006456,
+        "scope": "local retrieval only; the OpenAI planning artifact was precomputed"
+      },
+      "retriever": "bm25"
+    },
+    {
+      "all_answerable": {
+        "MRR@10": 0.8430555555555556,
+        "NDCG@10": 0.5549439470378066,
+        "Recall@10": 0.5467139804639805,
+        "full_locator_coverage": {
+          "rate": 0.8875,
+          "successes": 71,
+          "total": 80
+        }
+      },
+      "multi_hop": {
+        "MRR@10": 0.7240740740740741,
+        "NDCG@10": 0.3279572344089042,
+        "Recall@10": 0.27136345136345136,
+        "full_locator_coverage": {
+          "rate": 0.4,
+          "successes": 6,
+          "total": 15
+        },
+        "locator_hit_rate": {
+          "rate": 0.7272727272727273,
+          "successes": 32,
+          "total": 44
+        }
+      },
+      "retrieval_latency_ms": {
+        "p50": 0.1643954892642796,
+        "p95": 0.6319982436252757,
+        "scope": "local retrieval only; the OpenAI planning artifact was precomputed"
+      },
+      "retriever": "bm25-source-aware"
+    }
+  ],
+  "schema_version": 1,
+  "selection": {
+    "adopt_as_default": false,
+    "adopt_for_generation_experiment": true,
+    "candidate_status": "advance to expanded validation",
+    "decision": "advance bm25-source-aware to a generation experiment",
+    "final_decision": "retain BM25 as default; expand source-aware validation",
+    "final_reason": "bm25-source-aware changed automated multi-hop task pass from 7/15 to 9/15 with 4 paired gains and 2 paired losses (McNemar exact p=0.6875)",
+    "generation_experiment_completed": true,
+    "meets_numeric_generation_gate": true,
+    "rule": "candidate full-locator count must increase and paired gains must exceed losses"
+  },
+  "source_plan": {
+    "artifact_sha256": "23058db94f2ba04fe789f37143ee07db7f5848ea5aaef28bd300b951fb96e64b",
+    "cases_sha256": "38993e0ef0b35a3abb7dd4a5f6e4546290c200d28a4b645cadb1e04ac5a48711",
+    "generated_at": "2026-08-30T00:34:26.541128+00:00",
+    "method": "source-catalog-openai-v1",
+    "plan_count": 15,
+    "prompt_sha256": "77d99c6de40be108abb3ff47fcd2188b653aff59c5febf576b3a3c702f31918d",
+    "prompt_version": "source-scoped-search-plan-v1",
+    "question_and_source_catalog_only": true,
+    "requested_model": "gpt-5-mini",
+    "source_catalog_sha256": "07904b32c949ebdfbcf3512303839f6c0feae37fe98764129f4640d1db93d94c"
+  }
+}

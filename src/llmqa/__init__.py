@@ -1,7 +1,7 @@
 """Core package for the LLMQA retrieval and fairness evaluation system."""
 
 from llmqa.benchmark import fetch_scifact, load_scifact, run_retrieval_benchmark
-from llmqa.domain import Chunk, SearchResult
+from llmqa.domain import Chunk, SearchResult, SourceScopedQuery
 from llmqa.evaluation import RetrievalEvaluation, RetrievalJudgment, evaluate_rankings
 from llmqa.fairness import (
     CounterfactualOutcome,
@@ -11,7 +11,13 @@ from llmqa.fairness import (
     audit_exposure,
     fair_greedy_rerank,
 )
-from llmqa.retrieval import BM25Retriever, FaissRetriever, HybridRetriever, reciprocal_rank_fusion
+from llmqa.retrieval import (
+    BM25Retriever,
+    FaissRetriever,
+    HybridRetriever,
+    SourceAwareBM25Retriever,
+    reciprocal_rank_fusion,
+)
 
 __all__ = [
     "BM25Retriever",
@@ -24,6 +30,8 @@ __all__ = [
     "RetrievalEvaluation",
     "RetrievalJudgment",
     "SearchResult",
+    "SourceAwareBM25Retriever",
+    "SourceScopedQuery",
     "audit_counterfactual_outcomes",
     "audit_exposure",
     "evaluate_rankings",
