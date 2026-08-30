@@ -221,13 +221,44 @@ generation run followed. See the
 
 The full baseline exposes the actual remaining problem. Complete evidence coverage falls to
 `14/398` on four-hop inference and `10/265` on three-hop temporal questions. Static one-shot query
-decomposition and hard document caps are rejected; the next credible candidate needs iterative
-evidence-conditioned retrieval or a parent-document/graph mechanism that can return multiple
-fact-bearing children when necessary. These values use this project's chunker and exact
+decomposition and hard document caps are rejected. These values use this project's chunker and exact
 fact locators, so they are not directly comparable with numbers from the
 [COLM 2024 paper](https://openreview.net/forum?id=t4eB3zYWBK). The dataset is ODC-BY; raw data and
 per-query runs stay in ignored artifacts. Full provenance and failure slices are in the
 [machine-readable evidence record](docs/benchmarks/multihop-rag-external-validation-2026-08-29.json).
+
+### Parent-document expansion, rejected before it was built
+
+A third hypothesis was measured as an upper bound rather than implemented: expand every retrieved
+chunk to its neighbours in the same document, so a missed fact adjacent to a hit can be recovered.
+Because expansion enlarges the slate, the honest comparison is not against the `k=10` baseline but
+against reading the plain BM25 ranking down to the same number of chunks.
+
+| Full external set, 2,255 answerable | Expansion ceiling | Plain BM25, same slate | Slate size |
+|---|---:|---:|---:|
+| Expand by 1 chunk | 840 | **1,041** | 21.7 |
+| Expand by 2 chunks | 915 | **1,186** | 29.8 |
+| Expand by 3 chunks | 952 | **1,241** | 35.9 |
+| Expand by 5 chunks | 1,020 | **1,273** | 45.2 |
+
+Every window loses. The one-chunk window, which is both the cheapest and the only one whose control
+is not truncated by the `k=40` run, gives up 201 questions against the plain ranking at equal cost.
+The ceiling is generous by construction — it assumes expansion is free and that every reachable gold
+chunk is kept — so a real implementation would score no higher. The candidate was therefore rejected
+without freezing a confirmation cohort and without a single provider call. Provenance is in the
+[upper-bound evidence record](docs/benchmarks/multihop-rag-parent-expansion-2026-08-29.json).
+
+The same run exposes an untested lever. Complete evidence coverage is governed far more by how many
+chunks are retrieved than by any reranking rule tried so far:
+
+| BM25 slate size | 10 | 15 | 22 | 30 | 40 |
+|---|---:|---:|---:|---:|---:|
+| Complete evidence coverage | 718 | 908 | 1,071 | 1,218 | 1,358 |
+| Share of 2,255 answerable | 31.8% | 40.3% | 47.5% | 54.0% | 60.2% |
+
+This is descriptive retrieval evidence, not a new default. A larger slate costs generation tokens
+and carries lost-in-the-middle risk, so the slate size has to be chosen from an end-to-end
+measurement that reports answer quality, cost, and latency — not from this curve.
 
 ### Required-claim generation and prompt-injection baseline
 

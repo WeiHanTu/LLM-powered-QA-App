@@ -359,16 +359,30 @@ release claim.
   (`p=0.0625`); Recall@10 fell from 0.5986 to 0.4609. All 20 removed relevant hits were displaced by
   another chunk from the same document, and four cases structurally require multiple gold chunks
   from one document. No full-corpus, generation, or judge run followed the failed gate.
+- **Rejected before construction:** parent-document expansion was measured as an upper bound rather
+  than built. Expanding each of 10 BM25 seeds by one chunk either side could at best raise complete
+  evidence coverage from 718/2,255 to 840/2,255, but it enlarges the slate to 21.7 chunks. Reading
+  the plain BM25 ranking to that same slate size reaches 1,041/2,255, so the optimistic ceiling
+  loses by 201 queries at equal cost with no truncation caveat. Windows 2, 3, and 5 are dominated by
+  271, 289, and 253 with their controls understated by a `k=40` run. The candidate cannot win however
+  it is built, so no confirmation cohort was frozen and no generation or judge call was made. The
+  evidence record is `docs/benchmarks/multihop-rag-parent-expansion-2026-08-29.json`.
 - **Pending:** human review of the current required-claims run. Candidate and primary judge still
   use the same model alias, so the report remains an automated baseline rather than a final
   benchmark.
 - **Conditional:** add a cross-encoder reranker only if NDCG improves enough to justify latency and
   cost.
-- **Next candidate:** evidence-conditioned iterative retrieval or graph/parent-document expansion
-  with evidence-aware child retention. Freeze another untouched confirmation cohort before
-  evaluation; do not tune against its gold answers or evidence locators, and do not run generation
-  unless retrieval clears the paired gate.
-- **Pending:** select chunk size/overlap from the evaluation, not intuition.
+- **Next candidate:** the retrieved-slate size `k` itself, measured end to end. On the full external
+  set, complete evidence coverage runs 31.8% at `k=10`, 47.5% at `k=22`, and 60.2% at `k=40`. That is
+  the largest retrieval effect observed on this benchmark and it has never been evaluated, while
+  three candidates and two frozen cohorts were spent contesting one or two queries on 49-case
+  slices. Retrieval coverage is not answer quality: a larger slate costs generation tokens and
+  carries lost-in-the-middle risk, so `k` must be selected from a generation-layer measurement with
+  cost and latency reported, not from the retrieval curve alone.
+- **Deferred:** evidence-conditioned iterative retrieval. Freeze another untouched confirmation
+  cohort before evaluation; do not tune against its gold answers or evidence locators, and do not run
+  generation unless retrieval clears the paired gate.
+- **Pending:** select chunk size/overlap, and the slate size `k`, from the evaluation, not intuition.
 
 Exit gate: select the evidence-backed default and document utility, latency, and cost. Replacing BM25
 requires a meaningful paired improvement; this comparison does not establish one. The automated
@@ -481,6 +495,13 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
   full-corpus or generation evaluation.
 - Generation and cross-family judging run only after a candidate improves the paired complete-
   evidence endpoint without material regression in Recall@10, MRR, or NDCG@10.
+- A candidate that enlarges the retrieved slate must clear a budget-matched control: the plain
+  baseline ranking truncated to the same slate size, on the same cases. Reporting a raw coverage
+  gain against a smaller baseline slate is not evidence, because reading further down the baseline
+  ranking is the cheaper way to buy the same gain. The control run must be at least as deep as the
+  widest slate compared, and any truncation must be reported as understating the control.
+- A candidate whose measured upper bound loses to that control is rejected without construction. No
+  confirmation cohort is frozen and no provider call is made for a candidate that cannot win.
 - CI uses local schema fixtures and never downloads MultiHop-RAG or calls OpenAI.
 
 ## 13. Open decisions requiring domain input

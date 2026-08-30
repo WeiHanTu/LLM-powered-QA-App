@@ -29,6 +29,11 @@ from llmqa.fairness import (
     audit_exposure,
     fair_greedy_rerank,
 )
+from llmqa.multihop_expansion_diagnostic import (
+    diagnose_parent_expansion,
+    load_retrieval_run,
+    retrieval_run_sha256,
+)
 from llmqa.multihop_rag import (
     fetch_multihop_rag,
     load_multihop_rag,
@@ -261,6 +266,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     multihop_decompose.add_argument("--sample-per-stratum", type=int, default=7)
     multihop_decompose.add_argument("--model", default="gpt-5-mini")
+
+    expansion_diagnostic = subparsers.add_parser(
+        "diagnose-multihop-expansion",
+        help="measure the parent-document expansion ceiling before building the candidate",
+    )
+    expansion_diagnostic.add_argument(
+        "--dataset-dir", type=Path, default=Path("artifacts/benchmarks/multihop-rag")
+    )
+    expansion_diagnostic.add_argument("--baseline-run", type=Path, required=True)
+    expansion_diagnostic.add_argument("--output", type=Path, required=True)
+    expansion_diagnostic.add_argument("--sample-per-stratum", type=int, default=None)
+    expansion_diagnostic.add_argument("--stratum-offset", type=int, default=0)
+    expansion_diagnostic.add_argument("-k", type=int, default=10)
+    expansion_diagnostic.add_argument("--windows", nargs="+", type=int, default=[1, 2, 3])
 
     multihop_benchmark = subparsers.add_parser(
         "benchmark-multihop-rag",
@@ -782,6 +801,29 @@ def main(argv: list[str] | None = None) -> int:
                 indent=2,
             )
         )
+        return 0
+
+    if args.command == "diagnose-multihop-expansion":
+        expansion_bundle = load_multihop_rag(
+            args.dataset_dir,
+            sample_per_stratum=args.sample_per_stratum,
+            stratum_offset=args.stratum_offset,
+        )
+        diagnostic = diagnose_parent_expansion(
+            expansion_bundle.dataset.chunks,
+            expansion_bundle.cases,
+            load_retrieval_run(args.baseline_run),
+            k=args.k,
+            windows=args.windows,
+        )
+        record = diagnostic.as_record()
+        record["baseline_run_sha256"] = retrieval_run_sha256(args.baseline_run)
+        record["selection_sha256"] = expansion_bundle.selection_sha256
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        print(json.dumps(record, indent=2, sort_keys=True))
         return 0
 
     if args.command == "benchmark-multihop-rag":
