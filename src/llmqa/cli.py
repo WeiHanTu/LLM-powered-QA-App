@@ -70,6 +70,7 @@ from llmqa.project_generation_evaluation import (
 )
 from llmqa.project_generation_reporting import write_project_generation_report
 from llmqa.project_multihop_reporting import write_multihop_retrieval_report
+from llmqa.project_slate_reporting import write_slate_size_report
 from llmqa.query_decomposition import (
     generate_query_decomposition_artifact,
     load_query_decomposition_artifact,
@@ -583,6 +584,25 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="human-approved AI-assisted review bound to this run by ID and artifact hashes",
     )
+
+    slate_report = subparsers.add_parser(
+        "report-project-slate-size",
+        help="publish the preregistered k=10 vs k=40 probe after run-bound owner review",
+    )
+    slate_report.add_argument("preregistration", type=Path)
+    slate_report.add_argument("baseline_summary", type=Path)
+    slate_report.add_argument("baseline_results", type=Path)
+    slate_report.add_argument("candidate_summary", type=Path)
+    slate_report.add_argument("candidate_results", type=Path)
+    slate_report.add_argument("review", type=Path)
+    slate_report.add_argument(
+        "--eval-dir",
+        type=Path,
+        default=Path("evals/project/technical-papers-v1"),
+    )
+    slate_report.add_argument("--snapshot", type=Path, required=True)
+    slate_report.add_argument("--figure", type=Path, required=True)
+    slate_report.add_argument("--run-date", required=True)
 
     cross_judge = subparsers.add_parser(
         "cross-judge-project-generation",
@@ -1279,6 +1299,32 @@ def main(argv: list[str] | None = None) -> int:
                     "snapshot_path": str(args.snapshot),
                     "figure_path": str(args.figure),
                     "status": generation_snapshot["status"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "report-project-slate-size":
+        slate_snapshot = write_slate_size_report(
+            args.preregistration,
+            args.baseline_summary,
+            args.baseline_results,
+            args.candidate_summary,
+            args.candidate_results,
+            args.eval_dir,
+            args.review,
+            args.snapshot,
+            args.figure,
+            run_date=args.run_date,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot_path": str(args.snapshot),
+                    "figure_path": str(args.figure),
+                    "status": slate_snapshot["status"],
+                    "advance_gate": slate_snapshot["advance_gate"],
                 },
                 indent=2,
             )
