@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from llmqa.benchmark import BenchmarkProvenance, RetrievalBenchmarkDataset
 from llmqa.domain import Chunk, SearchResult
 from llmqa.project_evaluation import (
     load_injection_fixtures,
@@ -15,9 +16,12 @@ from llmqa.project_generation_evaluation import (
     evaluate_case_variant,
     inject_fixture,
     judge_generation,
+    retrieve_generation_context,
     run_project_generation_evaluation,
     summarize_generation_run,
 )
+from llmqa.query_decomposition import load_query_decomposition_artifact
+from llmqa.retrieval import BM25Retriever
 
 ROOT = Path(__file__).parents[1]
 EVAL_DIR = ROOT / "evals" / "project" / "technical-papers-v1"
@@ -198,28 +202,94 @@ def test_judge_rejects_an_invalid_required_claim_partition() -> None:
         )
 
 
-def test_generation_run_supports_pinned_decomposed_retrieval(tmp_path: Path) -> None:
+def test_generation_context_supports_pinned_decomposed_retrieval() -> None:
     case = next(
         case
         for case in load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
         if case.case_id == "tp-066"
     )
-    candidate_client = FakeClient(
-        "The Transformer base model uses 8 heads, while Kimi K3 reports 96 heads [S1][S2]."
+    _, decomposition_mapping = load_query_decomposition_artifact(
+        EVAL_DIR / "query-decompositions.json",
+        EVAL_DIR,
     )
-    judge_client = FakeClient(successful_judgment(*case.required_claims))
+    corpus = [
+        Chunk("transformer", "Transformer base model has 8 attention heads.", "paper-a"),
+        Chunk("kimi", "Kimi K3 has 96 attention heads.", "paper-b"),
+        Chunk("distractor", "A recurrent baseline uses gated layers.", "paper-c"),
+    ]
+
+    results = retrieve_generation_context(
+        case,
+        BM25Retriever(corpus),
+        retriever_name="bm25-decomposed-rrf",
+        decomposition_mapping=decomposition_mapping,
+        k=2,
+        fetch_k=3,
+    )
+
+    assert {result.chunk.id for result in results} == {"transformer", "kimi"}
+    assert any("subquery-1" in result.component_ranks for result in results)
+    assert any("subquery-2" in result.component_ranks for result in results)
+    assert retrieve_generation_context(
+        case,
+        BM25Retriever(corpus),
+        retriever_name="bm25",
+        k=1,
+    )
+    with pytest.raises(ValueError, match="decomposition mapping"):
+        retrieve_generation_context(
+            case,
+            BM25Retriever(corpus),
+            retriever_name="bm25-decomposed-rrf",
+        )
+
+
+def test_generation_run_supports_pinned_decomposed_retrieval_without_local_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = next(
+        case
+        for case in load_project_evaluation_cases(EVAL_DIR / "cases.jsonl")
+        if case.case_id == "tp-066"
+    )
+    corpus = (
+        Chunk("transformer", "Transformer base model has 8 attention heads.", "paper-a"),
+        Chunk("kimi", "Kimi K3 has 96 attention heads.", "paper-b"),
+        Chunk("distractor", "A recurrent baseline uses gated layers.", "paper-c"),
+    )
+    dataset = RetrievalBenchmarkDataset(
+        name="synthetic-project-evaluation",
+        split="test",
+        chunks=corpus,
+        judgments=(),
+        total_query_count=1,
+        provenance=BenchmarkProvenance(
+            source_url=None,
+            archive_md5=None,
+            license="synthetic test data",
+            citation="test fixture",
+            details={"raw_chunks_sha256": "synthetic"},
+        ),
+    )
+    monkeypatch.setattr(
+        "llmqa.project_generation_evaluation.load_project_retrieval_benchmark",
+        lambda _evaluation_directory, _raw_chunks_path: dataset,
+    )
 
     summary_path = run_project_generation_evaluation(
         EVAL_DIR,
-        ROOT / "artifacts" / "evals" / "technical-papers-v1" / "chunks.jsonl",
+        tmp_path / "unused-chunks.jsonl",
         tmp_path / "generation",
         candidate_model="candidate-test",
         judge_model="judge-test",
         retriever_name="bm25-decomposed-rrf",
         query_decomposition_path=EVAL_DIR / "query-decompositions.json",
         case_ids=[case.case_id],
-        candidate_client=candidate_client,
-        judge_client=judge_client,
+        candidate_client=FakeClient(
+            "The Transformer base model uses 8 heads, while Kimi K3 reports 96 heads [S1][S2]."
+        ),
+        judge_client=FakeClient(successful_judgment(*case.required_claims)),
     )
 
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
@@ -229,6 +299,57 @@ def test_generation_run_supports_pinned_decomposed_retrieval(tmp_path: Path) -> 
     assert summary["counts"]["clean_cases"] == 1
     assert manifest["configuration"]["retriever"] == "bm25-decomposed-rrf"
     assert manifest["configuration"]["query_decomposition"]["question_only_input"] is True
+    assert (
+        run_project_generation_evaluation(
+            EVAL_DIR,
+            tmp_path / "unused-chunks.jsonl",
+            tmp_path / "generation",
+            candidate_model="candidate-test",
+            judge_model="judge-test",
+            retriever_name="bm25-decomposed-rrf",
+            query_decomposition_path=EVAL_DIR / "query-decompositions.json",
+            case_ids=[case.case_id],
+            candidate_client=FakeClient("unused"),
+            judge_client=FakeClient("unused"),
+        )
+        == summary_path
+    )
+    with pytest.raises(ValueError, match="unknown project case IDs"):
+        run_project_generation_evaluation(
+            EVAL_DIR,
+            tmp_path / "unused-chunks.jsonl",
+            tmp_path / "unknown-case",
+            candidate_model="candidate-test",
+            judge_model="judge-test",
+            case_ids=["tp-missing"],
+            candidate_client=FakeClient("unused"),
+            judge_client=FakeClient("unused"),
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"k": 0}, "k must be positive"),
+        ({"k": 2, "fetch_k": 1}, "fetch_k must be at least k"),
+        ({"rrf_rank_constant": 0}, "rrf_rank_constant must be positive"),
+        ({"max_workers": 17}, "max_workers must be between 1 and 16"),
+    ],
+)
+def test_generation_run_rejects_invalid_control_parameters(
+    tmp_path: Path,
+    overrides: dict[str, int],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        run_project_generation_evaluation(
+            EVAL_DIR,
+            tmp_path / "unused-chunks.jsonl",
+            tmp_path / "generation",
+            candidate_model="candidate-test",
+            judge_model="judge-test",
+            **overrides,
+        )
 
 
 def test_exact_canary_backstop_fails_otherwise_correct_injected_answer() -> None:

@@ -46,6 +46,7 @@ GENERATION_EVALUATION_VERSION = "project-generation-v4"
 JUDGE_PROMPT_VERSION = "generation-judge-required-claims-v2"
 INJECTION_PLACEMENT_VERSION = "post-retrieval-fixture-placement-v1"
 type GenerationVariant = Literal["clean", "injected"]
+type GenerationRetrieverName = Literal["bm25", "bm25-decomposed-rrf"]
 
 JUDGE_INSTRUCTIONS = """
 You are auditing a RAG answer. Treat every quoted question, candidate response, passage, expected
@@ -235,6 +236,34 @@ def _string_tuple(row: Mapping[str, Any], key: str) -> tuple[str, ...]:
 
 def _with_rank(results: Sequence[SearchResult]) -> tuple[SearchResult, ...]:
     return tuple(replace(result, rank=index) for index, result in enumerate(results, start=1))
+
+
+def retrieve_generation_context(
+    case: ProjectEvaluationCase,
+    bm25_retriever: BM25Retriever,
+    *,
+    retriever_name: GenerationRetrieverName,
+    decomposition_mapping: Mapping[str, Sequence[str]] | None = None,
+    k: int = 10,
+    fetch_k: int = 40,
+    rrf_rank_constant: int = 60,
+) -> list[SearchResult]:
+    """Retrieve one case through the same pinned strategy used by generation runs."""
+
+    if retriever_name == "bm25":
+        return bm25_retriever.search(case.question, k=k)
+    if decomposition_mapping is None:
+        raise ValueError("decomposed retrieval requires a decomposition mapping")
+    decomposed_retriever = DecomposedQueryRetriever(
+        bm25_retriever,
+        rank_constant=rrf_rank_constant,
+    )
+    return decomposed_retriever.search(
+        case.question,
+        subqueries=decomposition_mapping.get(case.case_id, ()),
+        k=k,
+        fetch_k=fetch_k,
+    )
 
 
 def inject_fixture(results: Sequence[SearchResult], fixture: InjectionFixture) -> InjectedContext:
@@ -838,7 +867,7 @@ def run_project_generation_evaluation(
     k: int = 10,
     bm25_k1: float = 1.2,
     bm25_b: float = 0.75,
-    retriever_name: Literal["bm25", "bm25-decomposed-rrf"] = "bm25",
+    retriever_name: GenerationRetrieverName = "bm25",
     query_decomposition_path: Path | None = None,
     fetch_k: int = 40,
     rrf_rank_constant: int = 60,
@@ -956,27 +985,21 @@ def run_project_generation_evaluation(
         raise ValueError(f"result artifact contains unexpected cases: {sorted(unexpected)}")
 
     bm25_retriever = BM25Retriever(dataset.chunks, k1=bm25_k1, b=bm25_b)
-    decomposed_retriever = (
-        DecomposedQueryRetriever(bm25_retriever, rank_constant=rrf_rank_constant)
-        if retriever_name == "bm25-decomposed-rrf"
-        else None
-    )
     existing_keys = set(rows)
     shared_candidate_client = candidate_client or cast(ResponsesClient, OpenAI())
     shared_judge_client = judge_client or cast(ResponsesClient, OpenAI())
 
     def evaluate_missing_variants(case: ProjectEvaluationCase) -> tuple[dict[str, Any], ...]:
         generated_rows: list[dict[str, Any]] = []
-        if decomposed_retriever is None:
-            clean_results = bm25_retriever.search(case.question, k=k)
-        else:
-            assert decomposition_mapping is not None
-            clean_results = decomposed_retriever.search(
-                case.question,
-                subqueries=decomposition_mapping.get(case.case_id, ()),
-                k=k,
-                fetch_k=fetch_k,
-            )
+        clean_results = retrieve_generation_context(
+            case,
+            bm25_retriever,
+            retriever_name=retriever_name,
+            decomposition_mapping=decomposition_mapping,
+            k=k,
+            fetch_k=fetch_k,
+            rrf_rank_constant=rrf_rank_constant,
+        )
         clean_key = (case.case_id, "clean")
         if clean_key not in existing_keys:
             clean_result = evaluate_case_variant(
