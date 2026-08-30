@@ -559,6 +559,12 @@ def build_parser() -> argparse.ArgumentParser:
     generation_report.add_argument("--run-date", required=True)
     generation_report.add_argument("--bootstrap-resamples", type=int, default=10_000)
     generation_report.add_argument("--bootstrap-seed", type=int, default=20_260_829)
+    generation_report.add_argument(
+        "--adjudication",
+        type=Path,
+        default=None,
+        help="direct human-review record bound to this run by ID and artifact hashes",
+    )
 
     cross_judge = subparsers.add_parser(
         "cross-judge-project-generation",
@@ -1206,7 +1212,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "report-project-generation":
-        write_project_generation_report(
+        generation_snapshot = write_project_generation_report(
             args.summary,
             args.case_results,
             args.eval_dir,
@@ -1215,13 +1221,14 @@ def main(argv: list[str] | None = None) -> int:
             run_date=args.run_date,
             bootstrap_resamples=args.bootstrap_resamples,
             bootstrap_seed=args.bootstrap_seed,
+            adjudication_path=args.adjudication,
         )
         print(
             json.dumps(
                 {
                     "snapshot_path": str(args.snapshot),
                     "figure_path": str(args.figure),
-                    "status": "automated_baseline_human_adjudication_pending",
+                    "status": generation_snapshot["status"],
                 },
                 indent=2,
             )

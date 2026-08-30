@@ -363,10 +363,16 @@ release claim.
   than built. Expanding each of 10 BM25 seeds by one chunk either side could at best raise complete
   evidence coverage from 718/2,255 to 840/2,255, but it enlarges the slate to 21.7 chunks. Reading
   the plain BM25 ranking to that same slate size reaches 1,041/2,255, so the optimistic ceiling
-  loses by 201 queries at equal cost with no truncation caveat. Windows 2, 3, and 5 are dominated by
-  271, 289, and 253 with their controls understated by a `k=40` run. The candidate cannot win however
-  it is built, so no confirmation cohort was frozen and no generation or judge call was made. The
-  evidence record is `docs/benchmarks/multihop-rag-parent-expansion-2026-08-29.json`.
+  loses by 201 queries at equal cost with no truncation caveat. Windows 2, 3, and 5 lose by 271, 289,
+  and 253 with their controls understated by a `k=40` run. The fixed unconditional candidate was
+  rejected, so no confirmation cohort was frozen and no generation or judge call was made. This is
+  aggregate rather than per-query dominance: 56 to 96 cases are expansion-only wins, so a separately
+  preregistered query-adaptive selector is not disproven. The evidence record is
+  `docs/benchmarks/multihop-rag-parent-expansion-2026-08-29.json`.
+- **Implemented review binding:** generation reporting accepts only schema-v2 direct human review
+  bound to the exact run ID, cases contract, claim contract, selected variant set, raw summary,
+  raw results, and adjudication artifact hash. Partial review cannot replace the automated headline;
+  only direct review of all 110 variants can publish `metrics_human_reviewed`.
 - **Pending:** human review of the current required-claims run. Candidate and primary judge still
   use the same model alias, so the report remains an automated baseline rather than a final
   benchmark.
@@ -500,8 +506,10 @@ Exit gate: load, recovery, observability, privacy, and cost SLOs pass in a stagi
   gain against a smaller baseline slate is not evidence, because reading further down the baseline
   ranking is the cheaper way to buy the same gain. The control run must be at least as deep as the
   widest slate compared, and any truncation must be reported as understating the control.
-- A candidate whose measured upper bound loses to that control is rejected without construction. No
-  confirmation cohort is frozen and no provider call is made for a candidate that cannot win.
+- A fixed candidate whose measured aggregate upper bound loses to that control is rejected without
+  construction. Paired candidate-only wins must still be reported; aggregate loss does not disprove
+  a future adaptive selector unless a valid selection signal and a new confirmation contract are
+  evaluated. No provider call is made for the rejected fixed candidate.
 - CI uses local schema fixtures and never downloads MultiHop-RAG or calls OpenAI.
 
 ## 13. Open decisions requiring domain input

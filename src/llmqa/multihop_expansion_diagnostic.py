@@ -27,7 +27,7 @@ from typing import Any
 from llmqa.domain import Chunk
 from llmqa.multihop_rag import MultiHopRAGCase
 
-DIAGNOSTIC_VERSION = "parent-expansion-ceiling-v2"
+DIAGNOSTIC_VERSION = "parent-expansion-ceiling-v3"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +43,11 @@ class WindowCeiling:
     budget_matched_full_coverage: int
     budget_matched_margin: int
     truncated_budget_queries: int
-    dominated_by_budget_matched_baseline: bool
+    expansion_only_wins: int
+    budget_only_wins: int
+    both_pass: int
+    neither_pass: int
+    aggregate_coverage_not_higher_than_budget_matched_baseline: bool
     recovered_query_ids: tuple[str, ...]
 
 
@@ -152,6 +156,10 @@ def diagnose_parent_expansion(
     per_window_slate: dict[int, int] = dict.fromkeys(windows, 0)
     per_window_budget_matched: dict[int, int] = dict.fromkeys(windows, 0)
     per_window_truncated: dict[int, int] = dict.fromkeys(windows, 0)
+    per_window_expansion_only: dict[int, int] = dict.fromkeys(windows, 0)
+    per_window_budget_only: dict[int, int] = dict.fromkeys(windows, 0)
+    per_window_both: dict[int, int] = dict.fromkeys(windows, 0)
+    per_window_neither: dict[int, int] = dict.fromkeys(windows, 0)
 
     for case in cases:
         retrieved_all = run.get(case.query_id)
@@ -177,6 +185,7 @@ def diagnose_parent_expansion(
             per_window_injected[window] += len(reachable - retrieved_set)
             recoverable = missed & reachable
             per_window_recoverable_facts[window] += len(recoverable)
+            expansion_pass = is_full or recoverable == missed
             if is_full:
                 per_window_ceiling[window] += 1
             elif recoverable == missed:
@@ -188,8 +197,17 @@ def diagnose_parent_expansion(
             per_window_slate[window] += slate_size
             if slate_size > len(ranking):
                 per_window_truncated[window] += 1
-            if gold <= set(ranking[:slate_size]):
+            budget_pass = gold <= set(ranking[:slate_size])
+            if budget_pass:
                 per_window_budget_matched[window] += 1
+            if expansion_pass and budget_pass:
+                per_window_both[window] += 1
+            elif expansion_pass:
+                per_window_expansion_only[window] += 1
+            elif budget_pass:
+                per_window_budget_only[window] += 1
+            else:
+                per_window_neither[window] += 1
 
     window_reports = tuple(
         WindowCeiling(
@@ -202,7 +220,11 @@ def diagnose_parent_expansion(
             budget_matched_full_coverage=per_window_budget_matched[window],
             budget_matched_margin=per_window_ceiling[window] - per_window_budget_matched[window],
             truncated_budget_queries=per_window_truncated[window],
-            dominated_by_budget_matched_baseline=(
+            expansion_only_wins=per_window_expansion_only[window],
+            budget_only_wins=per_window_budget_only[window],
+            both_pass=per_window_both[window],
+            neither_pass=per_window_neither[window],
+            aggregate_coverage_not_higher_than_budget_matched_baseline=(
                 per_window_ceiling[window] <= per_window_budget_matched[window]
             ),
             recovered_query_ids=tuple(sorted(per_window_recovered[window])),

@@ -1,7 +1,7 @@
 {
   "artifact_sha256": {
     "baseline_run": "228931339f1798b40236fa1ba7a88215b77ae8b5cfd717f7ca7554204d9743e7",
-    "diagnostic_record": "bf5284a709e7bfeed683d60af024b5b651882d095c5b5066524bc82df58646bd"
+    "diagnostic_record": "b74c5f722ad7683a5da1beb3e258d8f7f54f148b9dfd35630851f97da9bf0b78"
   },
   "bm25_full_coverage_by_slate_size": {
     "10": 718,
@@ -21,12 +21,12 @@
     "revision": "71ac0d0bd1f951d2d6b70311f7d2ae404e1ffa82"
   },
   "decision": {
-    "action": "reject candidate before construction and retain BM25",
+    "action": "reject fixed unconditional expansion before construction and retain BM25",
     "candidate_run": "not_built",
     "confirmation_cohort": "not_frozen",
     "cross_judge_run": "not_run",
     "generation_run": "not_run",
-    "reason": "At window 1 the optimistic expansion ceiling is 840/2255 on a 21.7-chunk slate, while plain BM25 read to the same 21.7 chunks reaches 1041/2255. Expansion loses by 201 queries at equal cost with no control truncation. Windows 2, 3 and 5 lose by 271, 289 and 253 with understated controls. No window can win, so the candidate was not built.",
+    "reason": "At window 1 the optimistic fixed-expansion ceiling is 840/2255 on a 21.7-chunk slate, while plain BM25 read to the same per-query slate size reaches 1041/2255. Expansion loses by 201 queries at equal cost with no control truncation. Windows 2, 3 and 5 lose by 271, 289 and 253 with understated controls. The fixed always-expand candidate was not built; paired expansion-only wins show that this result does not rule out a query-adaptive hybrid.",
     "retrieval_gate": "failed_upper_bound"
   },
   "limitations": [
@@ -34,14 +34,15 @@
     "The budget-matched control is truncated at k=40, so it understates BM25 for 217, 838 and 1293 queries at windows 2, 3 and 5. Window 1 has no truncated query.",
     "Complete evidence coverage is a retrieval endpoint. Larger slates cost generation tokens and carry lost-in-the-middle risk, which this record does not measure.",
     "Canonical qrels identify the first fact-bearing chunk, so reaching a different chunk of the correct document earns no partial credit.",
-    "The slate-size curve is descriptive evidence about candidate budget, not a validated default; k must be selected from a generation-layer measurement."
+    "The slate-size curve is descriptive evidence about candidate budget, not a validated default; k must be selected from a generation-layer measurement.",
+    "Aggregate budget-matched losses reject fixed unconditional expansion, but expansion-only wins on 56 to 96 queries show that a separately preregistered query-adaptive selector is not disproven."
   ],
   "method": {
     "answerable_queries": 2255,
     "baseline_full_coverage_at_k10": 718,
     "ceiling_is_optimistic": true,
     "description": "Compute the best attainable complete-evidence coverage of parent-document expansion directly from a baseline run, then compare it against the plain BM25 ranking truncated to the same slate size on the same queries.",
-    "diagnostic_version": "parent-expansion-ceiling-v2",
+    "diagnostic_version": "parent-expansion-ceiling-v3",
     "excluded_null_queries": 301,
     "missed_evidence_facts": 2580,
     "seed_k": 10,
@@ -55,7 +56,11 @@
       "budget_matched_bm25_full_coverage": 1041,
       "budget_matched_margin": -201,
       "control_truncated_queries": 0,
-      "dominated_by_budget_matched_baseline": true,
+      "aggregate_coverage_not_higher_than_budget_matched_baseline": true,
+      "expansion_only_wins": 56,
+      "budget_only_wins": 257,
+      "both_pass": 784,
+      "neither_pass": 1158,
       "expansion_ceiling_full_coverage": 840,
       "expansion_max_gain_over_k10": 122,
       "mean_slate_size": 21.738359201773836,
@@ -65,7 +70,11 @@
       "budget_matched_bm25_full_coverage": 1186,
       "budget_matched_margin": -271,
       "control_truncated_queries": 217,
-      "dominated_by_budget_matched_baseline": true,
+      "aggregate_coverage_not_higher_than_budget_matched_baseline": true,
+      "expansion_only_wins": 66,
+      "budget_only_wins": 337,
+      "both_pass": 849,
+      "neither_pass": 1003,
       "expansion_ceiling_full_coverage": 915,
       "expansion_max_gain_over_k10": 197,
       "mean_slate_size": 29.760532150776054,
@@ -75,7 +84,11 @@
       "budget_matched_bm25_full_coverage": 1241,
       "budget_matched_margin": -289,
       "control_truncated_queries": 838,
-      "dominated_by_budget_matched_baseline": true,
+      "aggregate_coverage_not_higher_than_budget_matched_baseline": true,
+      "expansion_only_wins": 71,
+      "budget_only_wins": 360,
+      "both_pass": 881,
+      "neither_pass": 943,
       "expansion_ceiling_full_coverage": 952,
       "expansion_max_gain_over_k10": 234,
       "mean_slate_size": 35.93436807095344,
@@ -85,7 +98,11 @@
       "budget_matched_bm25_full_coverage": 1273,
       "budget_matched_margin": -253,
       "control_truncated_queries": 1293,
-      "dominated_by_budget_matched_baseline": true,
+      "aggregate_coverage_not_higher_than_budget_matched_baseline": true,
+      "expansion_only_wins": 96,
+      "budget_only_wins": 349,
+      "both_pass": 924,
+      "neither_pass": 886,
       "expansion_ceiling_full_coverage": 1020,
       "expansion_max_gain_over_k10": 302,
       "mean_slate_size": 45.1569844789357,

@@ -139,6 +139,187 @@ def _all_evidence_locators_retrieved(case: ProjectEvaluationCase, row: Mapping[s
     return all(_evidence_locator_hits(case, row))
 
 
+ADJUDICATION_VARIANTS = ("clean", "injected")
+ADJUDICATION_DECISIONS = ("pass", "fail")
+ADJUDICATION_STATUSES = ("partial_human_adjudication", "complete_human_adjudication")
+ADJUDICATION_REVIEW_DESIGN = "direct_output_review"
+
+
+def adjudication_selection_sha256(keys: Sequence[tuple[str, str]]) -> str:
+    """Hash the exact case/variant set selected for direct human review."""
+
+    payload = [{"case_id": case_id, "variant": variant} for case_id, variant in sorted(set(keys))]
+    return hashlib.sha256(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+
+
+def _validate_adjudication(
+    adjudication: Mapping[str, Any],
+    summary: Mapping[str, Any],
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    raw_summary_sha256: str | None,
+    raw_cases_sha256: str | None,
+    adjudication_sha256: str | None,
+) -> tuple[dict[tuple[str, str], Mapping[str, Any]], dict[str, object]]:
+    """Bind a human adjudication record to exactly one run, or refuse it.
+
+    A stale record is the dangerous failure here: applying decisions made against a
+    different run silently relabels outputs no reviewer ever saw. Every identity field
+    is therefore checked, and any mismatch raises instead of degrading.
+    """
+
+    if raw_summary_sha256 is None or raw_cases_sha256 is None or adjudication_sha256 is None:
+        raise ValueError("adjudication requires summary, results, and adjudication artifact hashes")
+    review_status = adjudication.get("status")
+    if adjudication.get("schema_version") != 2 or review_status not in ADJUDICATION_STATUSES:
+        raise ValueError("adjudication requires schema version 2 and a supported review status")
+    if adjudication.get("dataset") != summary.get("dataset"):
+        raise ValueError("adjudication dataset does not match the run")
+
+    scope = adjudication.get("scope")
+    provenance = adjudication.get("provenance")
+    if not isinstance(scope, Mapping) or not isinstance(provenance, Mapping):
+        raise ValueError("adjudication requires object 'scope' and 'provenance' fields")
+    if scope.get("primary_run_id") != summary["run_id"]:
+        raise ValueError(
+            f"adjudication scopes run {scope.get('primary_run_id')!r}, not {summary['run_id']!r}"
+        )
+    if scope.get("adjudicated_field") != "task_pass":
+        raise ValueError("only task_pass adjudication is supported")
+    if scope.get("review_design") != ADJUDICATION_REVIEW_DESIGN:
+        raise ValueError("only direct_output_review adjudication is supported")
+    summary_provenance = cast(Mapping[str, Any], summary["provenance"])
+    if provenance.get("cases_sha256") != summary_provenance.get("cases_sha256"):
+        raise ValueError("adjudication cases hash does not match the run")
+    contract = cast(Mapping[str, Any], summary["configuration"]).get("claim_contract_version")
+    if provenance.get("claim_contract_version") != contract:
+        raise ValueError("adjudication claim contract does not match the run")
+    if provenance.get("primary_summary_sha256") != raw_summary_sha256:
+        raise ValueError("adjudication primary summary hash does not match the run")
+    if provenance.get("primary_results_sha256") != raw_cases_sha256:
+        raise ValueError("adjudication primary results hash does not match the run")
+    reviewers = adjudication.get("reviewer_ids")
+    if (
+        not isinstance(reviewers, list)
+        or not reviewers
+        or any(not isinstance(item, str) or not item for item in reviewers)
+    ):
+        raise ValueError("adjudication requires a non-empty reviewer_ids list")
+    if not isinstance(adjudication.get("reviewed_at"), str) or not adjudication["reviewed_at"]:
+        raise ValueError("adjudication requires a reviewed_at timestamp")
+
+    decisions = adjudication.get("decisions")
+    if not isinstance(decisions, list) or not decisions:
+        raise ValueError("adjudication requires a non-empty decisions list")
+    row_index = {(str(row["case_id"]), str(row["variant"])): row for row in rows}
+    validated: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for decision in decisions:
+        if not isinstance(decision, Mapping):
+            raise ValueError("each adjudication decision must be a JSON object")
+        case_id = decision.get("case_id")
+        variant = decision.get("variant")
+        verdict = decision.get("decision")
+        rationale = decision.get("rationale")
+        if not isinstance(case_id, str) or not case_id:
+            raise ValueError("adjudication decision requires a case_id")
+        if variant not in ADJUDICATION_VARIANTS:
+            raise ValueError(f"{case_id}: variant must be one of {ADJUDICATION_VARIANTS}")
+        if verdict not in ADJUDICATION_DECISIONS:
+            raise ValueError(f"{case_id}: decision must be one of {ADJUDICATION_DECISIONS}")
+        if not isinstance(rationale, str) or not rationale.strip():
+            raise ValueError(f"{case_id}: adjudication decision requires a rationale")
+        key = (case_id, str(variant))
+        if key not in row_index:
+            raise ValueError(f"adjudication decision {key} is absent from the run results")
+        if key in validated:
+            raise ValueError(f"adjudication repeats decision for {key}")
+        validated[key] = decision
+
+    selected_hash = adjudication_selection_sha256(list(validated))
+    if scope.get("selected_variants_sha256") != selected_hash:
+        raise ValueError("adjudication selected-variant hash does not match its decisions")
+    variant_count = scope.get("variant_count")
+    if isinstance(variant_count, bool) or variant_count != len(validated):
+        raise ValueError("adjudication variant_count does not match its decisions")
+    all_row_keys = set(row_index)
+    reviewed_keys = set(validated)
+    if review_status == "complete_human_adjudication" and reviewed_keys != all_row_keys:
+        raise ValueError("complete adjudication must review every run variant")
+    if review_status == "partial_human_adjudication" and reviewed_keys == all_row_keys:
+        raise ValueError("a review of every run variant must use complete_human_adjudication")
+
+    overrides = [
+        {
+            "case_id": case_id,
+            "variant": variant,
+            "automated_task_pass": bool(row_index[(case_id, variant)]["task_pass"]),
+            "adjudicated_task_pass": validated[(case_id, variant)]["decision"] == "pass",
+            "rationale": str(validated[(case_id, variant)]["rationale"]).strip(),
+        }
+        for case_id, variant in sorted(validated)
+    ]
+    changed = [
+        item for item in overrides if item["automated_task_pass"] != item["adjudicated_task_pass"]
+    ]
+    record: dict[str, object] = {
+        "status": review_status,
+        "reviewer_ids": list(reviewers),
+        "reviewed_at": adjudication["reviewed_at"],
+        "scope": dict(scope),
+        "source": {
+            "artifact_sha256": adjudication_sha256,
+            "provenance": dict(provenance),
+        },
+        "adjudicated_variant_count": len(validated),
+        "total_variant_count": len(rows),
+        "changed_verdict_count": len(changed),
+        "coverage_statement": (
+            "Human review covered the variants listed in 'overrides' only. Every other variant "
+            "retains its automated judge verdict unless status is complete_human_adjudication."
+        ),
+        "overrides": overrides,
+    }
+    return validated, record
+
+
+def _apply_adjudication(
+    rows: Sequence[Mapping[str, Any]],
+    decisions: Mapping[tuple[str, str], Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    """Return rows with adjudicated task_pass applied; other rows keep the automated verdict."""
+
+    applied: list[Mapping[str, Any]] = []
+    for row in rows:
+        decision = decisions.get((str(row["case_id"]), str(row["variant"])))
+        if decision is None:
+            applied.append(row)
+            continue
+        updated = dict(row)
+        updated["task_pass"] = decision["decision"] == "pass"
+        applied.append(updated)
+    return applied
+
+
+def _metrics_delta(automated: Mapping[str, Any], adjudicated: Mapping[str, Any]) -> dict[str, Any]:
+    """Report per-metric movement so the size of the human correction stays visible."""
+
+    delta: dict[str, Any] = {}
+    for key, value in automated.items():
+        other = adjudicated.get(key)
+        if not isinstance(value, Mapping) or not isinstance(other, Mapping):
+            continue
+        if "successes" in value and "successes" in other:
+            delta[key] = {
+                "automated_successes": value["successes"],
+                "adjudicated_successes": other["successes"],
+                "successes_delta": int(other["successes"]) - int(value["successes"]),
+                "total": value.get("total"),
+            }
+    return delta
+
+
 def build_project_generation_snapshot(
     summary: Mapping[str, Any],
     rows: Sequence[Mapping[str, Any]],
@@ -150,8 +331,15 @@ def build_project_generation_snapshot(
     bootstrap_seed: int = 20_260_829,
     raw_summary_sha256: str | None = None,
     raw_cases_sha256: str | None = None,
+    adjudication: Mapping[str, Any] | None = None,
+    adjudication_sha256: str | None = None,
 ) -> dict[str, object]:
-    """Build a public automated baseline while keeping human-review status explicit."""
+    """Build a public report, optionally applying a bound human adjudication record.
+
+    Without ``adjudication`` the output is the automated baseline at schema 2, unchanged.
+    With one, the automated metrics are retained verbatim and the adjudicated metrics are
+    added beside them, so the size of the human correction stays auditable.
+    """
 
     if bool(summary.get("limited_run")) or not bool(summary.get("complete")):
         raise ValueError("generation report requires one complete, non-limited run")
@@ -160,6 +348,8 @@ def build_project_generation_snapshot(
     if summary.get("human_adjudication_status") != "pending":
         raise ValueError("unsupported human adjudication status")
     run_id = str(summary["run_id"])
+    adjudicated_decisions: dict[tuple[str, str], Mapping[str, Any]] | None = None
+    adjudication_record: dict[str, object] | None = None
     if any(row.get("run_id") != run_id for row in rows):
         raise ValueError("case result run IDs do not match the summary")
     if len(cases) != 100:
@@ -186,6 +376,15 @@ def build_project_generation_snapshot(
     }
     if set(fixture_by_id) != expected_fixture_ids:
         raise ValueError("reviewed fixtures do not match the fixture IDs referenced by cases")
+    if adjudication is not None:
+        adjudicated_decisions, adjudication_record = _validate_adjudication(
+            adjudication,
+            summary,
+            rows,
+            raw_summary_sha256=raw_summary_sha256,
+            raw_cases_sha256=raw_cases_sha256,
+            adjudication_sha256=adjudication_sha256,
+        )
 
     answerable = [case for case in cases if case.answerability == "answerable"]
     unanswerable = [case for case in cases if case.answerability == "unanswerable"]
@@ -329,7 +528,9 @@ def build_project_generation_snapshot(
                 "multi_hop" in case.case_types for case in under_retrieved_answerable
             ),
         },
-        "human_adjudication_status": "pending",
+        "human_adjudication_status": (
+            "pending" if adjudication_record is None else adjudication_record["status"]
+        ),
     }
     if noncompliant_unanswerable_ids:
         audit_flags["semantic_abstention_gap"] = {
@@ -340,9 +541,17 @@ def build_project_generation_snapshot(
                 "evidence-based refusal was acceptable."
             ),
         }
-    return {
-        "schema_version": 2,
-        "status": "automated_baseline_human_adjudication_pending",
+    snapshot: dict[str, object] = {
+        "schema_version": 2 if adjudication_record is None else 3,
+        "status": (
+            "automated_baseline_human_adjudication_pending"
+            if adjudication_record is None
+            else (
+                "human_adjudication_complete"
+                if adjudication_record["status"] == "complete_human_adjudication"
+                else "automated_baseline_partial_human_review"
+            )
+        ),
         "run_date": run_date,
         "run_id": run_id,
         "dataset": {
@@ -477,12 +686,77 @@ def build_project_generation_snapshot(
             ),
         ],
     }
+    if adjudicated_decisions is None or adjudication_record is None:
+        return snapshot
+
+    # Recompute the same metric block over adjudicated verdicts. Recursing with
+    # adjudication=None reuses every definition above rather than duplicating it.
+    reviewed_metrics = build_project_generation_snapshot(
+        summary,
+        _apply_adjudication(rows, adjudicated_decisions),
+        cases,
+        fixtures,
+        run_date=run_date,
+        bootstrap_resamples=bootstrap_resamples,
+        bootstrap_seed=bootstrap_seed,
+    )["metrics"]
+    review_status = str(adjudication_record["status"])
+    reviewed_metrics_field = (
+        "metrics_human_reviewed"
+        if review_status == "complete_human_adjudication"
+        else "metrics_with_reviewed_overrides"
+    )
+    snapshot[reviewed_metrics_field] = reviewed_metrics
+    snapshot["human_review_metric_delta"] = _metrics_delta(
+        cast(Mapping[str, Any], snapshot["metrics"]),
+        cast(Mapping[str, Any], reviewed_metrics),
+    )
+    adjudication_record["automated_metrics_field"] = "metrics"
+    adjudication_record["reviewed_metrics_field"] = reviewed_metrics_field
+    snapshot["human_review"] = adjudication_record
+    if review_status == "complete_human_adjudication":
+        review_limitation = (
+            "Every run variant received direct human review. The automated 'metrics' block is "
+            "retained for comparison; metrics_human_reviewed contains the reviewed task verdicts."
+        )
+    else:
+        review_limitation = (
+            "Human adjudication covered "
+            f"{adjudication_record['adjudicated_variant_count']} of "
+            f"{adjudication_record['total_variant_count']} variants. Unreviewed variants keep "
+            "their automated verdict in metrics_with_reviewed_overrides; the primary 'metrics' "
+            "block and per-case outcomes remain the automated baseline."
+        )
+    snapshot["limitations"] = [
+        *cast(Sequence[str], snapshot["limitations"]),
+        review_limitation,
+    ]
+    return snapshot
 
 
 def render_project_generation_svg(snapshot: Mapping[str, Any]) -> str:
-    """Render a compact four-panel automated-baseline figure."""
+    """Render automated metrics unless the entire run received direct human review."""
 
-    metrics = cast(Mapping[str, Mapping[str, Any]], snapshot["metrics"])
+    human_metrics = snapshot.get("metrics_human_reviewed")
+    metrics = cast(
+        Mapping[str, Mapping[str, Any]],
+        human_metrics if isinstance(human_metrics, Mapping) else snapshot["metrics"],
+    )
+    human_review = snapshot.get("human_review")
+    if isinstance(human_metrics, Mapping):
+        heading = "Human-reviewed RAG generation evaluation"
+        review_note = "complete direct human review"
+        review_desc = "Every variant received direct human review."
+    elif isinstance(human_review, Mapping):
+        heading = "Automated RAG generation evaluation"
+        reviewed = int(human_review["adjudicated_variant_count"])
+        total = int(human_review["total_variant_count"])
+        review_note = f"partial human review {reviewed}/{total}; headline remains automated"
+        review_desc = "Partial human review is recorded; displayed metrics remain automated."
+    else:
+        heading = "Automated RAG generation evaluation"
+        review_note = "human adjudication pending"
+        review_desc = "Human adjudication is pending."
     configuration = cast(Mapping[str, Any], snapshot["configuration"])
     cluster = metrics["answerable_grounded_evidence_cluster"]
     panels = [
@@ -529,18 +803,18 @@ def render_project_generation_svg(snapshot: Mapping[str, Any]) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="650" '
         'viewBox="0 0 1200 650" role="img" '
         'aria-labelledby="title description">',
-        '<title id="title">Automated RAG generation evaluation</title>',
+        f'<title id="title">{html.escape(heading)}</title>',
         (
             '<desc id="description">Four interval plots show answerable grounded pass, sentinel '
-            "compliance, prompt-injection joint pass, and attack-induced failure. Human "
-            "adjudication is pending.</desc>"
+            "compliance, prompt-injection joint pass, and attack-induced failure. "
+            f"{html.escape(review_desc)}</desc>"
         ),
         '<rect width="1200" height="650" rx="18" fill="#f8fafc"/>',
         '<text x="45" y="55" font-family="Arial,sans-serif" font-size="30" '
-        'font-weight="700" fill="#0f172a">Automated RAG generation evaluation</text>',
+        f'font-weight="700" fill="#0f172a">{html.escape(heading)}</text>',
         '<text x="45" y="88" font-family="Arial,sans-serif" font-size="15" fill="#475569">'
         f"100 clean cases · 10 attacked variants · {html.escape(str(snapshot['run_date']))} · "
-        "human adjudication pending</text>",
+        f"{html.escape(review_note)}</text>",
     ]
     for index, (label, value, interval, denominator, lower_is_better) in enumerate(panels):
         x = left + index * (card_width + card_gap)
@@ -605,7 +879,8 @@ def write_project_generation_report(
     run_date: str,
     bootstrap_resamples: int = 10_000,
     bootstrap_seed: int = 20_260_829,
-) -> None:
+    adjudication_path: Path | None = None,
+) -> dict[str, object]:
     summary = _read_json(summary_path)
     rows = _read_jsonl(case_results_path)
     cases_path = evaluation_directory / "cases.jsonl"
@@ -619,6 +894,7 @@ def write_project_generation_report(
     if provenance.get("fixtures_sha256") != _sha256(fixtures_path):
         raise ValueError("generation summary fixture hash does not match reviewed fixtures")
     fixtures = load_injection_fixtures(fixtures_path)
+    adjudication = _read_json(adjudication_path) if adjudication_path is not None else None
     snapshot = build_project_generation_snapshot(
         summary,
         rows,
@@ -629,6 +905,8 @@ def write_project_generation_report(
         bootstrap_seed=bootstrap_seed,
         raw_summary_sha256=_sha256(summary_path),
         raw_cases_sha256=_sha256(case_results_path),
+        adjudication=adjudication,
+        adjudication_sha256=(_sha256(adjudication_path) if adjudication_path is not None else None),
     )
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
     snapshot_path.write_text(
@@ -637,3 +915,4 @@ def write_project_generation_report(
     )
     figure_path.parent.mkdir(parents=True, exist_ok=True)
     figure_path.write_text(render_project_generation_svg(snapshot), encoding="utf-8")
+    return snapshot

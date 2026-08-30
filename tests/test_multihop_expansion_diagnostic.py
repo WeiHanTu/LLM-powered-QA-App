@@ -12,6 +12,9 @@ from llmqa.multihop_expansion_diagnostic import (
 )
 from llmqa.multihop_rag import MultiHopRAGCase
 
+ROOT = Path(__file__).parents[1]
+PUBLIC_RECORD = ROOT / "docs" / "benchmarks" / "multihop-rag-parent-expansion-2026-08-29.json"
+
 
 def _chunk(document: str, index: int) -> Chunk:
     return Chunk(
@@ -83,7 +86,7 @@ def test_already_complete_queries_count_toward_the_ceiling_but_not_the_gain() ->
     assert report.windows[0].recovered_query_ids == ()
 
 
-def test_a_window_is_dominated_when_the_plain_ranking_covers_the_same_slate() -> None:
+def test_a_window_reports_a_tie_when_both_methods_cover_the_same_slate() -> None:
     # Expansion reaches c1 and c3 from c2, but so does reading three ranks of the run.
     cases = [_case("q", ("docA-c1", "docA-c3"))]
     run = {"q": ["docA-c2", "docA-c1", "docA-c3", "docB-c0"]}
@@ -94,7 +97,10 @@ def test_a_window_is_dominated_when_the_plain_ranking_covers_the_same_slate() ->
     assert window.mean_slate_size == pytest.approx(3.0)
     assert window.budget_matched_full_coverage == 1
     assert window.budget_matched_margin == 0
-    assert window.dominated_by_budget_matched_baseline
+    assert window.both_pass == 1
+    assert window.expansion_only_wins == 0
+    assert window.budget_only_wins == 0
+    assert window.aggregate_coverage_not_higher_than_budget_matched_baseline
 
 
 def test_a_window_is_credited_when_the_plain_ranking_cannot_match_it() -> None:
@@ -106,7 +112,9 @@ def test_a_window_is_credited_when_the_plain_ranking_cannot_match_it() -> None:
     assert window.ceiling_full_coverage == 1
     assert window.budget_matched_full_coverage == 0
     assert window.budget_matched_margin == 1
-    assert not window.dominated_by_budget_matched_baseline
+    assert window.expansion_only_wins == 1
+    assert window.budget_only_wins == 0
+    assert not window.aggregate_coverage_not_higher_than_budget_matched_baseline
 
 
 def test_a_run_shallower_than_the_slate_is_reported_as_truncated() -> None:
@@ -176,3 +184,21 @@ def test_zero_evidence_queries_are_excluded_not_counted_as_complete() -> None:
     assert report.query_count == 1
     assert report.excluded_zero_evidence_queries == 1
     assert report.baseline_full_coverage == 1
+
+
+def test_committed_parent_expansion_record_reports_paired_non_dominance() -> None:
+    record = json.loads(PUBLIC_RECORD.read_text(encoding="utf-8"))
+
+    assert record["method"]["diagnostic_version"] == "parent-expansion-ceiling-v3"
+    assert "fixed unconditional expansion" in record["decision"]["action"]
+    assert "query-adaptive hybrid" in record["decision"]["reason"]
+    for window in record["windows"]:
+        assert window["aggregate_coverage_not_higher_than_budget_matched_baseline"] is True
+        assert window["expansion_only_wins"] > 0
+        assert (
+            window["expansion_only_wins"]
+            + window["budget_only_wins"]
+            + window["both_pass"]
+            + window["neither_pass"]
+            == record["method"]["answerable_queries"]
+        )

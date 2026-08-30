@@ -160,6 +160,15 @@ Before changing the report status from `automated_baseline_human_adjudication_pe
 5. Record reviewer identity, timestamp, decision, and rationale in a versioned adjudication artifact.
    Disagreements require a second reviewer; do not silently overwrite the automated result.
 
+The reporting CLI accepts only schema-v2 `direct_output_review` artifacts. They must bind the exact
+generation `run_id`, reviewed-case hash, claim-contract version, raw summary SHA-256, raw results
+SHA-256, and the hash of the selected `(case_id, variant)` set. The reporting command also records
+the adjudication artifact's own SHA-256. A partial review keeps the automated `metrics` and figure as
+the headline and publishes any mixed metric under `metrics_with_reviewed_overrides`; only a review
+covering all 110 variants may use `complete_human_adjudication` and `metrics_human_reviewed`.
+Historical cross-judge adjudication is a separate evidence record and is never accepted as direct
+review of a regenerated run.
+
 The 2026-08-29 second-family automated audit selected all clean answerable failures, all injection
 cases, and four seeded clean passes. Its eleven task-pass disagreements ran **entirely in one
 direction**: the primary judge failed eleven cases the cross judge passed, and there is no case where

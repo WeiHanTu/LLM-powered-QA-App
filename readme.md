@@ -234,18 +234,20 @@ chunk to its neighbours in the same document, so a missed fact adjacent to a hit
 Because expansion enlarges the slate, the honest comparison is not against the `k=10` baseline but
 against reading the plain BM25 ranking down to the same number of chunks.
 
-| Full external set, 2,255 answerable | Expansion ceiling | Plain BM25, same slate | Slate size |
-|---|---:|---:|---:|
-| Expand by 1 chunk | 840 | **1,041** | 21.7 |
-| Expand by 2 chunks | 915 | **1,186** | 29.8 |
-| Expand by 3 chunks | 952 | **1,241** | 35.9 |
-| Expand by 5 chunks | 1,020 | **1,273** | 45.2 |
+| Full external set, 2,255 answerable | Expansion ceiling | Plain BM25, same slate | Expansion-only wins | Slate size |
+|---|---:|---:|---:|---:|
+| Expand by 1 chunk | 840 | **1,041** | 56 | 21.7 |
+| Expand by 2 chunks | 915 | **1,186** | 66 | 29.8 |
+| Expand by 3 chunks | 952 | **1,241** | 71 | 35.9 |
+| Expand by 5 chunks | 1,020 | **1,273** | 96 | 45.2 |
 
 Every window loses. The one-chunk window, which is both the cheapest and the only one whose control
 is not truncated by the `k=40` run, gives up 201 questions against the plain ranking at equal cost.
 The ceiling is generous by construction — it assumes expansion is free and that every reachable gold
-chunk is kept — so a real implementation would score no higher. The candidate was therefore rejected
-without freezing a confirmation cohort and without a single provider call. Provenance is in the
+chunk is kept — so the fixed always-expand candidate would score no higher. It was therefore rejected
+without freezing a confirmation cohort and without a single provider call. This is aggregate, not
+per-query, dominance: 56 to 96 cases are expansion-only wins, so a future query-adaptive selector is
+not disproven and would require its own preregistered signal and confirmation cohort. Provenance is in the
 [upper-bound evidence record](docs/benchmarks/multihop-rag-parent-expansion-2026-08-29.json).
 
 The same run exposes an untested lever. Complete evidence coverage is governed far more by how many
@@ -308,6 +310,10 @@ result does not establish safety for tool-enabled agents. This run regenerated c
 well as changing the judge contract; its 70/80 answerable result therefore cannot be interpreted as
 an isolated seven-point gain from the new rubric. See the
 [machine-readable required-claim record](docs/benchmarks/technical-papers-v1-generation-required-claims-v1-2026-08-29.json).
+The historical disagreement adjudication is bound to run `3992f7ad…` and cannot be applied to this
+regenerated `68f31a98…` run. Reporting accepts only a new schema-v2 direct-review artifact carrying
+the exact run, contract, selection, summary, results, and artifact hashes. Partial review remains a
+separate override sensitivity block; it does not replace the automated headline.
 
 A second-family automated audit of the historical free-text-judge run re-judged its answers with the pinned
 [`gpt-4.1-2025-04-14`](https://developers.openai.com/api/docs/models/gpt-4.1) snapshot; it did not
