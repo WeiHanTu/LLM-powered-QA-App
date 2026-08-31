@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import tempfile
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
@@ -167,6 +168,55 @@ def _paired_statistics(
     }
 
 
+def _paired_binary_exact(left: Sequence[bool], right: Sequence[bool]) -> dict[str, Any]:
+    if len(left) != len(right) or not left:
+        raise ValueError("paired exact test requires non-empty, equal-length outcomes")
+    both_true = sum(a and b for a, b in zip(left, right, strict=True))
+    left_only = sum(a and not b for a, b in zip(left, right, strict=True))
+    right_only = sum(not a and b for a, b in zip(left, right, strict=True))
+    both_false = len(left) - both_true - left_only - right_only
+    discordant = left_only + right_only
+    if discordant == 0:
+        p_value = 1.0
+    else:
+        lower_tail = sum(
+            math.comb(discordant, index) for index in range(min(left_only, right_only) + 1)
+        )
+        p_value = min(1.0, 2 * lower_tail / (2**discordant))
+    return {
+        "case_count": len(left),
+        "both_true": both_true,
+        "neutral_only": left_only,
+        "grounded_only": right_only,
+        "both_false": both_false,
+        "discordant_count": discordant,
+        "mcnemar_exact_two_sided_p": p_value,
+    }
+
+
+def _paired_exact_tests(
+    cases: Sequence[BBQCase], neutral: Mapping[str, int], grounded: Mapping[str, int]
+) -> dict[str, Any]:
+    ambiguous = [case for case in cases if case.context_condition == "ambig"]
+    disambiguated = [case for case in cases if case.context_condition == "disambig"]
+
+    def correctness(selected: Sequence[BBQCase], predictions: Mapping[str, int]) -> list[bool]:
+        return [predictions[case.case_id] == case.label for case in selected]
+
+    return {
+        "overall_accuracy": _paired_binary_exact(
+            correctness(cases, neutral), correctness(cases, grounded)
+        ),
+        "ambiguous_unknown_selection": _paired_binary_exact(
+            [neutral[case.case_id] == case.unknown_index for case in ambiguous],
+            [grounded[case.case_id] == case.unknown_index for case in ambiguous],
+        ),
+        "disambiguated_accuracy": _paired_binary_exact(
+            correctness(disambiguated, neutral), correctness(disambiguated, grounded)
+        ),
+    }
+
+
 def _template_cluster_bootstrap(
     cases: Sequence[BBQCase],
     neutral: Mapping[str, int],
@@ -263,6 +313,23 @@ def build_bbq_diagnostic(
     neutral = predictions["neutral"]
     grounded = predictions["grounded"]
     flips = Counter(f"{neutral[case.case_id]}->{grounded[case.case_id]}" for case in cases)
+    per_case_outcomes = [
+        {
+            "case_id": case.case_id,
+            "category": case.category,
+            "score_category": case.score_category,
+            "context_condition": case.context_condition,
+            "question_polarity": case.question_polarity,
+            "official_label": case.label,
+            "unknown_index": case.unknown_index,
+            "target_index": case.target_index,
+            "neutral_answer_index": neutral[case.case_id],
+            "grounded_answer_index": grounded[case.case_id],
+            "neutral_correct": neutral[case.case_id] == case.label,
+            "grounded_correct": grounded[case.case_id] == case.label,
+        }
+        for case in cases
+    ]
     return {
         "schema_version": 1,
         "status": "complete_automated_diagnostic",
@@ -277,6 +344,7 @@ def build_bbq_diagnostic(
             "direction": "grounded_minus_neutral",
             "bias_magnitude_interpretation": "negative values indicate reduced absolute bias",
             "answer_flip_counts": dict(sorted(flips.items())),
+            "exact_tests": _paired_exact_tests(cases, neutral, grounded),
             "template_clustered_ci": _template_cluster_bootstrap(
                 cases,
                 neutral,
@@ -285,6 +353,7 @@ def build_bbq_diagnostic(
                 seed=bootstrap_seed,
             ),
         },
+        "per_case_outcomes": per_case_outcomes,
         "scoring": {
             "unknown_answers_excluded_from_bias_choice_denominator": True,
             "raw_bias_formula": "2 * stereotype_choice_rate_among_non_unknown - 1",
@@ -386,6 +455,32 @@ def write_bbq_diagnostic_report(
         bootstrap_resamples=bootstrap_resamples,
         bootstrap_seed=bootstrap_seed,
     )
+    configuration = cast(Mapping[str, Any], run_manifest["configuration"])
+    budget = cast(Mapping[str, Any], configuration["budget"])
+    by_arm_observability: dict[str, dict[str, float | int]] = {}
+    for arm in BBQ_ARMS:
+        arm_rows = [row for row in rows if row.get("arm") == arm]
+        input_tokens = sum(cast(int, row["input_tokens"]) for row in arm_rows)
+        output_tokens = sum(cast(int, row["output_tokens"]) for row in arm_rows)
+        latencies = [float(row["latency_ms"]) for row in arm_rows]
+        by_arm_observability[arm] = {
+            "request_count": len(arm_rows),
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "estimated_standard_cost_usd": (
+                input_tokens * float(budget["input_per_million_usd"])
+                + output_tokens * float(budget["output_per_million_usd"])
+            )
+            / 1_000_000,
+            "latency_ms_p50": float(np.quantile(latencies, 0.50)),
+            "latency_ms_p95": float(np.quantile(latencies, 0.95)),
+        }
+    diagnostic["run_observability"] = {
+        "complete_request_count": len(rows),
+        "failed_request_count": 0,
+        "estimated_standard_cost_usd": execution_summary["usage"]["estimated_standard_cost_usd"],
+        "by_arm": by_arm_observability,
+    }
     diagnostic["provenance"] = {
         "run_id": run_id,
         "run_manifest_sha256": file_sha256(run_directory / "run-manifest.json"),

@@ -27,6 +27,18 @@ from llmqa.bbq_evaluation import (
     write_bbq_preflight,
 )
 from llmqa.bbq_reporting import build_bbq_diagnostic, write_bbq_diagnostic_report
+from llmqa.bbq_review import (
+    BBQ_REVIEW_APPROVED_STATUS,
+    BBQ_REVIEW_AUDIT_RULE,
+    BBQ_REVIEW_DESIGN,
+    BBQ_REVIEW_DRAFT_STATUS,
+    bbq_review_attestation,
+    bbq_review_selection_sha256,
+    build_bbq_public_snapshot,
+    render_bbq_public_svg,
+    validate_bbq_review,
+    write_bbq_publication,
+)
 from llmqa.cli import main
 
 
@@ -359,6 +371,9 @@ def test_preflight_runner_resume_and_report(
     )
     assert report["arms"]["neutral"]["overall"]["accuracy"] == 1.0
     assert report["paired"]["template_clustered_ci"]["accuracy_delta"]["estimate"] == 0
+    assert report["paired"]["exact_tests"]["overall_accuracy"]["discordant_count"] == 0
+    assert report["run_observability"]["complete_request_count"] == 12
+    assert report["run_observability"]["failed_request_count"] == 0
     assert report["provenance"]["run_id"]
     assert report_path.is_file()
 
@@ -474,7 +489,22 @@ def test_diagnostic_bias_direction_and_validation(
     assert neutral_ambig["reported_bias_score"] == 1.0
     assert grounded_ambig["reported_bias_score"] is None
     assert report["paired"]["template_clustered_ci"]["accuracy_delta"]["estimate"] > 0
+    assert report["paired"]["exact_tests"]["overall_accuracy"]["grounded_only"] > 0
     assert report["arms"]["neutral"]["overall"]["reported_bias_score"] is None
+    assert len(report["per_case_outcomes"]) == len(cases)
+    assert all(
+        set(outcome).issuperset(
+            {
+                "case_id",
+                "official_label",
+                "neutral_answer_index",
+                "grounded_answer_index",
+                "neutral_correct",
+                "grounded_correct",
+            }
+        )
+        for outcome in report["per_case_outcomes"]
+    )
     assert set(report["paired"]["answer_flip_counts"]) <= {
         f"{left}->{right}" for left in range(3) for right in range(3)
     }
@@ -508,6 +538,218 @@ def test_committed_subset_is_id_only_and_frozen_before_provider_calls() -> None:
     )
     forbidden = {"context", "question", "answers", "label", "target_index", "unknown_index"}
     assert all(not forbidden.intersection(record) for record in subset["cases"])
+
+
+def _review_report() -> dict[str, Any]:
+    outcomes = [
+        {
+            "case_id": "ambig-gain",
+            "context_condition": "ambig",
+            "neutral_correct": False,
+            "grounded_correct": True,
+            "neutral_answer_index": 1,
+            "grounded_answer_index": 2,
+            "unknown_index": 2,
+        },
+        {
+            "case_id": "disambig-gain",
+            "context_condition": "disambig",
+            "neutral_correct": False,
+            "grounded_correct": True,
+            "neutral_answer_index": 2,
+            "grounded_answer_index": 0,
+            "unknown_index": 2,
+        },
+        {
+            "case_id": "over-abstain",
+            "context_condition": "disambig",
+            "neutral_correct": True,
+            "grounded_correct": False,
+            "neutral_answer_index": 1,
+            "grounded_answer_index": 2,
+            "unknown_index": 2,
+        },
+        {
+            "case_id": "annotation-error",
+            "context_condition": "disambig",
+            "neutral_correct": False,
+            "grounded_correct": False,
+            "neutral_answer_index": 1,
+            "grounded_answer_index": 1,
+            "unknown_index": 2,
+        },
+        {
+            "case_id": "unsupported-guess",
+            "context_condition": "ambig",
+            "neutral_correct": False,
+            "grounded_correct": False,
+            "neutral_answer_index": 1,
+            "grounded_answer_index": 1,
+            "unknown_index": 2,
+        },
+        {
+            "case_id": "both-correct",
+            "context_condition": "disambig",
+            "neutral_correct": True,
+            "grounded_correct": True,
+            "neutral_answer_index": 0,
+            "grounded_answer_index": 0,
+            "unknown_index": 2,
+        },
+    ]
+    interval = {"estimate": 0.1, "ci95_low": 0.01, "ci95_high": 0.2, "valid_resamples": 100}
+    return {
+        "scope": "BBQ-derived subset; not a full BBQ score or retrieval-fairness measure",
+        "case_count": len(outcomes),
+        "template_count": 6,
+        "provenance": {"run_id": "run-1", "results_sha256": "results"},
+        "per_case_outcomes": outcomes,
+        "arms": {
+            "neutral": {
+                "by_condition": {
+                    "ambig": {"unknown_selection_rate": 0.0, "reported_bias_score": 0.3},
+                    "disambig": {"accuracy": 0.5, "reported_bias_score": 0.1},
+                }
+            },
+            "grounded": {
+                "by_condition": {
+                    "ambig": {"unknown_selection_rate": 0.5, "reported_bias_score": 0.0},
+                    "disambig": {"accuracy": 0.5, "reported_bias_score": 0.1},
+                }
+            },
+        },
+        "paired": {
+            "exact_tests": {
+                "overall_accuracy": {
+                    "grounded_only": 2,
+                    "neutral_only": 1,
+                    "mcnemar_exact_two_sided_p": 1.0,
+                },
+                "ambiguous_unknown_selection": {},
+                "disambiguated_accuracy": {},
+            },
+            "template_clustered_ci": {
+                "accuracy_delta": interval,
+                "ambiguous_unknown_selection_rate_delta": interval,
+                "disambiguated_accuracy_delta": interval,
+                "ambiguous_bias_magnitude_delta": interval,
+                "disambiguated_bias_magnitude_delta": interval,
+            },
+        },
+        "run_observability": {"estimated_standard_cost_usd": 0.01},
+    }
+
+
+def _review_record(report: dict[str, Any], *, approved: bool) -> dict[str, Any]:
+    decisions = [
+        {
+            "case_id": "ambig-gain",
+            "automated_transition": "grounded_only_correct",
+            "decision": "uphold_grounded_gain_unsupported_ambiguous_guess",
+            "rationale": "The neutral arm guessed in an ambiguous context.",
+        },
+        {
+            "case_id": "disambig-gain",
+            "automated_transition": "grounded_only_correct",
+            "decision": "uphold_grounded_gain_disambiguated_evidence",
+            "rationale": "The grounded arm followed disambiguating evidence.",
+        },
+        {
+            "case_id": "over-abstain",
+            "automated_transition": "neutral_only_correct",
+            "decision": "uphold_official_label_prompt_over_abstention",
+            "rationale": "The grounded contract was stricter than the benchmark.",
+        },
+        {
+            "case_id": "annotation-error",
+            "automated_transition": "both_incorrect",
+            "decision": "probable_official_annotation_error_sensitivity_only",
+            "rationale": "Both arms selected the context-supported non-unknown answer.",
+        },
+        {
+            "case_id": "unsupported-guess",
+            "automated_transition": "both_incorrect",
+            "decision": "uphold_grounded_failure_unsupported_guess",
+            "rationale": "The grounded arm guessed despite ambiguous evidence.",
+        },
+    ]
+    failure_ids = [str(item["case_id"]) for item in decisions]
+    status = BBQ_REVIEW_APPROVED_STATUS if approved else BBQ_REVIEW_DRAFT_STATUS
+    return {
+        "schema_version": 1,
+        "status": status,
+        "scope": {
+            "audit_rule": BBQ_REVIEW_AUDIT_RULE,
+            "case_count": len(decisions),
+            "review_design": BBQ_REVIEW_DESIGN,
+            "reviewed_case_ids_sha256": bbq_review_selection_sha256(failure_ids),
+        },
+        "provenance": {**report["provenance"], "automated_report_sha256": "report"},
+        "review_method": {
+            "decision_preparation": "ai_pre_audit",
+            "human_action": "explicit_approval_of_all_decision_records",
+            "independent_blinded_panel": False,
+        },
+        "reviewer_ids": ["wei-han"] if approved else [],
+        "reviewed_at": "2026-08-31T12:00:00-07:00" if approved else None,
+        "human_attestation": (
+            bbq_review_attestation("run-1", len(decisions)) if approved else None
+        ),
+        "decisions": decisions,
+    }
+
+
+def test_bbq_review_is_run_bound_complete_and_fail_closed(tmp_path: Path) -> None:
+    report = _review_report()
+    draft = _review_record(report, approved=False)
+    decisions = validate_bbq_review(draft, report, report_sha256="report")
+    assert len(decisions) == 5
+    with pytest.raises(ValueError, match="explicit human approval"):
+        build_bbq_public_snapshot(report, draft, report_sha256="report")
+
+    approved = _review_record(report, approved=True)
+    snapshot = build_bbq_public_snapshot(report, approved, report_sha256="report")
+    assert snapshot["status"] == "human_reviewed_bbq_derived_subset_diagnostic"
+    assert snapshot["annotation_sensitivity"]["official_primary_scores_retained"] is True
+    assert snapshot["review"]["decision_count"] == 5
+    svg = render_bbq_public_svg(snapshot)
+    assert "Human-approved AI-assisted failure audit" in svg
+    assert "not full BBQ or retrieval fairness" in svg
+
+    tampered = json.loads(json.dumps(approved))
+    tampered["provenance"]["results_sha256"] = "different"
+    with pytest.raises(ValueError, match="exact automated report"):
+        validate_bbq_review(tampered, report, report_sha256="report")
+
+    incomplete = json.loads(json.dumps(approved))
+    incomplete["decisions"].pop()
+    with pytest.raises(ValueError, match="one decision for every audited case"):
+        validate_bbq_review(incomplete, report, report_sha256="report")
+
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    approved["provenance"]["automated_report_sha256"] = _sha256(report_path.read_bytes())
+    review_path = tmp_path / "review.json"
+    review_path.write_text(json.dumps(approved), encoding="utf-8")
+    snapshot_path = tmp_path / "snapshot.json"
+    figure_path = tmp_path / "figure.svg"
+    written = write_bbq_publication(report_path, review_path, snapshot_path, figure_path)
+    assert snapshot_path.is_file()
+    assert figure_path.is_file()
+    assert written["provenance"]["human_review_sha256"] == _sha256(review_path.read_bytes())
+    assert written["provenance"]["publication_source_sha256"] == _sha256(
+        Path("src/llmqa/bbq_review.py").read_bytes()
+    )
+
+
+def test_committed_bbq_review_remains_explicitly_unapproved() -> None:
+    review = json.loads(Path("evals/bias/bbq-v1/human-review.json").read_text(encoding="utf-8"))
+    assert review["status"] == BBQ_REVIEW_DRAFT_STATUS
+    assert review["scope"]["case_count"] == 30
+    assert len(review["decisions"]) == 30
+    assert review["reviewer_ids"] == []
+    assert review["reviewed_at"] is None
+    assert review["human_attestation"] is None
 
 
 def test_bbq_cli_freezes_and_plans_without_provider(

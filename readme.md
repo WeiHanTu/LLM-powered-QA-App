@@ -23,7 +23,7 @@ chain.
 - Prefix-sensitive normalized discounted KL divergence (NDKL) exposure audits
 - Counterfactual flip-rate and mean absolute score-difference metrics
 - Pinned BBQ acquisition, frozen template-stratified selection, paired prompt evaluation, and
-  template-clustered bias reporting with an explicit paid-run guard
+  template-clustered bias reporting with paid-run and human-review publication gates
 - Offline Recall@k, MRR, and graded NDCG@k evaluation from versionable JSONL
 - Offline unit tests, linting, type checking, a `uv.lock`, and GitHub Actions CI
 
@@ -31,12 +31,12 @@ The fairness features do **not** prove that a model or application is unbiased. 
 declared behaviors on reviewed labels and evaluation cases. See [the engineering spec](docs/spec.md)
 for the threat model, research basis, limitations, and roadmap.
 
-The Phase 2 BBQ harness is implemented but has not been run against OpenAI. Its committed contract
-freezes 180 of 58,476 scorable examples across 90 strata and 130 source templates, separating name
-proxies from explicit group labels. The revised 360-request preflight ceiling is `$0.38541525`;
-including five stopped v1 calls keeps the combined bound at `$0.3873575`. No outcome number or
-fairness claim exists yet. Raw benchmark
-content and provider run artifacts remain ignored. See the
+The Phase 2 BBQ contract freezes 180 of 58,476 scorable examples across 90 strata and 130 source
+templates, separating name proxies from explicit group labels. A complete 360-request paired run is
+cached locally under run ID `d8739a1e89adbf89d769`; its estimated standard token cost is
+`$0.037807`. The exact 30-case failure audit is prepared but not human-approved, so no outcome
+number, figure, or mitigation claim is published here. Raw benchmark content and provider run
+artifacts remain ignored. See the
 [BBQ diagnostic protocol](evals/bias/bbq-v1/README.md) for the exact selection, cost gate, commands,
 and reporting limits.
 

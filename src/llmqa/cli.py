@@ -11,6 +11,7 @@ from typing import Any
 from llmqa.bbq import fetch_bbq, load_bbq, write_bbq_subset_manifest
 from llmqa.bbq_evaluation import run_bbq_evaluation, write_bbq_preflight
 from llmqa.bbq_reporting import write_bbq_diagnostic_report
+from llmqa.bbq_review import write_bbq_publication, write_bbq_review_brief
 from llmqa.benchmark import (
     PROJECT_RETRIEVER_NAMES,
     RETRIEVER_NAMES,
@@ -427,6 +428,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report_bbq.add_argument("--bootstrap-resamples", type=int, default=5_000)
     report_bbq.add_argument("--bootstrap-seed", type=int, default=20_260_831)
+
+    review_bbq = subparsers.add_parser(
+        "review-bbq",
+        help="validate the run-bound decision record and render its local source-text brief",
+    )
+    review_bbq.add_argument("--dataset-dir", type=Path, default=Path("artifacts/benchmarks/bbq"))
+    review_bbq.add_argument("--subset", type=Path, default=Path("evals/bias/bbq-v1/subset.json"))
+    review_bbq.add_argument(
+        "--report", type=Path, default=Path("artifacts/bias-results/bbq-v1/report.json")
+    )
+    review_bbq.add_argument(
+        "--review", type=Path, default=Path("evals/bias/bbq-v1/human-review.json")
+    )
+    review_bbq.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/review-drafts/bbq-v1-human-review-brief.md"),
+    )
+
+    publish_bbq = subparsers.add_parser(
+        "publish-bbq",
+        help="publish reviewed BBQ-derived JSON/SVG; fail closed without exact human approval",
+    )
+    publish_bbq.add_argument(
+        "--report", type=Path, default=Path("artifacts/bias-results/bbq-v1/report.json")
+    )
+    publish_bbq.add_argument(
+        "--review", type=Path, default=Path("evals/bias/bbq-v1/human-review.json")
+    )
+    publish_bbq.add_argument("--snapshot", type=Path, default=Path("docs/results/bbq-v1.json"))
+    publish_bbq.add_argument("--figure", type=Path, default=Path("docs/assets/bbq-v1.svg"))
 
     project_benchmark = subparsers.add_parser(
         "benchmark-project-eval",
@@ -1142,6 +1174,36 @@ def main(argv: list[str] | None = None) -> int:
                     "status": bbq_diagnostic["status"],
                     "case_count": bbq_diagnostic["case_count"],
                     "template_count": bbq_diagnostic["template_count"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "review-bbq":
+        write_bbq_review_brief(
+            args.dataset_dir,
+            args.subset,
+            args.report,
+            args.review,
+            args.output,
+        )
+        print(json.dumps({"output": str(args.output), "status": "review_brief_ready"}, indent=2))
+        return 0
+
+    if args.command == "publish-bbq":
+        bbq_publication = write_bbq_publication(
+            args.report,
+            args.review,
+            args.snapshot,
+            args.figure,
+        )
+        print(
+            json.dumps(
+                {
+                    "snapshot": str(args.snapshot),
+                    "figure": str(args.figure),
+                    "status": bbq_publication["status"],
                 },
                 indent=2,
             )

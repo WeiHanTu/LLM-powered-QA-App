@@ -432,8 +432,10 @@ revised v2 360-request plan has a conservative standard-pricing upper bound of `
 the 2026-08-30 pricing contract and a `$0.50` ceiling. The initial v1 execution stopped after five
 calls when one response exhausted its 256-token output allowance during reasoning. Those calls cost
 an estimated `$0.00194225`; v2 raises the ceiling to 512 and sets reasoning effort to `minimal`,
-keeping the combined worst case at `$0.3873575`. No BBQ outcome metrics have been produced as of
-this update.
+keeping the combined worst case at `$0.3873575`. Run `d8739a1e89adbf89d769` subsequently completed
+all 360 v2 requests with zero incomplete responses for an estimated standard token cost of
+`$0.037807` (`$0.03974925` including v1). Its outcome metrics remain an ignored automated artifact,
+not a published result, while the run-bound human review is pending.
 
 Scoring is deterministic and uses the official row-specific `target_loc`, which already accounts
 for question polarity. It reports ambiguous accuracy-adjusted bias and disambiguated raw bias
@@ -466,8 +468,11 @@ template-cluster percentile intervals. Mixed-condition bias is intentionally not
 - Add paired, template-clustered bootstrap confidence intervals and regression thresholds.
 
 Exit gate: no statistically or practically material regression on declared fairness slices; all
-mitigations include utility deltas and a human review of failure clusters. The gate remains open:
-the provider run and human failure-cluster review have not happened.
+mitigations include utility deltas and a human review of failure clusters. The provider run is
+complete, but the gate remains open until the owner reviews and explicitly approves all 30 cases
+where at least one paired arm missed the official label. Publication must retain the official score,
+label the approved record as AI-assisted rather than independent review, and isolate any suspected
+benchmark-label correction as sensitivity analysis.
 
 ### Phase 3 — corpus governance and adversarial resilience
 

@@ -1,7 +1,9 @@
 # BBQ-derived diagnostic contract
 
-This directory freezes the selection contract for a budget-bounded generator-bias diagnostic. It
-does not contain the BBQ corpus and does not contain an LLMQA result.
+This directory freezes the selection and human-review contracts for a budget-bounded
+generator-bias diagnostic. It does not contain the BBQ corpus or a published LLMQA result. The
+companion `human-review.json` is explicitly an unapproved AI pre-audit until its status, reviewer,
+timestamp, and exact attestation are changed after owner review.
 
 ## Frozen scope
 
@@ -47,6 +49,7 @@ uv run llmqa evaluate-bbq \
   --authorize-paid-run \
   --max-cost-usd 0.50
 uv run llmqa report-bbq
+uv run llmqa review-bbq
 ```
 
 The runner refuses live calls without the explicit authorization flag, exact matching preflight,
@@ -59,6 +62,18 @@ The report must remain labelled a “BBQ-derived subset diagnostic.” It report
 disambiguated bias separately, includes the non-unknown denominator, pairs grounded minus neutral
 deltas, and clusters bootstrap resampling by source template within category. It is not a full BBQ
 score and it does not measure retrieval fairness.
+
+Run `d8739a1e89adbf89d769` completed all 360 v2 requests with zero incomplete responses. The
+estimated standard token cost was `$0.037807`, or `$0.03974925` including the stopped v1 calls.
+The ignored automated report is bound to the immutable attempt, result, summary, source, subset,
+and run-manifest hashes. Its audit population is deterministic: all 30 cases where at least one arm
+missed the official label, comprising 27 discordant pairs and three cases both arms missed.
+
+`review-bbq` validates the proposed decisions against the exact report and renders source text only
+under ignored `artifacts/review-drafts/`. `publish-bbq` separately refuses to write the public JSON
+and SVG unless all 30 records carry explicit run-bound human approval. One proposed record flags a
+probable official annotation error; the official primary score remains unchanged and any relabelled
+result is sensitivity analysis only.
 
 Before any README result or figure is published, review failure clusters manually and record the
 decision against the exact run ID and result hashes. A complete automated run alone does not close
