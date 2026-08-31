@@ -8,6 +8,9 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from llmqa.bbq import fetch_bbq, load_bbq, write_bbq_subset_manifest
+from llmqa.bbq_evaluation import run_bbq_evaluation, write_bbq_preflight
+from llmqa.bbq_reporting import write_bbq_diagnostic_report
 from llmqa.benchmark import (
     PROJECT_RETRIEVER_NAMES,
     RETRIEVER_NAMES,
@@ -362,6 +365,68 @@ def build_parser() -> argparse.ArgumentParser:
     diversity_report.add_argument("--run-date", required=True)
     diversity_report.add_argument("--sample-per-stratum", type=int, default=7)
     diversity_report.add_argument("--stratum-offset", type=int, default=7)
+
+    fetch_bbq_parser = subparsers.add_parser(
+        "fetch-bbq",
+        help="download and SHA-256 verify the pinned official BBQ benchmark",
+    )
+    fetch_bbq_parser.add_argument("--cache-dir", type=Path, default=Path("artifacts/benchmarks"))
+
+    freeze_bbq = subparsers.add_parser(
+        "freeze-bbq-subset",
+        help="freeze an ID-only template-stratified BBQ-derived diagnostic subset",
+    )
+    freeze_bbq.add_argument("--dataset-dir", type=Path, default=Path("artifacts/benchmarks/bbq"))
+    freeze_bbq.add_argument("--output", type=Path, default=Path("evals/bias/bbq-v1/subset.json"))
+    freeze_bbq.add_argument("--sample-per-stratum", type=int, default=2)
+    freeze_bbq.add_argument("--seed", default="llmqa-bbq-derived-v1")
+    freeze_bbq.add_argument("--frozen-at", required=True)
+
+    evaluate_bbq = subparsers.add_parser(
+        "evaluate-bbq",
+        help="plan, run, or resume the paired OpenAI BBQ-derived diagnostic",
+    )
+    evaluate_bbq.add_argument("--dataset-dir", type=Path, default=Path("artifacts/benchmarks/bbq"))
+    evaluate_bbq.add_argument("--subset", type=Path, default=Path("evals/bias/bbq-v1/subset.json"))
+    evaluate_bbq.add_argument(
+        "--output-dir", type=Path, default=Path("artifacts/bias-results/bbq-v1")
+    )
+    evaluate_bbq.add_argument(
+        "--preflight", type=Path, default=Path("artifacts/bias-results/bbq-v1/preflight.json")
+    )
+    evaluate_bbq.add_argument(
+        "--pricing-contract",
+        type=Path,
+        default=Path("evals/pricing/openai-gpt-5-mini-2025-08-07-2026-08-30.json"),
+    )
+    evaluate_bbq.add_argument("--model", default="gpt-5-mini-2025-08-07")
+    evaluate_bbq.add_argument("--max-cost-usd", type=float, default=0.50)
+    evaluate_bbq.add_argument("--max-output-tokens", type=int, default=256)
+    evaluate_bbq.add_argument("--input-safety-multiplier", type=float, default=1.15)
+    execution_mode = evaluate_bbq.add_mutually_exclusive_group(required=True)
+    execution_mode.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="write the exact cost preflight without reading an API key",
+    )
+    execution_mode.add_argument(
+        "--authorize-paid-run",
+        action="store_true",
+        help="explicitly authorize the budget-gated OpenAI calls and resume checkpoint",
+    )
+
+    report_bbq = subparsers.add_parser(
+        "report-bbq",
+        help="score a completed paired run with template-clustered confidence intervals",
+    )
+    report_bbq.add_argument("--dataset-dir", type=Path, default=Path("artifacts/benchmarks/bbq"))
+    report_bbq.add_argument("--subset", type=Path, default=Path("evals/bias/bbq-v1/subset.json"))
+    report_bbq.add_argument("--run-dir", type=Path, default=Path("artifacts/bias-results/bbq-v1"))
+    report_bbq.add_argument(
+        "--output", type=Path, default=Path("artifacts/bias-results/bbq-v1/report.json")
+    )
+    report_bbq.add_argument("--bootstrap-resamples", type=int, default=5_000)
+    report_bbq.add_argument("--bootstrap-seed", type=int, default=20_260_831)
 
     project_benchmark = subparsers.add_parser(
         "benchmark-project-eval",
@@ -986,6 +1051,97 @@ def main(argv: list[str] | None = None) -> int:
                     "snapshot": str(args.snapshot),
                     "status": diversity_snapshot["status"],
                     "decision": diversity_snapshot["decision"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "fetch-bbq":
+        dataset_directory = fetch_bbq(args.cache_dir)
+        loaded_bbq_cases = load_bbq(dataset_directory)
+        print(
+            json.dumps(
+                {
+                    "dataset_directory": str(dataset_directory),
+                    "case_count": len(loaded_bbq_cases),
+                    "scorable_case_count": sum(case.scorable for case in loaded_bbq_cases),
+                    "status": "verified",
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "freeze-bbq-subset":
+        frozen_bbq_cases = load_bbq(args.dataset_dir)
+        subset = write_bbq_subset_manifest(
+            frozen_bbq_cases,
+            args.output,
+            sample_per_stratum=args.sample_per_stratum,
+            seed=args.seed,
+            frozen_at=args.frozen_at,
+        )
+        print(
+            json.dumps(
+                {
+                    "output": str(args.output),
+                    "status": subset["status"],
+                    "selected_case_count": subset["selected_case_count"],
+                    "selected_template_count": subset["selected_template_count"],
+                    "selection_sha256": subset["selection_sha256"],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "evaluate-bbq":
+        if args.plan_only:
+            preflight = write_bbq_preflight(
+                args.preflight,
+                args.dataset_dir,
+                args.subset,
+                args.pricing_contract,
+                model=args.model,
+                max_cost_usd=args.max_cost_usd,
+                max_output_tokens=args.max_output_tokens,
+                input_safety_multiplier=args.input_safety_multiplier,
+            )
+            print(json.dumps(preflight, indent=2))
+            return 0
+        require_openai_api_key()
+        summary_path = run_bbq_evaluation(
+            args.dataset_dir,
+            args.subset,
+            args.output_dir,
+            args.preflight,
+            args.pricing_contract,
+            model=args.model,
+            max_cost_usd=args.max_cost_usd,
+            max_output_tokens=args.max_output_tokens,
+            input_safety_multiplier=args.input_safety_multiplier,
+            authorize_paid_run=args.authorize_paid_run,
+        )
+        print(summary_path.read_text(encoding="utf-8"))
+        return 0
+
+    if args.command == "report-bbq":
+        bbq_diagnostic = write_bbq_diagnostic_report(
+            args.dataset_dir,
+            args.subset,
+            args.run_dir,
+            args.output,
+            bootstrap_resamples=args.bootstrap_resamples,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        print(
+            json.dumps(
+                {
+                    "output": str(args.output),
+                    "status": bbq_diagnostic["status"],
+                    "case_count": bbq_diagnostic["case_count"],
+                    "template_count": bbq_diagnostic["template_count"],
                 },
                 indent=2,
             )

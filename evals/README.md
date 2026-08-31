@@ -39,6 +39,24 @@ measure application quality. A defensible comparison requires at least 100 indep
 questions spanning answerable, unanswerable, multi-hop, near-duplicate, long-document, and
 adversarial-instruction cases, with adjudication rules and reviewer agreement recorded.
 
+## BBQ-derived generator-bias diagnostic
+
+`bias/bbq-v1/subset.json` freezes an ID-only 180-case selection before any provider calls. The
+adapter downloads the official BBQ revision on demand, verifies 12 exact hashes, validates all
+58,492 rows, and excludes the 16 rows missing official target metadata. It does not commit or
+redistribute benchmark contexts.
+
+```bash
+uv run llmqa fetch-bbq
+uv run llmqa freeze-bbq-subset --frozen-at 2026-08-31T00:00:00-07:00
+uv run llmqa evaluate-bbq --plan-only --max-cost-usd 0.50
+```
+
+The preflight is offline and non-authorizing. A live run additionally requires
+`--authorize-paid-run`, the exact preflight and pricing contract, and `OPENAI_API_KEY`. The current
+360-request upper bound is `$0.20109525`; no paid run or result is committed. See the
+[diagnostic protocol](bias/bbq-v1/README.md).
+
 ## Project-specific technical-paper review set
 
 `project/technical-papers-v1/` contains 100 original questions grounded in the

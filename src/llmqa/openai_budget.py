@@ -71,6 +71,28 @@ class GenerationBudget:
         return asdict(self)
 
 
+@dataclass(frozen=True, slots=True)
+class SingleStageBudget:
+    """Preflight budget for one homogeneous provider request class."""
+
+    model: str
+    pricing_contract_sha256: str
+    pricing_verified_at: str
+    pricing_source_url: str
+    input_per_million_usd: float
+    output_per_million_usd: float
+    input_safety_multiplier: float
+    requests: RequestBudget
+    total_cost_upper_bound_usd: float
+    max_cost_usd: float
+    within_budget: bool
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-compatible representation."""
+
+        return asdict(self)
+
+
 def file_sha256(path: Path) -> str:
     """Hash one local contract without loading unrelated files."""
 
@@ -208,6 +230,44 @@ def estimate_generation_budget(
         input_safety_multiplier=input_safety_multiplier,
         candidate=candidate,
         judge=judge,
+        total_cost_upper_bound_usd=total,
+        max_cost_usd=max_cost_usd,
+        within_budget=total <= max_cost_usd,
+    )
+
+
+def estimate_single_stage_budget(
+    contract: OpenAIPricingContract,
+    *,
+    request_count: int,
+    input_tokens: int,
+    max_output_tokens: int,
+    input_safety_multiplier: float,
+    max_cost_usd: float,
+) -> SingleStageBudget:
+    """Price one homogeneous request set pessimistically with no cache discount."""
+
+    if not math.isfinite(input_safety_multiplier) or input_safety_multiplier < 1:
+        raise ValueError("input safety multiplier must be finite and at least 1")
+    if not math.isfinite(max_cost_usd) or max_cost_usd <= 0:
+        raise ValueError("max cost must be finite and positive")
+    requests = _request_budget(
+        request_count=request_count,
+        raw_estimated_input_tokens=input_tokens,
+        max_output_tokens_per_request=max_output_tokens,
+        input_safety_multiplier=input_safety_multiplier,
+        price=contract.price,
+    )
+    total = requests.total_cost_upper_bound_usd
+    return SingleStageBudget(
+        model=contract.price.model,
+        pricing_contract_sha256=contract.contract_sha256,
+        pricing_verified_at=contract.verified_at,
+        pricing_source_url=contract.source_url,
+        input_per_million_usd=contract.price.input_per_million_usd,
+        output_per_million_usd=contract.price.output_per_million_usd,
+        input_safety_multiplier=input_safety_multiplier,
+        requests=requests,
         total_cost_upper_bound_usd=total,
         max_cost_usd=max_cost_usd,
         within_budget=total <= max_cost_usd,

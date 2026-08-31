@@ -22,12 +22,22 @@ chain.
 - Research-mode Fair Greedy reranking over a larger candidate pool
 - Prefix-sensitive normalized discounted KL divergence (NDKL) exposure audits
 - Counterfactual flip-rate and mean absolute score-difference metrics
+- Pinned BBQ acquisition, frozen template-stratified selection, paired prompt evaluation, and
+  template-clustered bias reporting with an explicit paid-run guard
 - Offline Recall@k, MRR, and graded NDCG@k evaluation from versionable JSONL
 - Offline unit tests, linting, type checking, a `uv.lock`, and GitHub Actions CI
 
 The fairness features do **not** prove that a model or application is unbiased. They measure narrow,
 declared behaviors on reviewed labels and evaluation cases. See [the engineering spec](docs/spec.md)
 for the threat model, research basis, limitations, and roadmap.
+
+The Phase 2 BBQ harness is implemented but has not been run against OpenAI. Its committed contract
+freezes 180 of 58,476 scorable examples across 90 strata and 130 source templates, separating name
+proxies from explicit group labels. The 360-request preflight ceiling is `$0.20109525`; no outcome
+number or fairness claim exists yet. Raw benchmark
+content and provider run artifacts remain ignored. See the
+[BBQ diagnostic protocol](evals/bias/bbq-v1/README.md) for the exact selection, cost gate, commands,
+and reporting limits.
 
 ## Architecture
 

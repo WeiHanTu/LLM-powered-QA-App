@@ -1,7 +1,7 @@
 # LLMQA evolution specification
 
-Status: Phase 0 implemented; Phase 1 reviewed generation published; slate-size probe preregistered
-Last updated: 2026-08-30
+Status: Phase 0 implemented; Phase 1 reviewed generation published; Phase 2 diagnostic harness frozen
+Last updated: 2026-08-31
 
 ## 1. Executive decision
 
@@ -409,6 +409,35 @@ evaluation.
 
 ### Phase 2 — end-to-end bias evaluation
 
+Implementation status (2026-08-31): the official BBQ source is pinned to Git revision
+`bea11bd97d79217245b5871acd247b9d6eb24598`, and every one of the 11 category files plus the
+official scoring metadata file has an exact SHA-256 contract. The adapter validates all 58,492
+source rows. It excludes 16 rows whose official metadata has no `target_loc`, leaving 58,476 rows
+eligible for polarity-aware bias scoring; it never guesses those missing labels.
+
+The committed `evals/bias/bbq-v1/subset.json` freezes 180 case IDs across all 90 observed
+`(official score category, context condition, polarity, answer alignment)` strata, two per stratum,
+covering 130 distinct source templates. The score category preserves the official separation of
+name proxies from explicit group labels. Selection uses deterministic SHA-256 ranking with seed
+`llmqa-bbq-derived-v1`; its selection digest is
+`18cb2cca43661fa8681c890d6c317ee4e9f1b9e8b67991f53b8dcb9228e7adff`. The file contains IDs and
+strata only, not benchmark contexts or answers.
+
+The paired runner holds `gpt-5-mini-2025-08-07` and structured-output settings fixed while
+alternating arm order. It compares a neutral multiple-choice instruction with the grounded
+abstention instruction, checkpoints the exact structured provider output plus response/usage
+provenance before parsing, disables SDK retries and provider response storage, and resumes only an
+identical run contract without repaying for an attempted record. The
+frozen 360-request plan has a conservative standard-pricing upper bound of `$0.20109525` under the
+2026-08-30 pricing contract and a `$0.50` ceiling. This is a cost bound, not execution approval:
+no paid BBQ calls or BBQ outcome metrics have been produced as of this update.
+
+Scoring is deterministic and uses the official row-specific `target_loc`, which already accounts
+for question polarity. It reports ambiguous accuracy-adjusted bias and disambiguated raw bias
+separately, exposes non-unknown
+denominators, reports signed and absolute-bias changes, and computes paired category-stratified
+template-cluster percentile intervals. Mixed-condition bias is intentionally not aggregated.
+
 - Build controlled counterfactual RAG cases for the intended domain and document which attributes
   should be irrelevant.
 - Run BBQ and culturally appropriate variants as diagnostic benchmarks, not universal scores.
@@ -420,9 +449,10 @@ evaluation.
 - Publish the subset size, random seed, selected template IDs, category strata, model snapshot,
   prompt contract, token usage, and estimated API cost. Label every aggregate as a BBQ-derived
   diagnostic; never present a subset score as a full BBQ result or as retrieval fairness evidence.
-- Cache immutable raw provider responses so parsing, deterministic scoring, and template-clustered
-  bootstrap intervals can be recomputed offline without paying for another generation run. Require
-  a conservative preflight cost estimate and hard run-budget guard before any provider call.
+- Cache immutable structured provider output plus response ID/model, usage, and latency so parsing,
+  deterministic scoring, and template-clustered bootstrap intervals can be recomputed offline
+  without paying for another generation run. Require a conservative preflight cost estimate, exact
+  contract match, and explicit paid-run authorization before any provider call.
 - Compare two initial arms at fixed model settings: a minimal neutral-prompt baseline receiving the
   BBQ context directly, and the same context processed through LLMQA's grounded-answer and
   abstention contract.
@@ -433,7 +463,8 @@ evaluation.
 - Add paired, template-clustered bootstrap confidence intervals and regression thresholds.
 
 Exit gate: no statistically or practically material regression on declared fairness slices; all
-mitigations include utility deltas and a human review of failure clusters.
+mitigations include utility deltas and a human review of failure clusters. The gate remains open:
+the provider run and human failure-cluster review have not happened.
 
 ### Phase 3 — corpus governance and adversarial resilience
 
