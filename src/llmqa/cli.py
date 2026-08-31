@@ -401,7 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     evaluate_bbq.add_argument("--model", default="gpt-5-mini-2025-08-07")
     evaluate_bbq.add_argument("--max-cost-usd", type=float, default=0.50)
-    evaluate_bbq.add_argument("--max-output-tokens", type=int, default=256)
+    evaluate_bbq.add_argument("--max-output-tokens", type=int, default=512)
     evaluate_bbq.add_argument("--input-safety-multiplier", type=float, default=1.15)
     execution_mode = evaluate_bbq.add_mutually_exclusive_group(required=True)
     execution_mode.add_argument(

@@ -54,7 +54,8 @@ uv run llmqa evaluate-bbq --plan-only --max-cost-usd 0.50
 
 The preflight is offline and non-authorizing. A live run additionally requires
 `--authorize-paid-run`, the exact preflight and pricing contract, and `OPENAI_API_KEY`. The current
-360-request upper bound is `$0.20109525`; no paid run or result is committed. See the
+revised 360-request upper bound is `$0.38541525`; including the five stopped v1 calls keeps the
+combined bound at `$0.3873575`. No complete paid run or result is committed. See the
 [diagnostic protocol](bias/bbq-v1/README.md).
 
 ## Project-specific technical-paper review set

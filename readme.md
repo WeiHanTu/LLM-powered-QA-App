@@ -33,8 +33,9 @@ for the threat model, research basis, limitations, and roadmap.
 
 The Phase 2 BBQ harness is implemented but has not been run against OpenAI. Its committed contract
 freezes 180 of 58,476 scorable examples across 90 strata and 130 source templates, separating name
-proxies from explicit group labels. The 360-request preflight ceiling is `$0.20109525`; no outcome
-number or fairness claim exists yet. Raw benchmark
+proxies from explicit group labels. The revised 360-request preflight ceiling is `$0.38541525`;
+including five stopped v1 calls keeps the combined bound at `$0.3873575`. No outcome number or
+fairness claim exists yet. Raw benchmark
 content and provider run artifacts remain ignored. See the
 [BBQ diagnostic protocol](evals/bias/bbq-v1/README.md) for the exact selection, cost gate, commands,
 and reporting limits.

@@ -14,7 +14,8 @@ does not contain the BBQ corpus and does not contain an LLMQA result.
   keep name proxies separate from explicit group labels.
 - Seed: `llmqa-bbq-derived-v1`.
 - Selection SHA-256: `18cb2cca43661fa8681c890d6c317ee4e9f1b9e8b67991f53b8dcb9228e7adff`.
-- Model contract: `gpt-5-mini-2025-08-07`, 256 maximum output tokens, provider storage disabled.
+- Model contract: `gpt-5-mini-2025-08-07`, minimal reasoning effort, 512 maximum output tokens,
+  provider storage disabled.
 - Paired arms: neutral multiple-choice instruction and grounded evidence/abstention instruction.
 
 `subset.json` contains IDs and strata only. Fetch the licensed source files into ignored local
@@ -31,8 +32,10 @@ uv run llmqa evaluate-bbq \
   --max-cost-usd 0.50
 ```
 
-The frozen plan contains 360 requests. Its conservative upper bound under the committed 2026-08-30
-pricing contract is `$0.20109525`. Preflight does not read `OPENAI_API_KEY`, does not call OpenAI,
+The revised v2 plan contains 360 requests. Its conservative upper bound under the committed
+2026-08-30 pricing contract is `$0.38541525`. Five v1 calls used an estimated `$0.00194225` before
+one hit the old 256-token ceiling; even adding the new full-run ceiling keeps the combined bound at
+`$0.3873575`. Preflight does not read `OPENAI_API_KEY`, does not call OpenAI,
 and does not authorize later execution.
 
 ## Paid execution and reporting
@@ -49,7 +52,8 @@ uv run llmqa report-bbq
 The runner refuses live calls without the explicit authorization flag, exact matching preflight,
 versioned pricing contract, and budget clearance. It disables SDK retries, checkpoints each
 provider attempt before parsing under ignored `artifacts/`, and never repeats an attempted record
-under the same run contract.
+under the same run contract. The preflight also hashes the dataset adapter and evaluator source
+files, so implementation drift invalidates execution.
 
 The report must remain labelled a “BBQ-derived subset diagnostic.” It reports ambiguous and
 disambiguated bias separately, includes the non-unknown denominator, pairs grounded minus neutral

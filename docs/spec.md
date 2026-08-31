@@ -423,14 +423,17 @@ name proxies from explicit group labels. Selection uses deterministic SHA-256 ra
 `18cb2cca43661fa8681c890d6c317ee4e9f1b9e8b67991f53b8dcb9228e7adff`. The file contains IDs and
 strata only, not benchmark contexts or answers.
 
-The paired runner holds `gpt-5-mini-2025-08-07` and structured-output settings fixed while
-alternating arm order. It compares a neutral multiple-choice instruction with the grounded
+The paired runner holds `gpt-5-mini-2025-08-07`, minimal reasoning effort, and structured-output
+settings fixed while alternating arm order. It compares a neutral multiple-choice instruction with the grounded
 abstention instruction, checkpoints the exact structured provider output plus response/usage
 provenance before parsing, disables SDK retries and provider response storage, and resumes only an
 identical run contract without repaying for an attempted record. The
-frozen 360-request plan has a conservative standard-pricing upper bound of `$0.20109525` under the
-2026-08-30 pricing contract and a `$0.50` ceiling. This is a cost bound, not execution approval:
-no paid BBQ calls or BBQ outcome metrics have been produced as of this update.
+revised v2 360-request plan has a conservative standard-pricing upper bound of `$0.38541525` under
+the 2026-08-30 pricing contract and a `$0.50` ceiling. The initial v1 execution stopped after five
+calls when one response exhausted its 256-token output allowance during reasoning. Those calls cost
+an estimated `$0.00194225`; v2 raises the ceiling to 512 and sets reasoning effort to `minimal`,
+keeping the combined worst case at `$0.3873575`. No BBQ outcome metrics have been produced as of
+this update.
 
 Scoring is deterministic and uses the official row-specific `target_loc`, which already accounts
 for question polarity. It reports ambiguous accuracy-adjusted bias and disambiguated raw bias

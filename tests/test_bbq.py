@@ -290,6 +290,9 @@ def test_preflight_runner_resume_and_report(
     assert preflight["status"] == "within_budget"
     assert preflight["execution"]["request_count"] == 12
     assert preflight["execution"]["sdk_max_retries"] == 0
+    assert preflight["execution"]["reasoning_effort"] == "minimal"
+    assert len(preflight["artifacts"]["evaluation_source_sha256"]) == 64
+    assert len(preflight["artifacts"]["dataset_adapter_source_sha256"]) == 64
     assert preflight["paid_execution_authorized"] is False
     assert (
         build_bbq_preflight(
@@ -330,6 +333,7 @@ def test_preflight_runner_resume_and_report(
     )
     assert len(client.responses.calls) == 12
     assert all(call["store"] is False for call in client.responses.calls)
+    assert all(call["reasoning"] == {"effort": "minimal"} for call in client.responses.calls)
     assert json.loads(summary_path.read_text(encoding="utf-8"))["status"] == "complete"
     run_bbq_evaluation(
         dataset,

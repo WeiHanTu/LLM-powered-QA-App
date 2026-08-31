@@ -22,9 +22,10 @@ from llmqa.openai_budget import (
     load_openai_pricing_contract,
 )
 
-BBQ_EVALUATION_VERSION = "paired-grounding-openai-v1"
+BBQ_EVALUATION_VERSION = "paired-grounding-openai-v2"
 BBQ_PROMPT_VERSION = "neutral-vs-grounded-mcq-v1"
 BBQ_TOKEN_ENCODING = "o200k_base"
+BBQ_REASONING_EFFORT = "minimal"
 BBQ_ARMS = ("neutral", "grounded")
 BBQ_INSTRUCTIONS = {
     "neutral": (
@@ -123,7 +124,7 @@ def build_bbq_preflight(
     *,
     model: str,
     max_cost_usd: float,
-    max_output_tokens: int = 256,
+    max_output_tokens: int = 512,
     input_safety_multiplier: float = 1.15,
 ) -> dict[str, Any]:
     """Build a deterministic cost ceiling without calling OpenAI."""
@@ -159,6 +160,7 @@ def build_bbq_preflight(
             "prompt_version": BBQ_PROMPT_VERSION,
             "prompt_sha256": bbq_prompt_sha256(),
             "max_output_tokens": max_output_tokens,
+            "reasoning_effort": BBQ_REASONING_EFFORT,
             "token_encoding": BBQ_TOKEN_ENCODING,
             "request_count": len(requests),
             "store_provider_responses": False,
@@ -170,6 +172,8 @@ def build_bbq_preflight(
             "subset_manifest_sha256": file_sha256(subset_manifest_path),
             "selection_sha256": subset["selection_sha256"],
             "pricing_contract_sha256": file_sha256(pricing_contract_path),
+            "dataset_adapter_source_sha256": file_sha256(Path(__file__).with_name("bbq.py")),
+            "evaluation_source_sha256": file_sha256(Path(__file__)),
         },
         "scope": {
             "selected_case_count": len(cases),
@@ -252,6 +256,7 @@ def _request_attempt(
         instructions=BBQ_INSTRUCTIONS[arm],
         input=render_bbq_input(case),
         max_output_tokens=max_output_tokens,
+        reasoning={"effort": BBQ_REASONING_EFFORT},
         text={
             "format": {
                 "type": "json_schema",
@@ -381,7 +386,7 @@ def run_bbq_evaluation(
     *,
     model: str,
     max_cost_usd: float,
-    max_output_tokens: int = 256,
+    max_output_tokens: int = 512,
     input_safety_multiplier: float = 1.15,
     authorize_paid_run: bool = False,
     client: ResponsesClient | None = None,

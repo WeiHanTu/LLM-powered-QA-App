@@ -394,6 +394,8 @@ def write_bbq_diagnostic_report(
         "execution_summary_sha256": file_sha256(run_directory / "summary.json"),
         "subset_manifest_sha256": file_sha256(subset_manifest_path),
         "selection_sha256": subset["selection_sha256"],
+        "evaluation_source_sha256": file_sha256(Path(__file__).with_name("bbq_evaluation.py")),
+        "reporting_source_sha256": file_sha256(Path(__file__)),
     }
     _atomic_write(destination, (json.dumps(diagnostic, indent=2, sort_keys=True) + "\n").encode())
     return diagnostic
